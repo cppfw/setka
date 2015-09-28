@@ -72,7 +72,7 @@ public:
 	 * @return number of bytes actually sent. Actually it is either 0 or the size of the
 	 *         datagram passed in as argument.
 	 */
-	size_t send(utki::Buf<const std::uint8_t> buf, const IPAddress& destinationIP);
+	size_t send(const utki::Buf<std::uint8_t> buf, const IPAddress& destinationIP);
 
 
 

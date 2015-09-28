@@ -153,7 +153,7 @@ void UDPSocket::open(std::uint16_t port){
 
 
 
-size_t UDPSocket::send(utki::Buf<const std::uint8_t> buf, const IPAddress& destinationIP){
+size_t UDPSocket::send(const utki::Buf<std::uint8_t> buf, const IPAddress& destinationIP){
 	if(!*this){
 		throw setka::Exc("UDPSocket::Send(): socket is not opened");
 	}

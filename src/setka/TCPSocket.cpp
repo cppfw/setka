@@ -123,7 +123,7 @@ void TCPSocket::open(const IPAddress& ip, bool disableNaggle){
 
 
 
-size_t TCPSocket::send(utki::Buf<const std::uint8_t> buf){
+size_t TCPSocket::send(const utki::Buf<std::uint8_t> buf){
 	if(!*this){
 		throw setka::Exc("TCPSocket::Send(): socket is not opened");
 	}

@@ -96,7 +96,7 @@ public:
 			data[1] = '1';
 			data[2] = '2';
 			data[3] = '4';
-			SendAll(sock, data);
+			SendAll(sock, utki::wrapBuf(data));
 		}catch(setka::Exc &e){
 			ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
 		}
@@ -209,7 +209,7 @@ void Run(){
 	while(aika::getTicks() - startTime < 5000){ //5 seconds
 		std::array<pogodi::Waitable*, 2> triggered;
 
-		unsigned numTriggered = ws.waitWithTimeout(1000, triggered);
+		unsigned numTriggered = ws.waitWithTimeout(1000, utki::wrapBuf(triggered));
 //		unsigned numTriggered = ws.wait(triggered);
 
 		ASSERT_ALWAYS(numTriggered <= 2)
@@ -285,7 +285,7 @@ void Run(){
 					std::array<std::uint8_t, 0x2000> buf; //8kb buffer
 					unsigned numBytesReceived;
 					try{
-						numBytesReceived = sockR.recieve(buf);
+						numBytesReceived = sockR.recieve(utki::wrapBuf(buf));
 					}catch(setka::Exc& e){
 						ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 					}
@@ -392,7 +392,7 @@ void Run(){
 			std::array<std::uint8_t, 0x2000> buf; //8kb buffer
 			unsigned numBytesReceived;
 			try{
-				numBytesReceived = sockR.recieve(buf);
+				numBytesReceived = sockR.recieve(utki::wrapBuf(buf));
 			}catch(setka::Exc& e){
 				ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 			}
@@ -492,7 +492,7 @@ void Run(){
 			);
 
 		for(unsigned i = 0; i < 10; ++i){
-			bytesSent = sendSock.send(data, addr);
+			bytesSent = sendSock.send(utki::wrapBuf(data), addr);
 			ASSERT_ALWAYS(bytesSent == 4 || bytesSent == 0)
 			if(bytesSent == 4){
 				break;
@@ -511,7 +511,7 @@ void Run(){
 		unsigned bytesReceived = 0;
 		for(unsigned i = 0; i < 10; ++i){
 			setka::IPAddress ip;
-			bytesReceived = recvSock.recieve(buf, ip);
+			bytesReceived = recvSock.recieve(utki::wrapBuf(buf), ip);
 			ASSERT_ALWAYS(bytesReceived == 0 || bytesReceived == 4)//all or nothing
 			if(bytesReceived == 4){
 				if(IsIPv6SupportedByOS()){

@@ -72,7 +72,7 @@ public:
 	 * @param buf - pointer to the buffer with data to send.
 	 * @return the number of bytes actually sent.
 	 */
-	size_t send(utki::Buf<const std::uint8_t> buf);
+	size_t send(const utki::Buf<std::uint8_t> buf);
 
 
 

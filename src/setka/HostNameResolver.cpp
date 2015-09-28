@@ -112,7 +112,7 @@ struct Resolver : public utki::PoolStored<Resolver, 10>{
 
 
 
-class LookupThread : public nitki::MsgThread{
+class LookupThread : public nitki::MsgThread, public utki::Unique{
 	setka::UDPSocket socket;
 	pogodi::WaitSet waitSet;
 	
@@ -260,7 +260,7 @@ public:
 		ASSERT(size_t(p - &*buf.begin()) == packetSize);
 		
 		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.getIPv4Host()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
-		size_t ret = this->socket.send(utki::Buf<std::uint8_t>(&*buf.begin(), packetSize), r->dns);
+		size_t ret = this->socket.send(utki::wrapBuf(&*buf.begin(), packetSize), r->dns);
 		
 		ASSERT(ret == packetSize || ret == 0)
 		
@@ -720,7 +720,7 @@ private:
 					try{
 						std::array<std::uint8_t, 512> buf;//RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
 						setka::IPAddress address;
-						size_t ret = this->socket.recieve(buf, address);
+						size_t ret = this->socket.recieve(utki::wrapBuf(buf), address);
 						
 						ASSERT(ret != 0)
 						ASSERT(ret <= buf.size())

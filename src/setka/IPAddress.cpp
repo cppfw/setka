@@ -183,14 +183,14 @@ IPAddress::IPAddress(const char* ip){
 		
 		char* dst;
 		for(dst = &*buf.begin(); *ip != ']'; ++dst, ++ip){
-			if(*ip == 0 || !utki::Buf<char>(buf).overlaps(dst + 1)){
+			if(*ip == 0 || !utki::wrapBuf(buf).overlaps(dst + 1)){
 				throw BadIPAddressFormatExc();
 			}
 			
 			*dst = *ip;
 		}
 		
-		ASSERT(utki::Buf<char>(buf).Overlaps(dst))
+		ASSERT(utki::wrapBuf(buf).Overlaps(dst))
 		*dst = 0;//null-terminate
 				
 		this->host = Host::parseIPv6(&*buf.begin());
@@ -204,7 +204,7 @@ IPAddress::IPAddress(const char* ip){
 			
 			char* dst;
 			for(dst = &*buf.begin(); *ip != ':' && *ip != 0; ++dst, ++ip){
-				if(!utki::Buf<char>(buf).overlaps(dst + 1)){
+				if(!utki::wrapBuf(buf).overlaps(dst + 1)){
 					throw BadIPAddressFormatExc();
 				}
 
