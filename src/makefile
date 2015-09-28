@@ -44,12 +44,14 @@ this_cflags += -g #include debugging symbols
                 #-O3 -funroll-loops -fomit-frame-pointer
 
 
+this_ldlibs += -lpogodi -lnitki -lpapki -laika
+
 
 ifeq ($(prorab_os),linux)
     this_cflags += -fPIC # Since we are building shared library, we need Position-Independend Code
-#    this_ldlibs := -lpthread -lrt
+#    this_ldlibs += -lpthread -lrt
 else ifeq ($(prorab_os),windows)
- #   this_ldlibs := -lws2_32
+ #   this_ldlibs += -lws2_32
 else ifeq ($(prorab_os),macosx)
     this_cflags += -stdlib=libc++ #this is needed to be able to use c++11 std lib
 endif
