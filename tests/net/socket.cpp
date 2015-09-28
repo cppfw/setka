@@ -467,7 +467,7 @@ void Run(){
 	setka::UDPSocket recvSock;
 
 	try{
-		recvSock.Open(13666);
+		recvSock.open(13666);
 	}catch(setka::Exc &e){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
@@ -477,7 +477,7 @@ void Run(){
 	setka::UDPSocket sendSock;
 
 	try{
-		sendSock.Open();
+		sendSock.open();
 
 		std::array<std::uint8_t, 4> data;
 		data[0] = '0';
@@ -492,7 +492,7 @@ void Run(){
 			);
 
 		for(unsigned i = 0; i < 10; ++i){
-			bytesSent = sendSock.Send(data, addr);
+			bytesSent = sendSock.send(data, addr);
 			ASSERT_ALWAYS(bytesSent == 4 || bytesSent == 0)
 			if(bytesSent == 4){
 				break;
@@ -511,7 +511,7 @@ void Run(){
 		unsigned bytesReceived = 0;
 		for(unsigned i = 0; i < 10; ++i){
 			setka::IPAddress ip;
-			bytesReceived = recvSock.Recv(buf, ip);
+			bytesReceived = recvSock.recieve(buf, ip);
 			ASSERT_ALWAYS(bytesReceived == 0 || bytesReceived == 4)//all or nothing
 			if(bytesReceived == 4){
 				if(IsIPv6SupportedByOS()){
@@ -546,7 +546,7 @@ void Run(){
 		setka::UDPSocket sendSock;
 
 		try{
-			sendSock.Open();
+			sendSock.open();
 
 			pogodi::WaitSet ws(1);
 

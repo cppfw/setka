@@ -13,7 +13,7 @@ using namespace setka;
 
 
 
-void UDPSocket::Open(std::uint16_t port){
+void UDPSocket::open(std::uint16_t port){
 	if(*this){
 		throw setka::Exc("UDPSocket::Open(): the socket is already opened");
 	}
@@ -153,7 +153,7 @@ void UDPSocket::Open(std::uint16_t port){
 
 
 
-size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& destinationIP){
+size_t UDPSocket::send(utki::Buf<const std::uint8_t> buf, const IPAddress& destinationIP){
 	if(!*this){
 		throw setka::Exc("UDPSocket::Send(): socket is not opened");
 	}
@@ -269,7 +269,7 @@ size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& desti
 
 
 
-size_t UDPSocket::Recv(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
+size_t UDPSocket::recieve(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 	if(!*this){
 		throw setka::Exc("UDPSocket::Recv(): socket is not opened");
 	}

@@ -260,7 +260,7 @@ public:
 		ASSERT(size_t(p - &*buf.begin()) == packetSize);
 		
 		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.getIPv4Host()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
-		size_t ret = this->socket.Send(utki::Buf<std::uint8_t>(&*buf.begin(), packetSize), r->dns);
+		size_t ret = this->socket.send(utki::Buf<std::uint8_t>(&*buf.begin(), packetSize), r->dns);
 		
 		ASSERT(ret == packetSize || ret == 0)
 		
@@ -693,7 +693,7 @@ private:
 			std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);//mutex is needed because socket opening may fail and we will have to set isExiting flag which should be protected by mutex
 			
 			try{
-				this->socket.Open();
+				this->socket.open();
 			}catch(...){
 				this->isExiting = true;
 				this->RemoveAllResolvers();
@@ -720,7 +720,7 @@ private:
 					try{
 						std::array<std::uint8_t, 512> buf;//RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
 						setka::IPAddress address;
-						size_t ret = this->socket.Recv(buf, address);
+						size_t ret = this->socket.recieve(buf, address);
 						
 						ASSERT(ret != 0)
 						ASSERT(ret <= buf.size())

@@ -57,7 +57,7 @@ public:
 	 *               are no free ports, then it is an error and an exception will be thrown.
 	 *               This is useful for server-side sockets, for client-side sockets use UDPSocket::Open().
 	 */
-	void Open(std::uint16_t port = 0);
+	void open(std::uint16_t port = 0);
 
 
 
@@ -72,7 +72,7 @@ public:
 	 * @return number of bytes actually sent. Actually it is either 0 or the size of the
 	 *         datagram passed in as argument.
 	 */
-	size_t Send(utki::Buf<const std::uint8_t> buf, const IPAddress& destinationIP);
+	size_t send(utki::Buf<const std::uint8_t> buf, const IPAddress& destinationIP);
 
 
 
@@ -91,7 +91,7 @@ public:
 	 *                       of the sender will be stored.
 	 * @return number of bytes stored in the output buffer.
 	 */
-	size_t Recv(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP);
+	size_t recieve(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP);
 
 
 
@@ -99,7 +99,7 @@ public:
 private:
 	void setWaitingEvents(std::uint32_t flagsToWaitFor)override;
 #endif
-};//~class UDPSocket
+};
 
 
 
