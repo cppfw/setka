@@ -1,43 +1,20 @@
-/* The MIT License:
-
-Copyright (c) 2009-2013 Ivan Gagis <igagis@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-// Home page: http://ting.googlecode.com
-
-
-
 #include <map>
 #include <list>
+#include <cstring>
 
-#include "HostNameResolver.hpp"
+#include <utki/config.hpp>
+#include <utki/PoolStored.hpp>
+#include <utki/types.hpp>
 
-#include "../config.hpp"
-#include "../mt/MsgThread.hpp"
-#include "../PoolStored.hpp"
-#include "../timer.hpp"
+#include <nitki/MsgThread.hpp>
+
+#include <aika/timer.hpp>
 
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-#	include "../fs/FSFile.hpp"
+#	include <papki/FSFile.hpp>
 #endif
 
+#include "HostNameResolver.hpp"
 #include "UDPSocket.hpp"
 #include "Lib.hpp"
 
@@ -115,7 +92,7 @@ typedef T_ResolversMap::iterator T_ResolversIter;
 
 
 
-struct Resolver : public ting::PoolStored<Resolver, 10>{
+struct Resolver : public utki::PoolStored<Resolver, 10>{
 	HostNameResolver* hnr;
 	
 	std::string hostName; //host name to resolve
@@ -135,9 +112,9 @@ struct Resolver : public ting::PoolStored<Resolver, 10>{
 
 
 
-class LookupThread : public ting::mt::MsgThread{
+class LookupThread : public nitki::MsgThread{
 	ting::net::UDPSocket socket;
-	ting::WaitSet waitSet;
+	pogodi::WaitSet waitSet;
 	
 	T_ResolversTimeMap resolversByTime1, resolversByTime2;
 	
@@ -149,7 +126,7 @@ public:
 	std::mutex completedMutex;
 	
 	//this variable is for joining and destroying previous thread object if there was any.
-	std::unique_ptr<ting::mt::MsgThread> prevThread;
+	std::unique_ptr<nitki::MsgThread> prevThread;
 	
 	//this is to indicate that the thread is exiting and new DNS lookup requests should be queued to
 	//a new thread.
@@ -171,7 +148,7 @@ public:
 	ting::net::IPAddress dns;
 	
 	void StartSending(){
-		this->waitSet.Change(this->socket, ting::Waitable::READ_AND_WRITE);
+		this->waitSet.change(this->socket, pogodi::Waitable::READ_AND_WRITE);
 	}
 	
 	//NOTE: call to this function should be protected by mutex.
@@ -223,27 +200,27 @@ public:
 		std::uint8_t* p = &*buf.begin();
 		
 		//ID
-		ting::util::Serialize16BE(r->id, p);
+		utki::serialize16BE(r->id, p);
 		p += 2;
 		
 		//flags
-		ting::util::Serialize16BE(0x100, p);
+		utki::serialize16BE(0x100, p);
 		p += 2;
 		
 		//Number of questions
-		ting::util::Serialize16BE(1, p);
+		utki::serialize16BE(1, p);
 		p += 2;
 		
 		//Number of answers
-		ting::util::Serialize16BE(0, p);
+		utki::serialize16BE(0, p);
 		p += 2;
 		
 		//Number of authority records
-		ting::util::Serialize16BE(0, p);
+		utki::serialize16BE(0, p);
 		p += 2;
 		
 		//Number of other records
-		ting::util::Serialize16BE(0, p);
+		utki::serialize16BE(0, p);
 		p += 2;
 		
 		//domain name
@@ -272,18 +249,18 @@ public:
 		*p = 0; //terminate labels sequence
 		++p;
 		
-		ting::util::Serialize16BE(r->recordType, p);
+		utki::serialize16BE(r->recordType, p);
 		p += 2;
 		
 		//Question class (1 means inet)
-		ting::util::Serialize16BE(1, p);
+		utki::serialize16BE(1, p);
 		p += 2;
 		
 		ASSERT(&*buf.begin() <= p && p <= &*buf.end());
 		ASSERT(size_t(p - &*buf.begin()) == packetSize);
 		
 		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.IPv4Host()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
-		size_t ret = this->socket.Send(ting::Buffer<std::uint8_t>(&*buf.begin(), packetSize), r->dns);
+		size_t ret = this->socket.Send(utki::Buf<std::uint8_t>(&*buf.begin(), packetSize), r->dns);
 		
 		ASSERT(ret == packetSize || ret == 0)
 		
@@ -319,7 +296,7 @@ public:
 	
 	//NOTE: call to this function should be protected by mutex
 	//This function will call the Resolver callback.
-	ParseResult ParseReplyFromDNS(dns::Resolver* r, const ting::Buffer<std::uint8_t> buf){
+	ParseResult ParseReplyFromDNS(dns::Resolver* r, const utki::Buf<std::uint8_t> buf){
 		TRACE(<< "dns::Resolver::ParseReplyFromDNS(): enter" << std::endl)
 #ifdef DEBUG
 		for(unsigned i = 0; i < buf.size(); ++i){
@@ -343,7 +320,7 @@ public:
 		p += 2;//skip ID
 		
 		{
-			std::uint16_t flags = ting::util::Deserialize16BE(p);
+			std::uint16_t flags = utki::deserialize16BE(p);
 			p += 2;
 			
 			if((flags & 0x8000) == 0){//we expect it to be a response, not query.
@@ -363,7 +340,7 @@ public:
 		}
 		
 		{//check number of questions
-			std::uint16_t numQuestions = ting::util::Deserialize16BE(p);
+			std::uint16_t numQuestions = utki::deserialize16BE(p);
 			p += 2;
 			
 			if(numQuestions != 1){
@@ -371,7 +348,7 @@ public:
 			}
 		}
 		
-		std::uint16_t numAnswers = ting::util::Deserialize16BE(p);
+		std::uint16_t numAnswers = utki::deserialize16BE(p);
 		p += 2;
 		ASSERT(buf.begin() <= p)
 		ASSERT(p <= (buf.end() - 1) || p == buf.end())
@@ -381,12 +358,12 @@ public:
 		}
 		
 		{
-//			std::uint16_t nscount = ting::util::Deserialize16BE(p);
+//			std::uint16_t nscount = utki::deserialize16BE(p);
 			p += 2;
 		}
 		
 		{
-//			std::uint16_t arcount = ting::util::Deserialize16BE(p);
+//			std::uint16_t arcount = utki::deserialize16BE(p);
 			p += 2;
 		}
 		
@@ -403,7 +380,7 @@ public:
 		
 		//check query type, we sent question type 1 (A query).
 		{
-			std::uint16_t type = ting::util::Deserialize16BE(p);
+			std::uint16_t type = utki::deserialize16BE(p);
 			p += 2;
 			
 			if(type != r->recordType){
@@ -413,7 +390,7 @@ public:
 		
 		//check query class, we sent question class 1 (inet).
 		{
-			std::uint16_t cls = ting::util::Deserialize16BE(p);
+			std::uint16_t cls = utki::deserialize16BE(p);
 			p += 2;
 			
 			if(cls != 1){
@@ -448,7 +425,7 @@ public:
 			if(buf.end() - p < 2){
 				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
 			}
-			std::uint16_t type = ting::util::Deserialize16BE(p);
+			std::uint16_t type = utki::deserialize16BE(p);
 			p += 2;
 			
 			if(buf.end() - p < 2){
@@ -466,7 +443,7 @@ public:
 			if(buf.end() - p < 2){
 				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
 			}
-			std::uint16_t dataLen = ting::util::Deserialize16BE(p);
+			std::uint16_t dataLen = utki::deserialize16BE(p);
 			p += 2;
 			
 			if(buf.end() - p < dataLen){
@@ -481,7 +458,7 @@ public:
 							return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
 						}
 
-						h = IPAddress::Host(ting::util::Deserialize32BE(p));
+						h = IPAddress::Host(utki::deserialize32BE(p));
 						break;
 					case D_DNSRecordAAAA: //'AAAA' type answer
 						if(dataLen < 2 * 8){
@@ -489,10 +466,10 @@ public:
 						}
 
 						h = IPAddress::Host(
-								ting::util::Deserialize32BE(p),
-								ting::util::Deserialize32BE(p + 4),
-								ting::util::Deserialize32BE(p + 8),
-								ting::util::Deserialize32BE(p + 12)
+								utki::deserialize32BE(p),
+								utki::deserialize32BE(p + 4),
+								utki::deserialize32BE(p + 8),
+								utki::deserialize32BE(p + 12)
 							);
 						break;
 					default:
@@ -513,7 +490,7 @@ public:
 	
 	
 	
-private:
+public:
 	LookupThread() :
 			waitSet(2),
 			timeMap1(&resolversByTime1),
@@ -647,9 +624,9 @@ private:
 			}
 
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-			ting::fs::FSFile f("/etc/resolv.conf");
+			papki::FSFile f("/etc/resolv.conf");
 			
-			std::vector<std::uint8_t> buf = f.LoadWholeFileIntoMemory(0xfff);//4kb max
+			std::vector<std::uint8_t> buf = f.loadWholeFileIntoMemory(0xfff);//4kb max
 			
 			for(std::uint8_t* p = &*buf.begin(); p != &*buf.end(); ++p){
 				std::uint8_t* start = p;
@@ -693,7 +670,7 @@ private:
 	}
 	
 	
-	void Run(){
+	void run()override{
 		TRACE(<< "DNS lookup thread started" << std::endl)
 		
 		//destroy previous thread if necessary
@@ -701,7 +678,7 @@ private:
 			//NOTE: if the thread was not started due to some error during adding its
 			//first DNS lookup request it is OK to call Join() on such not
 			//started thread.
-			this->prevThread->Join();
+			this->prevThread->join();
 			this->prevThread.reset();
 			TRACE(<< "Previous thread destroyed" << std::endl)
 		}
@@ -724,21 +701,21 @@ private:
 			}
 		}
 		
-		this->waitSet.Add(this->queue, ting::Waitable::READ);
-		this->waitSet.Add(this->socket, ting::Waitable::READ);
+		this->waitSet.add(this->queue, pogodi::Waitable::READ);
+		this->waitSet.add(this->socket, pogodi::Waitable::READ);
 		
 		while(!this->quitFlag){
 			std::uint32_t timeout;
 			{
 				std::lock_guard<decltype(this->mutex)> mutexGuard(this->mutex);
 				
-				if(this->socket.ErrorCondition()){
+				if(this->socket.errorCondition()){
 					this->isExiting = true;
 					this->RemoveAllResolvers();
 					break;//exit thread
 				}
 
-				if(this->socket.CanRead()){
+				if(this->socket.canRead()){
 					TRACE(<< "can read" << std::endl)
 					try{
 						std::array<std::uint8_t, 512> buf;//RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
@@ -748,7 +725,7 @@ private:
 						ASSERT(ret != 0)
 						ASSERT(ret <= buf.size())
 						if(ret >= 13){//at least there should be standard header and host name, otherwise ignore received UDP packet
-							std::uint16_t id = ting::util::Deserialize16BE(&*buf.begin());
+							std::uint16_t id = utki::deserialize16BE(&*buf.begin());
 							
 							T_IdIter i = this->idMap.find(id);
 							if(i != this->idMap.end()){
@@ -759,7 +736,7 @@ private:
 								std::string host = dns::ParseHostNameFromDNSPacket(p, &*buf.end());
 								
 								if(host == i->second->hostName){
-									ParseResult res = this->ParseReplyFromDNS(i->second, ting::Buffer<std::uint8_t>(&*buf.begin(), ret));
+									ParseResult res = this->ParseReplyFromDNS(i->second, utki::Buf<std::uint8_t>(&*buf.begin(), ret));
 									
 									if(res.result == ting::net::HostNameResolver::NO_SUCH_HOST && i->second->recordType == D_DNSRecordAAAA){
 										//try getting record type A
@@ -802,7 +779,7 @@ private:
 #if M_OS == M_OS_WINDOWS
 				if(this->sendList.size() != 0)
 #else
-				if(this->socket.CanWrite())
+				if(this->socket.canWrite())
 #endif
 				{
 					TRACE(<< "can write" << std::endl)
@@ -833,7 +810,7 @@ private:
 							}
 						}
 					}catch(ting::net::Exc& DEBUG_CODE(e)){
-						TRACE(<< "writing to a socket failed: " << e.What() << std::endl)
+						TRACE(<< "writing to a socket failed: " << e.what() << std::endl)
 						this->isExiting = true;
 						this->RemoveAllResolvers();
 						break;//exit thread
@@ -841,12 +818,12 @@ private:
 					
 					if(this->sendList.size() == 0){
 						//move socket to waiting for READ condition only
-						this->waitSet.Change(this->socket, ting::Waitable::READ);
+						this->waitSet.change(this->socket, pogodi::Waitable::READ);
 						TRACE(<< "socket wait mode changed to read only" << std::endl)
 					}
 				}
 				
-				std::uint32_t curTime = ting::timer::GetTicks();
+				std::uint32_t curTime = aika::getTicks();
 				{//check if time has warped around and it is necessary to swap time maps
 					bool isFirstHalf = curTime < (std::uint32_t(-1) / 2);
 					if(isFirstHalf && !this->lastTicksInFirstHalf){
@@ -894,7 +871,7 @@ private:
 			}
 			
 			//Make sure that ting::GetTicks is called at least 4 times per full time warp around cycle.
-			ting::util::ClampTop(timeout, std::uint32_t(-1) / 4);
+			utki::clampTop(timeout, std::uint32_t(-1) / 4);
 			
 //Workaround for strange bug on Win32 (reproduced on WinXP at least).
 //For some reason waiting for WRITE on UDP socket does not work. It hangs in the
@@ -906,27 +883,22 @@ private:
 #endif
 			
 			TRACE(<< "DNS thread: waiting with timeout = " << timeout << std::endl)
-			if(this->waitSet.WaitWithTimeout(timeout) == 0){
+			if(this->waitSet.waitWithTimeout(timeout) == 0){
 				//no Waitables triggered
 //				TRACE(<< "timeout hit" << std::endl)
 				continue;
 			}
 			
-			if(this->queue.CanRead()){
-				while(auto m = std::move(this->queue.PeekMsg())){
+			if(this->queue.canRead()){
+				while(auto m = std::move(this->queue.peekMsg())){
 					m();
 				}
 			}			
 		}//~while(!this->quitFlag)
 		
-		this->waitSet.Remove(this->socket);
-		this->waitSet.Remove(this->queue);
+		this->waitSet.remove(this->socket);
+		this->waitSet.remove(this->queue);
 		TRACE(<< "DNS lookup thread stopped" << std::endl)
-	}
-	
-public:
-	static std::unique_ptr<LookupThread> New(){
-		return std::unique_ptr<LookupThread>(new LookupThread());
 	}
 };
 
@@ -973,7 +945,7 @@ void HostNameResolver::Resolve_ts(const std::string& hostName, std::uint32_t tim
 	
 	//check if thread is created
 	if(!dns::thread){
-		dns::thread = dns::LookupThread::New();
+		dns::thread = utki::makeUnique<dns::LookupThread>();
 		needStartTheThread = true;
 	}else{
 		std::lock_guard<decltype(dns::thread->mutex)> mutexGuard(dns::thread->mutex);
@@ -986,7 +958,7 @@ void HostNameResolver::Resolve_ts(const std::string& hostName, std::uint32_t tim
 		//Thread is created, check if it is running.
 		//If there are active requests then the thread must be running.
 		if(dns::thread->isExiting == true){
-			std::unique_ptr<dns::LookupThread> t = dns::LookupThread::New();
+			auto t = utki::makeUnique<dns::LookupThread>();
 			t->prevThread = std::move(dns::thread);
 			dns::thread = std::move(t);
 			needStartTheThread = true;
@@ -1031,7 +1003,7 @@ void HostNameResolver::Resolve_ts(const std::string& hostName, std::uint32_t tim
 	}
 	
 	//calculate time
-	std::uint32_t curTime = ting::timer::GetTicks();
+	std::uint32_t curTime = aika::getTicks();
 	{
 		std::uint32_t endTime = curTime + timeoutMillis;
 //		TRACE(<< "HostNameResolver::Resolve_ts(): curTime = " << curTime << std::endl)
@@ -1067,7 +1039,7 @@ void HostNameResolver::Resolve_ts(const std::string& hostName, std::uint32_t tim
 		//socket to wait for sending mode.
 		if(dns::thread->sendList.size() == 1){
 			std::unique_ptr<dns::LookupThread>& t = dns::thread;
-			dns::thread->PushMessage(
+			dns::thread->pushMessage(
 					[&t](){
 						t->StartSending();
 					}
@@ -1077,7 +1049,7 @@ void HostNameResolver::Resolve_ts(const std::string& hostName, std::uint32_t tim
 		//Start the thread if we created the new one.
 		if(needStartTheThread){
 			dns::thread->lastTicksInFirstHalf = curTime < (std::uint32_t(-1) / 2);
-			dns::thread->Start();
+			dns::thread->start();
 			dns::thread->isExiting = false;//thread has just started, clear the exiting flag
 			TRACE(<< "HostNameResolver::Resolve_ts(): thread started" << std::endl)
 		}
@@ -1104,7 +1076,7 @@ bool HostNameResolver::Cancel_ts()noexcept{
 	bool ret = bool(dns::thread->RemoveResolver(this));
 	
 	if(dns::thread->resolversMap.size() == 0){
-		dns::thread->PushPreallocatedQuitMessage();
+		dns::thread->pushPreallocatedQuitMessage();
 	}
 	
 	if(!ret){
@@ -1125,8 +1097,8 @@ void HostNameResolver::CleanUp(){
 	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
 
 	if(dns::thread){
-		dns::thread->PushPreallocatedQuitMessage();
-		dns::thread->Join();
+		dns::thread->pushPreallocatedQuitMessage();
+		dns::thread->join();
 
 		ASSERT_INFO(dns::thread->resolversMap.size() == 0, "There are active DNS requests upon Sockets library de-initialization, all active DNS requests must be canceled before that.")
 

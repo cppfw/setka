@@ -1,30 +1,4 @@
-/* The MIT License:
-
-Copyright (c) 2009-2012 Ivan Gagis <igagis@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-// Home page: http://ting.googlecode.com
-
-
-
-#include "../config.hpp"
+#include <utki/config.hpp>
 
 #include "Lib.hpp"
 #include "Exc.hpp"
@@ -33,7 +7,7 @@ THE SOFTWARE. */
 
 #if M_OS == M_OS_WINDOWS
 #	include <winsock2.h>
-#	include "../windows.hpp"
+#	include <utki/windows.hpp>
 
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_UNIX || M_OS == M_OS_MACOSX
 #	include <signal.h>
@@ -48,7 +22,7 @@ using namespace ting::net;
 
 
 
-ting::IntrusiveSingleton<Lib>::T_Instance Lib::instance;
+utki::IntrusiveSingleton<Lib>::T_Instance Lib::instance;
 
 
 

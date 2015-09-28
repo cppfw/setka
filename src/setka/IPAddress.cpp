@@ -1,34 +1,9 @@
-/* The MIT License:
-
-Copyright (c) 2009-2013 Ivan Gagis <igagis@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-// Home page: http://ting.googlecode.com
-
-
 #include <sstream>
 
 #include "IPAddress.hpp"
 
-#include "../config.hpp"
-#include "../Buffer.hpp"
+#include <utki/config.hpp>
+#include <utki/Buf.hpp>
 
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
 #	include <arpa/inet.h>
@@ -208,14 +183,14 @@ IPAddress::IPAddress(const char* ip){
 		
 		char* dst;
 		for(dst = &*buf.begin(); *ip != ']'; ++dst, ++ip){
-			if(*ip == 0 || !ting::Buffer<char>(buf).Overlaps(dst + 1)){
+			if(*ip == 0 || !utki::Buf<char>(buf).overlaps(dst + 1)){
 				throw BadIPAddressFormatExc();
 			}
 			
 			*dst = *ip;
 		}
 		
-		ASSERT(ting::Buffer<char>(buf).Overlaps(dst))
+		ASSERT(utki::Buf<char>(buf).Overlaps(dst))
 		*dst = 0;//null-terminate
 				
 		this->host = Host::ParseIPv6(&*buf.begin());
@@ -229,14 +204,14 @@ IPAddress::IPAddress(const char* ip){
 			
 			char* dst;
 			for(dst = &*buf.begin(); *ip != ':' && *ip != 0; ++dst, ++ip){
-				if(!ting::Buffer<char>(buf).Overlaps(dst + 1)){
+				if(!utki::Buf<char>(buf).overlaps(dst + 1)){
 					throw BadIPAddressFormatExc();
 				}
 
 				*dst = *ip;
 			}
 
-			ASSERT(ting::Buffer<char>(buf).Overlaps(dst))
+			ASSERT(utki::Buf<char>(buf).Overlaps(dst))
 			*dst = 0;//null-terminate
 
 			this->host = Host::ParseIPv4(&*buf.begin());

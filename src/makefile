@@ -11,10 +11,13 @@ this_soname := $(shell cat $(prorab_this_dir)soname.txt)
 
 #Sources
 this_srcs :=
-this_srcs += papki/BufferFile.cpp
-this_srcs += papki/File.cpp
-this_srcs += papki/FSFile.cpp
-this_srcs += papki/MemoryFile.cpp
+this_srcs += setka/HostNameResolver.cpp
+this_srcs += setka/IPAddress.cpp
+this_srcs += setka/Lib.cpp
+this_srcs += setka/Socket.cpp
+this_srcs += setka/TCPServerSocket.cpp
+this_srcs += setka/TCPSocket.cpp
+this_srcs += setka/UDPSocket.cpp
 
 
 

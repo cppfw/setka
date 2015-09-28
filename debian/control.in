@@ -2,7 +2,8 @@ Source: libsetka
 Section: misc
 Priority: extra
 Maintainer: Ivan Gagis <igagis@gmail.com>
-Build-Depends: debhelper (>= 9), libc6-dev, prorab, libutki-dev, libpogodi-dev
+Build-Depends: debhelper (>= 9), libc6-dev, prorab,
+		libutki-dev, libpogodi-dev, libnitki-dev, libaika-dev, libpapki-dev
 Build-Depends-Indep: doxygen
 Standards-Version: 3.9.2
 
@@ -22,7 +23,8 @@ Description: debugging symbols for libsetka$(soname) package.
 Package: libsetka-dev
 Section: devel
 Architecture: all
-Depends: libutki-dev, libpogodi-dev, libsetka$(soname) (= ${binary:Version}), ${misc:Depends}
+Depends: libsetka$(soname) (= ${binary:Version}), ${misc:Depends},
+		libutki-dev, libpogodi-dev, libnitki-dev, libaika-dev, libpapki-dev
 Suggests: libsetka$(soname)-dbg (= ${binary:Version}), libsetka-doc
 Description: cross-platform C++ network library.
  Network library.

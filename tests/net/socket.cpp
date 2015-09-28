@@ -1,13 +1,13 @@
-#include "../../src/ting/timer.hpp"
-#include "../../src/ting/mt/Thread.hpp"
-#include "../../src/ting/mt/MsgThread.hpp"
-#include "../../src/ting/net/TCPSocket.hpp"
-#include "../../src/ting/net/TCPServerSocket.hpp"
-#include "../../src/ting/net/UDPSocket.hpp"
-#include "../../src/ting/WaitSet.hpp"
-#include "../../src/ting/Buffer.hpp"
-#include "../../src/ting/config.hpp"
-#include "../../src/ting/util.hpp"
+#include <aika/timer.hpp>
+#include <nitki/MsgThread.hpp>
+
+#include "../../src/setka/TCPSocket.hpp"
+#include "../../src/setka/TCPServerSocket.hpp"
+#include "../../src/setka/UDPSocket.hpp"
+
+#include <pogodi/WaitSet.hpp>
+#include <utki/Buf.hpp>
+#include <utki/config.hpp>
 
 #include "socket.hpp"
 
@@ -40,7 +40,7 @@ bool IsIPv6SupportedByOS(){
 
 namespace BasicClientServerTest{
 
-void SendAll(ting::net::TCPSocket& s, ting::Buffer<std::uint8_t> buf){
+void SendAll(ting::net::TCPSocket& s, utki::Buf<std::uint8_t> buf){
 	if(!s){
 		throw ting::net::Exc("TCPSocket::Send(): socket is not opened");
 	}
@@ -59,17 +59,16 @@ void SendAll(ting::net::TCPSocket& s, ting::Buffer<std::uint8_t> buf){
 			break;
 		}
 		//give 30ms to allow data from send buffer to be sent
-		ting::mt::Thread::Sleep(30);
+		nitki::Thread::sleep(30);
 	}
 
 	ASSERT(left == 0)
 }
 
 
-class ServerThread : public ting::mt::MsgThread{
+class ServerThread : public nitki::MsgThread{
 public:
-	//override
-	void Run(){
+	void run()override{
 		try{
 			ting::net::TCPServerSocket listenSock;
 
@@ -81,8 +80,8 @@ public:
 			ting::net::TCPSocket sock;
 			while(!sock && !this->quitFlag){
 				sock = listenSock.Accept();
-				ting::mt::Thread::Sleep(100);
-				if(auto m = this->queue.PeekMsg()){
+				nitki::Thread::sleep(100);
+				if(auto m = this->queue.peekMsg()){
 					m();
 				}
 			}
@@ -99,7 +98,7 @@ public:
 			data[3] = '4';
 			SendAll(sock, data);
 		}catch(ting::net::Exc &e){
-			ASSERT_INFO_ALWAYS(false, "Network error: " << e.What())
+			ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
 		}
 	}
 };
@@ -109,9 +108,9 @@ public:
 void Run(){
 	ServerThread serverThread;
 	
-	serverThread.Start();
+	serverThread.start();
 	
-	ting::mt::Thread::Sleep(1000);
+	nitki::Thread::sleep(1000);
 	
 	try{
 		ting::net::IPAddress ip("127.0.0.1", 13666);
@@ -122,7 +121,7 @@ void Run(){
 
 		ASSERT_ALWAYS(sock)
 
-		ting::mt::Thread::Sleep(1000);//give some time for socket to connect
+		nitki::Thread::sleep(1000);//give some time for socket to connect
 		
 		ASSERT_ALWAYS(sock.GetRemoteAddress().host.IPv4Host() == 0x7f000001)
 
@@ -130,13 +129,13 @@ void Run(){
 		unsigned bytesReceived = 0;
 		for(unsigned i = 0; i < 30; ++i){
 			ASSERT_ALWAYS(bytesReceived < 4)
-			bytesReceived += sock.Recv(ting::Buffer<std::uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
+			bytesReceived += sock.Recv(utki::Buf<std::uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
 			ASSERT_ALWAYS(bytesReceived <= 4)
 			if(bytesReceived == 4){
 				break;
 			}
 
-			ting::mt::Thread::Sleep(100);
+			nitki::Thread::sleep(100);
 		}
 		ASSERT_ALWAYS(bytesReceived == 4)
 		
@@ -145,10 +144,10 @@ void Run(){
 		ASSERT_ALWAYS(data[2] == '2')
 		ASSERT_ALWAYS(data[3] == '4')
 	}catch(ting::net::Exc &e){
-		ASSERT_INFO_ALWAYS(false, "Network error: " << e.What())
+		ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
 	}
 	
-	serverThread.Join();
+	serverThread.join();
 }
 
 }//~namespace
@@ -173,7 +172,7 @@ void Run(){
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	ting::net::TCPSocket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
-		ting::mt::Thread::Sleep(100);
+		nitki::Thread::sleep(100);
 		sockR = serverSock.Accept();
 	}
 
@@ -191,9 +190,9 @@ void Run(){
 		ASSERT_ALWAYS(addrR.host.IPv4Host() == 0x7f000001) //check that IP is 127.0.0.1
 	}
 
-	ting::WaitSet ws(2);
-	ws.Add(sockR, ting::Waitable::READ);
-	ws.Add(sockS, ting::Waitable::WRITE);
+	pogodi::WaitSet ws(2);
+	ws.add(sockR, pogodi::Waitable::READ);
+	ws.add(sockS, pogodi::Waitable::WRITE);
 
 
 	std::uint32_t scnt = 0;
@@ -205,13 +204,13 @@ void Run(){
 	unsigned recvBufBytes = 0;
 
 
-	std::uint32_t startTime = ting::timer::GetTicks();
+	std::uint32_t startTime = aika::getTicks();
 	
-	while(ting::timer::GetTicks() - startTime < 5000){ //5 seconds
-		std::array<ting::Waitable*, 2> triggered;
+	while(aika::getTicks() - startTime < 5000){ //5 seconds
+		std::array<pogodi::Waitable*, 2> triggered;
 
-		unsigned numTriggered = ws.WaitWithTimeout(1000, triggered);
-//		unsigned numTriggered = ws.Wait(triggered);
+		unsigned numTriggered = ws.waitWithTimeout(1000, triggered);
+//		unsigned numTriggered = ws.wait(triggered);
 
 		ASSERT_ALWAYS(numTriggered <= 2)
 
@@ -234,9 +233,9 @@ void Run(){
 				ASSERT_ALWAYS(triggered[i] != &sockR)
 
 //				TRACE(<< "SendDataContinuously::Run(): sockS triggered" << std::endl)
-				ASSERT_ALWAYS(!sockS.CanRead())
-				ASSERT_ALWAYS(!sockS.ErrorCondition())
-				ASSERT_ALWAYS(sockS.CanWrite())
+				ASSERT_ALWAYS(!sockS.canRead())
+				ASSERT_ALWAYS(!sockS.errorCondition())
+				ASSERT_ALWAYS(sockS.canWrite())
 
 				ASSERT_ALWAYS(bytesSent <= sendBuffer.size())
 
@@ -253,7 +252,7 @@ void Run(){
 					std::uint8_t* p = &*sendBuffer.begin();
 					for(; p != &*sendBuffer.end(); p += sizeof(std::uint32_t)){
 						ASSERT_INFO_ALWAYS(p < (&*sendBuffer.end() - (sizeof(std::uint32_t) - 1)), "p = " << p << " sendBuffer.End() = " << &*sendBuffer.end())
-						ting::util::Serialize32LE(scnt, p);
+						utki::serialize32LE(scnt, p);
 						++scnt;
 					}
 					ASSERT_ALWAYS(p == &*sendBuffer.end())
@@ -262,25 +261,25 @@ void Run(){
 				ASSERT_ALWAYS(sendBuffer.size() > 0)
 
 				try{
-					unsigned res = sockS.Send(ting::Buffer<std::uint8_t>(&*sendBuffer.begin() + bytesSent, sendBuffer.size() - bytesSent));
+					unsigned res = sockS.Send(utki::Buf<std::uint8_t>(&*sendBuffer.begin() + bytesSent, sendBuffer.size() - bytesSent));
 					bytesSent += res;
 					if(res == 0){
 						ASSERT_ALWAYS(res > 0) //since it was CanWrite() we should be able to write at least something
 					}else{
 //						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
 					}
-					ASSERT_ALWAYS(!sockS.CanWrite())
+					ASSERT_ALWAYS(!sockS.canWrite())
 				}catch(ting::net::Exc& e){
-					ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.What())
+					ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
 				}
 				ASSERT_ALWAYS(bytesSent <= sendBuffer.size())
 			}else if(triggered[i] == &sockR){
 				ASSERT_ALWAYS(triggered[i] != &sockS)
 
 //				TRACE(<< "SendDataContinuously::Run(): sockR triggered" << std::endl)
-				ASSERT_ALWAYS(sockR.CanRead())
-				ASSERT_ALWAYS(!sockR.ErrorCondition())
-				ASSERT_ALWAYS(!sockR.CanWrite())
+				ASSERT_ALWAYS(sockR.canRead())
+				ASSERT_ALWAYS(!sockR.errorCondition())
+				ASSERT_ALWAYS(!sockR.canWrite())
 
 				while(true){
 					std::array<std::uint8_t, 0x2000> buf; //8kb buffer
@@ -288,7 +287,7 @@ void Run(){
 					try{
 						numBytesReceived = sockR.Recv(buf);
 					}catch(ting::net::Exc& e){
-						ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.What())
+						ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 					}
 					ASSERT_ALWAYS(numBytesReceived <= buf.size())
 //					TRACE(<< "SendDataContinuously::Run(): " << numBytesReceived << " bytes received" << std::endl)
@@ -306,7 +305,7 @@ void Run(){
 
 						if(recvBufBytes == recvBuffer.size()){
 							recvBufBytes = 0;
-							std::uint32_t num = ting::util::Deserialize32LE(recvBuffer.begin());
+							std::uint32_t num = utki::deserialize32LE(recvBuffer.begin());
 							ASSERT_INFO_ALWAYS(
 									rcnt == num,
 									"num = " << num << " rcnt = " << rcnt
@@ -327,8 +326,8 @@ void Run(){
 		}//~for(triggered)
 	}//~while
 
-	ws.Remove(sockS);
-	ws.Remove(sockR);
+	ws.remove(sockS);
+	ws.remove(sockR);
 }
 
 }//~namespace
@@ -353,7 +352,7 @@ void Run(){
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	ting::net::TCPSocket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
-		ting::mt::Thread::Sleep(100);
+		nitki::Thread::sleep(100);
 		sockR = serverSock.Accept();
 	}
 
@@ -367,14 +366,14 @@ void Run(){
 	std::uint8_t rcnt = 0;
 
 
-	std::uint32_t startTime = ting::timer::GetTicks();
+	std::uint32_t startTime = aika::getTicks();
 
-	while(ting::timer::GetTicks() - startTime < 5000){ //5 seconds
+	while(aika::getTicks() - startTime < 5000){ //5 seconds
 
 		//SEND
 
 		try{
-			ting::Buffer<std::uint8_t> buf(&scnt, 1);
+			utki::Buf<std::uint8_t> buf(&scnt, 1);
 			unsigned res = sockS.Send(buf);
 			ASSERT_ALWAYS(res <= 1)
 			if(res == 1){
@@ -383,7 +382,7 @@ void Run(){
 				ASSERT_ALWAYS(false)
 			}
 		}catch(ting::net::Exc& e){
-			ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.What())
+			ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
 		}
 
 
@@ -395,7 +394,7 @@ void Run(){
 			try{
 				numBytesReceived = sockR.Recv(buf);
 			}catch(ting::net::Exc& e){
-				ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.What())
+				ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 			}
 			ASSERT_ALWAYS(numBytesReceived <= buf.size())
 //			TRACE(<< "SendDataContinuously::Run(): " << numBytesReceived << " bytes received" << std::endl)
@@ -470,7 +469,7 @@ void Run(){
 	try{
 		recvSock.Open(13666);
 	}catch(ting::net::Exc &e){
-		ASSERT_INFO_ALWAYS(false, e.What())
+		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 
 	ASSERT_ALWAYS(recvSock.GetLocalPort() == 13666)
@@ -499,11 +498,11 @@ void Run(){
 				break;
 			}
 			
-			ting::mt::Thread::Sleep(100);
+			nitki::Thread::sleep(100);
 		}
 		ASSERT_ALWAYS(bytesSent == 4)
 	}catch(ting::net::Exc &e){
-		ASSERT_INFO_ALWAYS(false, e.What())
+		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 
 	try{
@@ -523,7 +522,7 @@ void Run(){
 				break;
 			}
 			
-			ting::mt::Thread::Sleep(100);
+			nitki::Thread::sleep(100);
 		}
 		ASSERT_ALWAYS(bytesReceived == 4)
 		ASSERT_ALWAYS(buf[0] == '0')
@@ -531,7 +530,7 @@ void Run(){
 		ASSERT_ALWAYS(buf[2] == '2')
 		ASSERT_ALWAYS(buf[3] == '4')
 	}catch(ting::net::Exc& e){
-		ASSERT_INFO_ALWAYS(false, e.What())
+		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 }
 
@@ -549,11 +548,11 @@ void Run(){
 		try{
 			sendSock.Open();
 
-			ting::WaitSet ws(1);
+			pogodi::WaitSet ws(1);
 
-			ws.Add(sendSock, ting::Waitable::READ_AND_WRITE);
+			ws.add(sendSock, pogodi::Waitable::READ_AND_WRITE);
 
-			if(ws.WaitWithTimeout(3000) == 0){
+			if(ws.waitWithTimeout(3000) == 0){
 				//if timeout was hit
 //NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
 #if M_OS == M_OS_WINDOWS
@@ -563,13 +562,13 @@ void Run(){
 #	endif
 #endif
 			}else{
-				ASSERT_ALWAYS(sendSock.CanWrite())
-				ASSERT_ALWAYS(!sendSock.CanRead())
+				ASSERT_ALWAYS(sendSock.canWrite())
+				ASSERT_ALWAYS(!sendSock.canRead())
 			}
 
-			ws.Remove(sendSock);
+			ws.remove(sendSock);
 		}catch(ting::net::Exc &e){
-			ASSERT_INFO_ALWAYS(false, e.What())
+			ASSERT_INFO_ALWAYS(false, e.what())
 		}
 	}catch(std::exception& e){
 		ASSERT_INFO_ALWAYS(false, e.what())
@@ -729,8 +728,8 @@ void Run(){
 			ASSERT_ALWAYS(ip.host.Quad3() == 0x7008900a)
 		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(false)
-		}catch(ting::Exc& e){
-			ASSERT_INFO_ALWAYS(false, "exception caught: " << e.What())
+		}catch(utki::Exc& e){
+			ASSERT_INFO_ALWAYS(false, "exception caught: " << e.what())
 		}catch(...){
 			ASSERT_ALWAYS(false)
 		}

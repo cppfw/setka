@@ -1,31 +1,6 @@
-/* The MIT License:
-
-Copyright (c) 2009-2013 Ivan Gagis <igagis@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-// Home page: http://ting.googlecode.com
-
-
-
 #include "TCPSocket.hpp"
-#include "../util.hpp"
+
+#include <cstring>
 
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 #	include <netinet/in.h>
@@ -66,7 +41,7 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 
 	this->SetNonBlockingMode();
 
-	this->ClearAllReadinessFlags();
+	this->clearAllReadinessFlags();
 
 	//Connecting to remote host
 	sockaddr_storage sockAddr;
@@ -148,12 +123,12 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 
 
 
-size_t TCPSocket::Send(ting::Buffer<const std::uint8_t> buf){
+size_t TCPSocket::Send(utki::Buf<const std::uint8_t> buf){
 	if(!*this){
 		throw net::Exc("TCPSocket::Send(): socket is not opened");
 	}
 
-	this->ClearCanWriteFlag();
+	this->clearCanWriteFlag();
 
 #if M_OS == M_OS_WINDOWS
 	int len;
@@ -205,11 +180,11 @@ size_t TCPSocket::Send(ting::Buffer<const std::uint8_t> buf){
 
 
 
-size_t TCPSocket::Recv(ting::Buffer<std::uint8_t> buf){
+size_t TCPSocket::Recv(utki::Buf<std::uint8_t> buf){
 	//the 'can read' flag shall be cleared even if this function fails to avoid subsequent
 	//calls to Recv() because it indicates that there's activity.
 	//So, do it at the beginning of the function.
-	this->ClearCanReadFlag();
+	this->clearCanReadFlag();
 
 	if(!*this){
 		throw net::Exc("TCPSocket::Recv(): socket is not opened");

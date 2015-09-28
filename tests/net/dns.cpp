@@ -1,8 +1,9 @@
 #include "dns.hpp"
 
-#include "../../src/ting/net/HostNameResolver.hpp"
-#include "../../src/ting/mt/Thread.hpp"
-#include "../../src/ting/mt/Semaphore.hpp"
+#include "../../src/setka/HostNameResolver.hpp"
+
+#include <nitki/Thread.hpp>
+#include <nitki/Semaphore.hpp>
 
 #include <memory>
 #include <vector>
@@ -13,14 +14,14 @@ class Resolver : public ting::net::HostNameResolver{
 	
 public:
 	
-	Resolver(ting::mt::Semaphore& sema, const std::string& hostName = std::string()) :
+	Resolver(nitki::Semaphore& sema, const std::string& hostName = std::string()) :
 			sema(sema),
 			hostName(hostName)
 	{}
 	
 	ting::net::IPAddress::Host ip;
 	
-	ting::mt::Semaphore& sema;
+	nitki::Semaphore& sema;
 	
 	E_Result result;
 	
@@ -39,13 +40,13 @@ public:
 		
 		this->ip = ip;
 		
-		this->sema.Signal();
+		this->sema.signal();
 	}
 };
 
 void Run(){
 	{//test one resolve at a time
-		ting::mt::Semaphore sema;
+		nitki::Semaphore sema;
 
 		Resolver r(sema);
 
@@ -53,7 +54,7 @@ void Run(){
 
 		TRACE(<< "TestSimpleDNSLookup::Run(): waiting on semaphore" << std::endl)
 		
-		if(!sema.Wait(11000)){
+		if(!sema.wait(11000)){
 			ASSERT_ALWAYS(false)
 		}
 
@@ -66,7 +67,7 @@ void Run(){
 	}
 	
 	{//test several resolves at a time
-		ting::mt::Semaphore sema;
+		nitki::Semaphore sema;
 
 		typedef std::vector<std::unique_ptr<Resolver> > T_ResolverList;
 		typedef T_ResolverList::iterator T_ResolverIter;
@@ -84,7 +85,7 @@ void Run(){
 		}
 		
 		for(unsigned i = 0; i < r.size(); ++i){
-			if(!sema.Wait(11000)){
+			if(!sema.wait(11000)){
 				ASSERT_ALWAYS(false)
 			}
 		}
@@ -108,7 +109,7 @@ class Resolver : public ting::net::HostNameResolver{
 	
 public:
 	
-	Resolver(ting::mt::Semaphore& sema) :
+	Resolver(nitki::Semaphore& sema) :
 			sema(sema)
 	{}
 	
@@ -116,7 +117,7 @@ public:
 	
 	ting::net::IPAddress::Host ip;
 	
-	ting::mt::Semaphore& sema;
+	nitki::Semaphore& sema;
 	
 	E_Result result;
 	
@@ -134,19 +135,19 @@ public:
 			ASSERT_ALWAYS(this->host == "ya.ru")
 			this->result = result;
 			this->ip = ip;
-			this->sema.Signal();
+			this->sema.signal();
 		}
 	}
 };
 
 void Run(){
-	ting::mt::Semaphore sema;
+	nitki::Semaphore sema;
 	
 	Resolver r(sema);
 	
 	r.Resolve_ts("rfesfdf.ru", 3000);
 	
-	if(!sema.Wait(8000)){
+	if(!sema.wait(8000)){
 		ASSERT_ALWAYS(false)
 	}
 	
@@ -180,11 +181,11 @@ void Run(){
 	
 	r.Resolve_ts("rfesweefdqfdf.ru", 3000, ting::net::IPAddress("1.2.3.4", 53));
 	
-	ting::mt::Thread::Sleep(500);
+	nitki::Thread::sleep(500);
 	
 	bool res = r.Cancel_ts();
 	
-	ting::mt::Thread::Sleep(3000);
+	nitki::Thread::sleep(3000);
 	
 	ASSERT_ALWAYS(res)
 	

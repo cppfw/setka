@@ -1,5 +1,5 @@
-#include "../../src/ting/debug.hpp"
-#include "../../src/ting/net/Lib.hpp"
+#include <utki/debug.hpp>
+#include "../../src/setka/Lib.hpp"
 
 #include "dns.hpp"
 #include "socket.hpp"

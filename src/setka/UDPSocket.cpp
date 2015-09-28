@@ -1,6 +1,7 @@
 #include "UDPSocket.hpp"
 
 #include <limits>
+#include <cstring>
 
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 #	include <netinet/in.h>
@@ -147,17 +148,17 @@ void UDPSocket::Open(std::uint16_t port){
 #	error "Unsupported OS"
 #endif
 
-	this->ClearAllReadinessFlags();
+	this->clearAllReadinessFlags();
 }
 
 
 
-size_t UDPSocket::Send(ting::Buffer<const std::uint8_t> buf, const IPAddress& destinationIP){
+size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& destinationIP){
 	if(!*this){
 		throw net::Exc("UDPSocket::Send(): socket is not opened");
 	}
 
-	this->ClearCanWriteFlag();
+	this->clearCanWriteFlag();
 
 	sockaddr_storage sockAddr;
 	socklen_t sockAddrLen;
@@ -268,7 +269,7 @@ size_t UDPSocket::Send(ting::Buffer<const std::uint8_t> buf, const IPAddress& de
 
 
 
-size_t UDPSocket::Recv(ting::Buffer<std::uint8_t> buf, IPAddress &out_SenderIP){
+size_t UDPSocket::Recv(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 	if(!*this){
 		throw net::Exc("UDPSocket::Recv(): socket is not opened");
 	}
@@ -277,7 +278,7 @@ size_t UDPSocket::Recv(ting::Buffer<std::uint8_t> buf, IPAddress &out_SenderIP){
 	//This is to avoid subsequent calls to Recv() because of it indicating
 	//that there's an activity.
 	//So, do it at the beginning of the function.
-	this->ClearCanReadFlag();
+	this->clearCanReadFlag();
 
 	sockaddr_storage sockAddr;
 
