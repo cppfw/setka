@@ -11,7 +11,7 @@ using namespace setka;
 
 
 
-void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t queueLength){
+void TCPServerSocket::open(std::uint16_t port, bool disableNaggle, std::uint16_t queueLength){
 	if(*this){
 		throw setka::Exc("TCPServerSocket::Open(): socket already opened");
 	}
@@ -141,7 +141,7 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 
 
 
-TCPSocket TCPServerSocket::Accept(){
+TCPSocket TCPServerSocket::accept(){
 	if(!*this){
 		throw setka::Exc("TCPServerSocket::Accept(): the socket is not opened");
 	}
@@ -191,7 +191,7 @@ TCPSocket TCPServerSocket::Accept(){
 
 #if M_OS == M_OS_WINDOWS
 //override
-void TCPServerSocket::SetWaitingEvents(std::uint32_t flagsToWaitFor){
+void TCPServerSocket::setWaitingEvents(std::uint32_t flagsToWaitFor){
 	if(flagsToWaitFor != 0 && flagsToWaitFor != Waitable::READ){
 		throw setka::Exc("TCPServerSocket::SetWaitingEvents(): only Waitable::READ flag allowed");
 	}

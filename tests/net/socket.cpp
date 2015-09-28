@@ -72,14 +72,14 @@ public:
 		try{
 			setka::TCPServerSocket listenSock;
 
-			listenSock.Open(13666);//start listening
+			listenSock.open(13666);//start listening
 
 			ASSERT_ALWAYS(listenSock.getLocalPort() == 13666)
 
 			//Accept some connection
 			setka::TCPSocket sock;
 			while(!sock && !this->quitFlag){
-				sock = listenSock.Accept();
+				sock = listenSock.accept();
 				nitki::Thread::sleep(100);
 				if(auto m = this->queue.peekMsg()){
 					m();
@@ -159,7 +159,7 @@ namespace SendDataContinuouslyWithWaitSet{
 void Run(){
 	setka::TCPServerSocket serverSock;
 
-	serverSock.Open(13666);
+	serverSock.open(13666);
 
 
 	setka::TCPSocket sockS;
@@ -173,7 +173,7 @@ void Run(){
 	setka::TCPSocket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
 		nitki::Thread::sleep(100);
-		sockR = serverSock.Accept();
+		sockR = serverSock.accept();
 	}
 
 	ASSERT_ALWAYS(sockS)
@@ -339,7 +339,7 @@ namespace SendDataContinuously{
 void Run(){
 	setka::TCPServerSocket serverSock;
 
-	serverSock.Open(13666);
+	serverSock.open(13666);
 
 
 	setka::TCPSocket sockS;
@@ -353,7 +353,7 @@ void Run(){
 	setka::TCPSocket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
 		nitki::Thread::sleep(100);
-		sockR = serverSock.Accept();
+		sockR = serverSock.accept();
 	}
 
 	ASSERT_ALWAYS(sockS)

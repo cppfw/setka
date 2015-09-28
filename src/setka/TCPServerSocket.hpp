@@ -60,7 +60,7 @@ public:
 	 * @param disableNaggle - enable/disable Naggle algorithm for all accepted connections.
 	 * @param queueLength - the maximum length of the queue of pending connections.
 	 */
-	void Open(std::uint16_t port, bool disableNaggle = false, std::uint16_t queueLength = 50);
+	void open(std::uint16_t port, bool disableNaggle = false, std::uint16_t queueLength = 50);
 	
 	
 	
@@ -75,13 +75,13 @@ public:
 	 *         - if the socket is valid then it is a newly connected socket, further it can be used to send or receive data.
 	 *         - if the socket is invalid then there was no any connections pending, so no connection was accepted.
 	 */
-	TCPSocket Accept();
+	TCPSocket accept();
 
 
 
 #if M_OS == M_OS_WINDOWS
 private:
-	void SetWaitingEvents(std::uint32_t flagsToWaitFor)override;
+	void setWaitingEvents(std::uint32_t flagsToWaitFor)override;
 #endif
 };//~class TCPServerSocket
 
