@@ -1,0 +1,35 @@
+Source: libsetka
+Section: misc
+Priority: extra
+Maintainer: Ivan Gagis <igagis@gmail.com>
+Build-Depends: debhelper (>= 9), libc6-dev, prorab, libutki-dev, libpogodi-dev
+Build-Depends-Indep: doxygen
+Standards-Version: 3.9.2
+
+Package: libsetka$(soname)
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: cross-platform C++ network library.
+ Network library.
+
+Package: libsetka$(soname)-dbg
+Section: libdevel
+Architecture: any
+Depends: libsetka$(soname) (= ${binary:Version}), ${misc:Depends}
+Description: debugging symbols for libsetka$(soname) package.
+
+Package: libsetka-dev
+Section: devel
+Architecture: all
+Depends: libutki-dev, libpogodi-dev, libsetka$(soname) (= ${binary:Version}), ${misc:Depends}
+Suggests: libsetka$(soname)-dbg (= ${binary:Version}), libsetka-doc
+Description: cross-platform C++ network library.
+ Network library.
+
+Package: libsetka-doc
+Section: devel
+Architecture: all
+Depends: ${misc:Depends}
+Description: documentation for libsetka - network library.
+ For more details see description to libsetka-dev package.
