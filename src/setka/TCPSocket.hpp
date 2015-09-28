@@ -61,7 +61,7 @@ public:
 	 * @param ip - IP address.
 	 * @param disableNaggle - enable/disable Naggle algorithm.
 	 */
-	void Open(const IPAddress& ip, bool disableNaggle = false);
+	void open(const IPAddress& ip, bool disableNaggle = false);
 
 
 
@@ -72,7 +72,7 @@ public:
 	 * @param buf - pointer to the buffer with data to send.
 	 * @return the number of bytes actually sent.
 	 */
-	size_t Send(utki::Buf<const std::uint8_t> buf);
+	size_t send(utki::Buf<const std::uint8_t> buf);
 
 
 
@@ -86,7 +86,7 @@ public:
 	 * @param buf - pointer to the buffer where to put received data.
 	 * @return the number of bytes written to the buffer.
 	 */
-	size_t Recv(utki::Buf<std::uint8_t> buf);
+	size_t recieve(utki::Buf<std::uint8_t> buf);
 
 	
 	
@@ -94,7 +94,7 @@ public:
 	 * @brief Get local IP address and port.
 	 * @return IP address and port of the local socket.
 	 */
-	IPAddress GetLocalAddress();
+	IPAddress getLocalAddress();
 	
 	
 	
@@ -102,13 +102,13 @@ public:
 	 * @brief Get remote IP address and port.
 	 * @return IP address and port of the peer socket.
 	 */
-	IPAddress GetRemoteAddress();
+	IPAddress getRemoteAddress();
 
 
 
 #if M_OS == M_OS_WINDOWS
 private:
-	void SetWaitingEvents(std::uint32_t flagsToWaitFor)override;
+	void setWaitingEvents(std::uint32_t flagsToWaitFor)override;
 #endif
 
 };//~class TCPSocket

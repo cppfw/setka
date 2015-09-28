@@ -51,7 +51,7 @@ void SendAll(setka::TCPSocket& s, utki::Buf<std::uint8_t> buf){
 	size_t offset = 0;
 
 	while(true){
-		int res = s.Send(decltype(buf)(&*buf.begin() + offset, buf.size() - offset));
+		int res = s.send(decltype(buf)(&*buf.begin() + offset, buf.size() - offset));
 		DEBUG_CODE(left -= res;)
 		ASSERT(left >= 0)
 		offset += res;
@@ -88,8 +88,8 @@ public:
 
 			ASSERT_ALWAYS(sock)
 
-			ASSERT_ALWAYS(sock.GetLocalAddress().host.getIPv4Host() == 0x7f000001)
-			ASSERT_ALWAYS(sock.GetRemoteAddress().host.getIPv4Host() == 0x7f000001)
+			ASSERT_ALWAYS(sock.getLocalAddress().host.getIPv4Host() == 0x7f000001)
+			ASSERT_ALWAYS(sock.getRemoteAddress().host.getIPv4Host() == 0x7f000001)
 
 			std::array<std::uint8_t, 4> data;
 			data[0] = '0';
@@ -117,19 +117,19 @@ void Run(){
 
 		setka::TCPSocket sock;
 
-		sock.Open(ip);
+		sock.open(ip);
 
 		ASSERT_ALWAYS(sock)
 
 		nitki::Thread::sleep(1000);//give some time for socket to connect
 		
-		ASSERT_ALWAYS(sock.GetRemoteAddress().host.getIPv4Host() == 0x7f000001)
+		ASSERT_ALWAYS(sock.getRemoteAddress().host.getIPv4Host() == 0x7f000001)
 
 		std::array<std::uint8_t, 4> data;
 		unsigned bytesReceived = 0;
 		for(unsigned i = 0; i < 30; ++i){
 			ASSERT_ALWAYS(bytesReceived < 4)
-			bytesReceived += sock.Recv(utki::Buf<std::uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
+			bytesReceived += sock.recieve(utki::Buf<std::uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
 			ASSERT_ALWAYS(bytesReceived <= 4)
 			if(bytesReceived == 4){
 				break;
@@ -165,7 +165,7 @@ void Run(){
 	setka::TCPSocket sockS;
 	{
 		setka::IPAddress ip("127.0.0.1", 13666);
-		sockS.Open(ip);
+		sockS.open(ip);
 	}
 
 	//Accept connection
@@ -182,8 +182,8 @@ void Run(){
 	//Here we have 2 sockets sockS and sockR
 
 	{
-		setka::IPAddress addrS = sockS.GetRemoteAddress();
-		setka::IPAddress addrR = sockR.GetRemoteAddress();
+		setka::IPAddress addrS = sockS.getRemoteAddress();
+		setka::IPAddress addrR = sockR.getRemoteAddress();
 //		TRACE(<< "SendDataContinuously::Run(): addrS = " << std::hex << addrS.host << ":" << addrS.port << std::dec << std::endl)
 //		TRACE(<< "SendDataContinuously::Run(): addrR = " << std::hex << addrR.host << ":" << addrR.port << std::dec << std::endl)
 		ASSERT_ALWAYS(addrS.host.getIPv4Host() == 0x7f000001) //check that IP is 127.0.0.1
@@ -261,7 +261,7 @@ void Run(){
 				ASSERT_ALWAYS(sendBuffer.size() > 0)
 
 				try{
-					unsigned res = sockS.Send(utki::Buf<std::uint8_t>(&*sendBuffer.begin() + bytesSent, sendBuffer.size() - bytesSent));
+					unsigned res = sockS.send(utki::Buf<std::uint8_t>(&*sendBuffer.begin() + bytesSent, sendBuffer.size() - bytesSent));
 					bytesSent += res;
 					if(res == 0){
 						ASSERT_ALWAYS(res > 0) //since it was CanWrite() we should be able to write at least something
@@ -285,7 +285,7 @@ void Run(){
 					std::array<std::uint8_t, 0x2000> buf; //8kb buffer
 					unsigned numBytesReceived;
 					try{
-						numBytesReceived = sockR.Recv(buf);
+						numBytesReceived = sockR.recieve(buf);
 					}catch(setka::Exc& e){
 						ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 					}
@@ -345,7 +345,7 @@ void Run(){
 	setka::TCPSocket sockS;
 	{
 		setka::IPAddress ip("127.0.0.1", 13666);
-		sockS.Open(ip);
+		sockS.open(ip);
 	}
 
 	//Accept connection
@@ -374,7 +374,7 @@ void Run(){
 
 		try{
 			utki::Buf<std::uint8_t> buf(&scnt, 1);
-			unsigned res = sockS.Send(buf);
+			unsigned res = sockS.send(buf);
 			ASSERT_ALWAYS(res <= 1)
 			if(res == 1){
 				++scnt;
@@ -392,7 +392,7 @@ void Run(){
 			std::array<std::uint8_t, 0x2000> buf; //8kb buffer
 			unsigned numBytesReceived;
 			try{
-				numBytesReceived = sockR.Recv(buf);
+				numBytesReceived = sockR.recieve(buf);
 			}catch(setka::Exc& e){
 				ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 			}

@@ -12,7 +12,7 @@ using namespace setka;
 
 
 
-void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
+void TCPSocket::open(const IPAddress& ip, bool disableNaggle){
 	if(*this){
 		throw setka::Exc("TCPSocket::Open(): socket already opened");
 	}
@@ -123,7 +123,7 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 
 
 
-size_t TCPSocket::Send(utki::Buf<const std::uint8_t> buf){
+size_t TCPSocket::send(utki::Buf<const std::uint8_t> buf){
 	if(!*this){
 		throw setka::Exc("TCPSocket::Send(): socket is not opened");
 	}
@@ -137,7 +137,7 @@ size_t TCPSocket::Send(utki::Buf<const std::uint8_t> buf){
 #endif
 
 	while(true){
-		len = send(
+		len = ::send(
 				this->socket,
 				reinterpret_cast<const char*>(&*buf.begin()),
 				buf.size(),
@@ -180,7 +180,7 @@ size_t TCPSocket::Send(utki::Buf<const std::uint8_t> buf){
 
 
 
-size_t TCPSocket::Recv(utki::Buf<std::uint8_t> buf){
+size_t TCPSocket::recieve(utki::Buf<std::uint8_t> buf){
 	//the 'can read' flag shall be cleared even if this function fails to avoid subsequent
 	//calls to Recv() because it indicates that there's activity.
 	//So, do it at the beginning of the function.
@@ -197,7 +197,7 @@ size_t TCPSocket::Recv(utki::Buf<std::uint8_t> buf){
 #endif
 
 	while(true){
-		len = recv(
+		len = ::recv(
 				this->socket,
 				reinterpret_cast<char*>(&*buf.begin()),
 				buf.size(),
@@ -278,7 +278,7 @@ IPAddress CreateIPAddressFromSockaddrStorage(const sockaddr_storage& addr){
 
 
 
-IPAddress TCPSocket::GetLocalAddress(){
+IPAddress TCPSocket::getLocalAddress(){
 	if(!*this){
 		throw setka::Exc("Socket::GetLocalAddress(): socket is not valid");
 	}
@@ -300,7 +300,7 @@ IPAddress TCPSocket::GetLocalAddress(){
 
 
 
-IPAddress TCPSocket::GetRemoteAddress(){
+IPAddress TCPSocket::getRemoteAddress(){
 	if(!*this){
 		throw setka::Exc("TCPSocket::GetRemoteAddress(): socket is not valid");
 	}
