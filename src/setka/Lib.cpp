@@ -18,7 +18,7 @@
 
 
 
-using namespace ting::net;
+using namespace setka;
 
 
 
@@ -31,7 +31,7 @@ Lib::Lib(){
 	WORD versionWanted = MAKEWORD(2,2);
 	WSADATA wsaData;
 	if(WSAStartup(versionWanted, &wsaData) != 0 ){
-		throw net::Exc("SocketLib::SocketLib(): Winsock 2.2 initialization failed");
+		throw setka::Exc("SocketLib::SocketLib(): Winsock 2.2 initialization failed");
 	}
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_UNIX || M_OS == M_OS_MACOSX
 	// SIGPIPE is generated when a remote socket is closed

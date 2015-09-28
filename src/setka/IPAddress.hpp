@@ -11,8 +11,7 @@
 
 
 
-namespace ting{
-namespace net{
+namespace setka{
 
 
 
@@ -27,7 +26,7 @@ public:
 	 * This exception is thrown when trying to parse and IP address from string and
 	 * that string does not contain a valid IP address.
 	 */
-	class BadIPAddressFormatExc : public ting::net::Exc{
+	class BadIPAddressFormatExc : public setka::Exc{
 	public:
 		BadIPAddressFormatExc(){}
 	};
@@ -342,5 +341,4 @@ public:
 
 
 
-}//~namespace
 }//~namespace

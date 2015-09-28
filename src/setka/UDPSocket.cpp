@@ -9,13 +9,13 @@
 
 
 
-using namespace ting::net;
+using namespace setka;
 
 
 
 void UDPSocket::Open(std::uint16_t port){
 	if(*this){
-		throw net::Exc("UDPSocket::Open(): the socket is already opened");
+		throw setka::Exc("UDPSocket::Open(): the socket is already opened");
 	}
 
 #if M_OS == M_OS_WINDOWS
@@ -34,7 +34,7 @@ void UDPSocket::Open(std::uint16_t port){
 #if M_OS == M_OS_WINDOWS
 			this->CloseEventForWaitable();
 #endif
-			throw net::Exc("TCPServerSocket::Open(): Couldn't create socket");
+			throw setka::Exc("TCPServerSocket::Open(): Couldn't create socket");
 		}
 
 		this->ipv4 = true;
@@ -66,7 +66,7 @@ void UDPSocket::Open(std::uint16_t port){
 #if M_OS == M_OS_WINDOWS
 				this->CloseEventForWaitable();
 #endif
-				throw net::Exc("TCPServerSocket::Open(): Couldn't create socket");
+				throw setka::Exc("TCPServerSocket::Open(): Couldn't create socket");
 			}
 			
 			this->ipv4 = true;
@@ -122,7 +122,7 @@ void UDPSocket::Open(std::uint16_t port){
 #else
 				ss << strerror(errorCode);
 #endif
-			throw net::Exc(ss.str());
+			throw setka::Exc(ss.str());
 		}
 	}
 
@@ -141,7 +141,7 @@ void UDPSocket::Open(std::uint16_t port){
 			) == DSocketError())
 		{
 			this->Close();
-			throw net::Exc("UDPSocket::Open(): failed setting broadcast option");
+			throw setka::Exc("UDPSocket::Open(): failed setting broadcast option");
 		}
 	}
 #else
@@ -155,7 +155,7 @@ void UDPSocket::Open(std::uint16_t port){
 
 size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& destinationIP){
 	if(!*this){
-		throw net::Exc("UDPSocket::Send(): socket is not opened");
+		throw setka::Exc("UDPSocket::Send(): socket is not opened");
 	}
 
 	this->clearCanWriteFlag();
@@ -229,7 +229,7 @@ size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& desti
 			int errorCode = WSAGetLastError();
 			
 			if(errorCode == WSAEAFNOSUPPORT){
-				throw net::Exc("Address family is not supported by protocol family. Note, that libting on WinXP does not support IPv6.");
+				throw setka::Exc("Address family is not supported by protocol family. Note, that libting on WinXP does not support IPv6.");
 			}
 #else
 			int errorCode = errno;
@@ -253,7 +253,7 @@ size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& desti
 #else
 				ss << strerror(errorCode);
 #endif
-				throw net::Exc(ss.str());
+				throw setka::Exc(ss.str());
 			}
 		}
 		break;
@@ -271,7 +271,7 @@ size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& desti
 
 size_t UDPSocket::Recv(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 	if(!*this){
-		throw net::Exc("UDPSocket::Recv(): socket is not opened");
+		throw setka::Exc("UDPSocket::Recv(): socket is not opened");
 	}
 
 	//The "can read" flag shall be cleared even if this function fails.
@@ -330,7 +330,7 @@ size_t UDPSocket::Recv(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 #else
 				ss << strerror(errorCode);
 #endif
-				throw net::Exc(ss.str());
+				throw setka::Exc(ss.str());
 			}
 		}
 		break;

@@ -7,13 +7,13 @@
 #endif
 
 
-using namespace ting::net;
+using namespace setka;
 
 
 
 void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t queueLength){
 	if(*this){
-		throw net::Exc("TCPServerSocket::Open(): socket already opened");
+		throw setka::Exc("TCPServerSocket::Open(): socket already opened");
 	}
 
 	this->disableNaggle = disableNaggle;
@@ -35,7 +35,7 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 #if M_OS == M_OS_WINDOWS
 			this->CloseEventForWaitable();
 #endif
-			throw net::Exc("TCPServerSocket::Open(): Couldn't create IPv4 socket");
+			throw setka::Exc("TCPServerSocket::Open(): Couldn't create IPv4 socket");
 		}
 		
 		ipv4 = true;
@@ -67,7 +67,7 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 #if M_OS == M_OS_WINDOWS
 				this->CloseEventForWaitable();
 #endif
-				throw net::Exc("TCPServerSocket::Open(): Couldn't create IPv4 socket");
+				throw setka::Exc("TCPServerSocket::Open(): Couldn't create IPv4 socket");
 			}
 			
 			ipv4 = true;
@@ -128,12 +128,12 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 		ss << strerror(errorCode);
 #endif
 		this->Close();
-		throw net::Exc(ss.str());
+		throw setka::Exc(ss.str());
 	}
 
 	if(listen(this->socket, int(queueLength)) == DSocketError()){
 		this->Close();
-		throw net::Exc("TCPServerSocket::Open(): Couldn't listen to local port");
+		throw setka::Exc("TCPServerSocket::Open(): Couldn't listen to local port");
 	}
 
 	this->SetNonBlockingMode();
@@ -143,7 +143,7 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 
 TCPSocket TCPServerSocket::Accept(){
 	if(!*this){
-		throw net::Exc("TCPServerSocket::Accept(): the socket is not opened");
+		throw setka::Exc("TCPServerSocket::Accept(): the socket is not opened");
 	}
 
 	this->clearCanReadFlag();
@@ -193,7 +193,7 @@ TCPSocket TCPServerSocket::Accept(){
 //override
 void TCPServerSocket::SetWaitingEvents(std::uint32_t flagsToWaitFor){
 	if(flagsToWaitFor != 0 && flagsToWaitFor != Waitable::READ){
-		throw ting::Exc("TCPServerSocket::SetWaitingEvents(): only Waitable::READ flag allowed");
+		throw setka::Exc("TCPServerSocket::SetWaitingEvents(): only Waitable::READ flag allowed");
 	}
 
 	long flags = FD_CLOSE;

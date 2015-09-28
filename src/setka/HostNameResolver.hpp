@@ -12,8 +12,7 @@
 
 
 
-namespace ting{
-namespace net{
+namespace setka{
 
 
 
@@ -42,10 +41,10 @@ public:
 	 * @brief Basic DNS lookup exception.
      * @param message - human friendly error description.
      */
-	class Exc : public net::Exc{
+	class Exc : public setka::Exc{
 	public:
 		inline Exc(const std::string& message) :
-				ting::net::Exc(message)
+				setka::Exc(message)
 		{}
 	};
 	
@@ -84,7 +83,7 @@ public:
 	void Resolve_ts(
 			const std::string& hostName,
 			std::uint32_t timeoutMillis = 20000,
-			const ting::net::IPAddress& dnsIP = ting::net::IPAddress(ting::net::IPAddress::Host(0), 0)
+			const setka::IPAddress& dnsIP = setka::IPAddress(setka::IPAddress::Host(0), 0)
 		);
 	
 	/**
@@ -145,11 +144,10 @@ public:
 	virtual void OnCompleted_ts(E_Result result, IPAddress::Host ip)noexcept = 0;
 	
 private:
-	friend class ting::net::Lib;
+	friend class setka::Lib;
 	static void CleanUp();
 };
 
 
 
-}//~namespace
 }//~namespace

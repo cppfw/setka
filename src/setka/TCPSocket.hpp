@@ -12,8 +12,7 @@
 
 
 
-namespace ting{
-namespace net{
+namespace setka{
 
 
 
@@ -26,7 +25,7 @@ class TCPServerSocket;
  * @brief a class which represents a TCP socket.
  */
 class TCPSocket : public Socket{
-	friend class ting::net::TCPServerSocket;
+	friend class setka::TCPServerSocket;
 public:
 	
 	/**
@@ -116,5 +115,4 @@ private:
 
 
 
-}//~namespace
 }//~namespace

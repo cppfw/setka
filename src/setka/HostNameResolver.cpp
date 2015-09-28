@@ -20,7 +20,7 @@
 
 
 
-using namespace ting::net;
+using namespace setka;
 
 
 
@@ -107,13 +107,13 @@ struct Resolver : public utki::PoolStored<Resolver, 10>{
 	
 	T_RequestsToSendIter sendIter;
 	
-	ting::net::IPAddress dns;
+	setka::IPAddress dns;
 };
 
 
 
 class LookupThread : public nitki::MsgThread{
-	ting::net::UDPSocket socket;
+	setka::UDPSocket socket;
 	pogodi::WaitSet waitSet;
 	
 	T_ResolversTimeMap resolversByTime1, resolversByTime2;
@@ -145,7 +145,7 @@ public:
 	T_ResolversMap resolversMap;
 	T_IdMap idMap;
 	
-	ting::net::IPAddress dns;
+	setka::IPAddress dns;
 	
 	void StartSending(){
 		this->waitSet.change(this->socket, pogodi::Waitable::READ_AND_WRITE);
@@ -276,7 +276,7 @@ public:
 	
 	
 	//NOTE: call to this function should be protected by mutex
-	inline void CallCallback(dns::Resolver* r, ting::net::HostNameResolver::E_Result result, IPAddress::Host ip = IPAddress::Host(0, 0, 0, 0))noexcept{
+	inline void CallCallback(dns::Resolver* r, setka::HostNameResolver::E_Result result, IPAddress::Host ip = IPAddress::Host(0, 0, 0, 0))noexcept{
 		this->completedMutex.lock();
 		this->mutex.unlock();
 		r->hnr->OnCompleted_ts(result, ip);
@@ -285,10 +285,10 @@ public:
 	}
 	
 	struct ParseResult{
-		ting::net::HostNameResolver::E_Result result;
-		ting::net::IPAddress::Host host;
+		setka::HostNameResolver::E_Result result;
+		setka::IPAddress::Host host;
 		
-		ParseResult(ting::net::HostNameResolver::E_Result result, ting::net::IPAddress::Host host = ting::net::IPAddress::Host(0, 0, 0, 0)) :
+		ParseResult(setka::HostNameResolver::E_Result result, setka::IPAddress::Host host = setka::IPAddress::Host(0, 0, 0, 0)) :
 				result(result),
 				host(host)
 		{}
@@ -313,7 +313,7 @@ public:
 				2   //Number of other records
 			)
 		{
-			return ParseResult(ting::net::HostNameResolver::DNS_ERROR);
+			return ParseResult(setka::HostNameResolver::DNS_ERROR);
 		}
 		
 		const std::uint8_t* p = buf.begin();
@@ -325,16 +325,16 @@ public:
 			
 			if((flags & 0x8000) == 0){//we expect it to be a response, not query.
 				TRACE(<< "ParseReplyFromDNS(): (flags & 0x8000) = " << (flags & 0x8000) << std::endl)
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);
 			}
 			
 			//Check response code
 			if((flags & 0xf) != 0){//0 means no error condition
 				if((flags & 0xf) == 3){//name does not exist
-					return ParseResult(ting::net::HostNameResolver::NO_SUCH_HOST);
+					return ParseResult(setka::HostNameResolver::NO_SUCH_HOST);
 				}else{
 					TRACE(<< "ParseReplyFromDNS(): (flags & 0xf) = " << (flags & 0xf) << std::endl)
-					return ParseResult(ting::net::HostNameResolver::DNS_ERROR);
+					return ParseResult(setka::HostNameResolver::DNS_ERROR);
 				}
 			}
 		}
@@ -344,7 +344,7 @@ public:
 			p += 2;
 			
 			if(numQuestions != 1){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);
 			}
 		}
 		
@@ -354,7 +354,7 @@ public:
 		ASSERT(p <= (buf.end() - 1) || p == buf.end())
 		
 		if(numAnswers == 0){
-			return ParseResult(ting::net::HostNameResolver::NO_SUCH_HOST);
+			return ParseResult(setka::HostNameResolver::NO_SUCH_HOST);
 		}
 		
 		{
@@ -374,7 +374,7 @@ public:
 			
 			if(r->hostName != host){
 //				TRACE(<< "this->hostName = " << this->hostName << std::endl)
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//wrong host name for ID.
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//wrong host name for ID.
 			}
 		}
 		
@@ -384,7 +384,7 @@ public:
 			p += 2;
 			
 			if(type != r->recordType){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//wrong question type
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//wrong question type
 			}
 		}
 		
@@ -394,7 +394,7 @@ public:
 			p += 2;
 			
 			if(cls != 1){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//wrong question class
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//wrong question class
 			}
 		}
 		
@@ -403,7 +403,7 @@ public:
 		//loop through the answers
 		for(std::uint16_t n = 0; n != numAnswers; ++n){
 			if(p == buf.end()){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 			}
 			
 			//check if there is a domain name or a reference to the domain name
@@ -413,7 +413,7 @@ public:
 					ASSERT(buf.Overlaps(p))
 				}
 				if(p == buf.end()){
-					return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+					return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 				}
 				++p;
 			}else{
@@ -423,31 +423,31 @@ public:
 			}
 			
 			if(buf.end() - p < 2){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 			}
 			std::uint16_t type = utki::deserialize16BE(p);
 			p += 2;
 			
 			if(buf.end() - p < 2){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 			}
 //			std::uint16_t cls = ting::util::Deserialize16(p);
 			p += 2;
 			
 			if(buf.end() - p < 4){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 			}
 //			std::uint32_t ttl = ting::util::Deserialize32(p);//time till the returned value can be cached.
 			p += 4;
 			
 			if(buf.end() - p < 2){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 			}
 			std::uint16_t dataLen = utki::deserialize16BE(p);
 			p += 2;
 			
 			if(buf.end() - p < dataLen){
-				return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 			}
 			if(type == r->recordType){
 				IPAddress::Host h;
@@ -455,14 +455,14 @@ public:
 				switch(type){
 					case D_DNSRecordA: //'A' type answer
 						if(dataLen < 4){
-							return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+							return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 						}
 
 						h = IPAddress::Host(utki::deserialize32BE(p));
 						break;
 					case D_DNSRecordAAAA: //'AAAA' type answer
 						if(dataLen < 2 * 8){
-							return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//unexpected end of packet
+							return ParseResult(setka::HostNameResolver::DNS_ERROR);//unexpected end of packet
 						}
 
 						h = IPAddress::Host(
@@ -480,12 +480,12 @@ public:
 				}
 				
 				TRACE(<< "host resolved: " << r->hostName << " = " << h.ToString() << std::endl)
-				return ParseResult(ting::net::HostNameResolver::OK, h);
+				return ParseResult(setka::HostNameResolver::OK, h);
 			}
 			p += dataLen;
 		}
 		
-		return ParseResult(ting::net::HostNameResolver::DNS_ERROR);//no answer found
+		return ParseResult(setka::HostNameResolver::DNS_ERROR);//no answer found
 	}
 	
 	
@@ -496,7 +496,7 @@ public:
 			timeMap1(&resolversByTime1),
 			timeMap2(&resolversByTime2)
 	{
-		ASSERT_INFO(ting::net::Lib::IsCreated(), "ting::net::Lib is not initialized before doing the DNS request")
+		ASSERT_INFO(setka::Lib::IsCreated(), "ting::net::Lib is not initialized before doing the DNS request")
 	}
 public:
 	~LookupThread()noexcept{
@@ -565,7 +565,7 @@ private:
 							&this->key
 						) != ERROR_SUCCESS)
 					{
-						throw ting::Exc("InitDNS(): RegOpenKey() failed");
+						throw setka::Exc("InitDNS(): RegOpenKey() failed");
 					}
 				}
 				
@@ -596,7 +596,7 @@ private:
 						std::string ip = str.substr(0, spaceIndex);
 						TRACE(<< "NameServer ip = " << ip << std::endl)
 				
-						this->dns = ting::net::IPAddress(ip.c_str(), 53);
+						this->dns = setka::IPAddress(ip.c_str(), 53);
 						RegCloseKey(hSub);
 						return;
 					}catch(...){}
@@ -616,7 +616,7 @@ private:
 					std::string ip = str.substr(0, spaceIndex);
 					TRACE(<< "DhcpNameServer ip = " << ip << std::endl)
 				
-					this->dns = ting::net::IPAddress(ip.c_str(), 53);
+					this->dns = setka::IPAddress(ip.c_str(), 53);
 					RegCloseKey(hSub);
 					return;
 				}catch(...){}
@@ -657,7 +657,7 @@ private:
 				TRACE(<< "dns ipstr = " << ipstr << std::endl)
 				
 				try{
-					this->dns = ting::net::IPAddress(ipstr.c_str(), 53);
+					this->dns = setka::IPAddress(ipstr.c_str(), 53);
 					return;
 				}catch(...){}
 			}
@@ -666,7 +666,7 @@ private:
 #endif
 		}catch(...){
 		}
-		this->dns = ting::net::IPAddress(std::uint32_t(0), 0);
+		this->dns = setka::IPAddress(std::uint32_t(0), 0);
 	}
 	
 	
@@ -719,7 +719,7 @@ private:
 					TRACE(<< "can read" << std::endl)
 					try{
 						std::array<std::uint8_t, 512> buf;//RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
-						ting::net::IPAddress address;
+						setka::IPAddress address;
 						size_t ret = this->socket.Recv(buf, address);
 						
 						ASSERT(ret != 0)
@@ -738,7 +738,7 @@ private:
 								if(host == i->second->hostName){
 									ParseResult res = this->ParseReplyFromDNS(i->second, utki::Buf<std::uint8_t>(&*buf.begin(), ret));
 									
-									if(res.result == ting::net::HostNameResolver::NO_SUCH_HOST && i->second->recordType == D_DNSRecordAAAA){
+									if(res.result == setka::HostNameResolver::NO_SUCH_HOST && i->second->recordType == D_DNSRecordAAAA){
 										//try getting record type A
 										TRACE(<< "no record AAAA found, trying to get record type A" << std::endl)
 										
@@ -755,7 +755,7 @@ private:
 										}catch(...){
 											//failed adding to sending list, report error
 											std::unique_ptr<dns::Resolver> r = this->RemoveResolver(i->second->hnr);
-											this->CallCallback(r.operator->(), ting::net::HostNameResolver::ERROR);
+											this->CallCallback(r.operator->(), setka::HostNameResolver::ERROR);
 										}										
 									}else{
 										std::unique_ptr<dns::Resolver> r = this->RemoveResolver(i->second->hnr);
@@ -765,7 +765,7 @@ private:
 								}
 							}
 						}
-					}catch(ting::net::Exc&){
+					}catch(setka::Exc&){
 						this->isExiting = true;
 						this->RemoveAllResolvers();
 						break;//exit thread
@@ -809,7 +809,7 @@ private:
 								this->CallCallback(removedResolver.operator->(), HostNameResolver::ERROR, 0);
 							}
 						}
-					}catch(ting::net::Exc& DEBUG_CODE(e)){
+					}catch(setka::Exc& DEBUG_CODE(e)){
 						TRACE(<< "writing to a socket failed: " << e.what() << std::endl)
 						this->isExiting = true;
 						this->RemoveAllResolvers();
@@ -878,7 +878,7 @@ private:
 //Wait() method until timeout is hit. So, just check every 100ms if it is OK to write to UDP socket.
 #if M_OS == M_OS_WINDOWS
 			if(this->sendList.size() > 0){
-				ting::util::ClampTop(timeout, std::uint32_t(100));
+				setka::util::ClampTop(timeout, std::uint32_t(100));
 			}
 #endif
 			
@@ -930,10 +930,10 @@ HostNameResolver::~HostNameResolver(){
 
 
 
-void HostNameResolver::Resolve_ts(const std::string& hostName, std::uint32_t timeoutMillis, const ting::net::IPAddress& dnsIP){
+void HostNameResolver::Resolve_ts(const std::string& hostName, std::uint32_t timeoutMillis, const setka::IPAddress& dnsIP){
 //	TRACE(<< "HostNameResolver::Resolve_ts(): enter" << std::endl)
 	
-	ASSERT(ting::net::Lib::IsCreated())
+	ASSERT(setka::Lib::IsCreated())
 	
 	if(hostName.size() > 253){
 		throw DomainNameTooLongExc();

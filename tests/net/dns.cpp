@@ -10,7 +10,7 @@
 
 namespace TestSimpleDNSLookup{
 
-class Resolver : public ting::net::HostNameResolver{
+class Resolver : public setka::HostNameResolver{
 	
 public:
 	
@@ -19,7 +19,7 @@ public:
 			hostName(hostName)
 	{}
 	
-	ting::net::IPAddress::Host ip;
+	setka::IPAddress::Host ip;
 	
 	nitki::Semaphore& sema;
 	
@@ -32,7 +32,7 @@ public:
 	}
 	
 	//override
-	void OnCompleted_ts(E_Result result, ting::net::IPAddress::Host ip)noexcept{
+	void OnCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept{
 		TRACE(<< "OnCompleted_ts(): result = " << result << " ip = " << ip.ToString() << std::endl)
 		
 //		ASSERT_INFO_ALWAYS(result == ting::net::HostNameResolver::OK, "result = " << result)
@@ -58,7 +58,7 @@ void Run(){
 			ASSERT_ALWAYS(false)
 		}
 
-		ASSERT_INFO_ALWAYS(r.result == ting::net::HostNameResolver::OK, "r.result = " << r.result)
+		ASSERT_INFO_ALWAYS(r.result == setka::HostNameResolver::OK, "r.result = " << r.result)
 
 //		ASSERT_INFO_ALWAYS(r.ip == 0x4D581503 || r.ip == 0x57FAFB03, "r.ip = " << r.ip)
 		ASSERT_INFO_ALWAYS(r.ip.IsValid(), "ip = " << r.ip.ToString())
@@ -92,7 +92,7 @@ void Run(){
 //		TRACE(<< "resolutions done" << std::endl)
 		
 		for(T_ResolverIter i = r.begin(); i != r.end(); ++i){
-			ASSERT_INFO_ALWAYS((*i)->result == ting::net::HostNameResolver::OK, "result = " << (*i)->result << " host to resolve = " << (*i)->hostName)
+			ASSERT_INFO_ALWAYS((*i)->result == setka::HostNameResolver::OK, "result = " << (*i)->result << " host to resolve = " << (*i)->hostName)
 //			ASSERT_INFO_ALWAYS((*i)->ip == 0x4D581503 || (*i)->ip == 0x57FAFB03, "(*i)->ip = " << (*i)->ip)
 			ASSERT_ALWAYS((*i)->ip.IsValid())
 		}
@@ -105,7 +105,7 @@ void Run(){
 
 namespace TestRequestFromCallback{
 
-class Resolver : public ting::net::HostNameResolver{
+class Resolver : public setka::HostNameResolver{
 	
 public:
 	
@@ -115,18 +115,18 @@ public:
 	
 	std::string host;
 	
-	ting::net::IPAddress::Host ip;
+	setka::IPAddress::Host ip;
 	
 	nitki::Semaphore& sema;
 	
 	E_Result result;
 	
 	//override
-	void OnCompleted_ts(E_Result result, ting::net::IPAddress::Host ip)noexcept{
+	void OnCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept{
 //		ASSERT_INFO_ALWAYS(result == ting::net::HostNameResolver::OK, "result = " << result)
 		
 		if(this->host.size() == 0){
-			ASSERT_INFO_ALWAYS(result == ting::net::HostNameResolver::NO_SUCH_HOST, "result = " << result)
+			ASSERT_INFO_ALWAYS(result == setka::HostNameResolver::NO_SUCH_HOST, "result = " << result)
 			ASSERT_ALWAYS(!ip.IsValid())
 			
 			this->host = "ya.ru";
@@ -151,7 +151,7 @@ void Run(){
 		ASSERT_ALWAYS(false)
 	}
 	
-	ASSERT_INFO_ALWAYS(r.result == ting::net::HostNameResolver::OK, "r.result = " << r.result)
+	ASSERT_INFO_ALWAYS(r.result == setka::HostNameResolver::OK, "r.result = " << r.result)
 
 //	ASSERT_INFO_ALWAYS(r.ip == 0x4D581503 || r.ip == 0x57FAFB03, "r.ip = " << r.ip)
 	ASSERT_ALWAYS(r.ip.IsValid())
@@ -161,7 +161,7 @@ void Run(){
 
 
 namespace TestCancelDNSLookup{
-class Resolver : public ting::net::HostNameResolver{
+class Resolver : public setka::HostNameResolver{
 	
 public:
 	
@@ -170,7 +170,7 @@ public:
 	volatile bool called = false;
 	
 	//override
-	void OnCompleted_ts(E_Result result, ting::net::IPAddress::Host ip)noexcept{
+	void OnCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept{
 		this->called = true;
 	}
 };
@@ -179,7 +179,7 @@ void Run(){
 	TRACE_ALWAYS(<< "\tRunning 'cacnel DNS lookup' test, it will take about 4 seconds" << std::endl)
 	Resolver r;
 	
-	r.Resolve_ts("rfesweefdqfdf.ru", 3000, ting::net::IPAddress("1.2.3.4", 53));
+	r.Resolve_ts("rfesweefdqfdf.ru", 3000, setka::IPAddress("1.2.3.4", 53));
 	
 	nitki::Thread::sleep(500);
 	

@@ -11,12 +11,7 @@
 
 
 
-namespace ting{
-
-/**
- * @brief Namespace where all network-related classes are defined.
- */
-namespace net{
+namespace setka{
 
 
 
@@ -40,7 +35,6 @@ public:
 
 
 
-}//~namespace
 }//~namespace
 
 

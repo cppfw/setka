@@ -8,13 +8,13 @@
 
 
 
-using namespace ting::net;
+using namespace setka;
 
 
 
 void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 	if(*this){
-		throw net::Exc("TCPSocket::Open(): socket already opened");
+		throw setka::Exc("TCPSocket::Open(): socket already opened");
 	}
 
 	//create event for implementing Waitable
@@ -31,7 +31,7 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 #if M_OS == M_OS_WINDOWS
 		this->CloseEventForWaitable();
 #endif
-		throw net::Exc("TCPSocket::Open(): Couldn't create socket");
+		throw setka::Exc("TCPSocket::Open(): Couldn't create socket");
 	}
 
 	//Disable Naggle algorithm if required
@@ -116,7 +116,7 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 			ss << strerror(errorCode);
 #endif
 			this->Close();
-			throw net::Exc(ss.str());
+			throw setka::Exc(ss.str());
 		}
 	}
 }
@@ -125,7 +125,7 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 
 size_t TCPSocket::Send(utki::Buf<const std::uint8_t> buf){
 	if(!*this){
-		throw net::Exc("TCPSocket::Send(): socket is not opened");
+		throw setka::Exc("TCPSocket::Send(): socket is not opened");
 	}
 
 	this->clearCanWriteFlag();
@@ -168,7 +168,7 @@ size_t TCPSocket::Send(utki::Buf<const std::uint8_t> buf){
 #else
 				ss << strerror(errorCode);
 #endif
-				throw net::Exc(ss.str());
+				throw setka::Exc(ss.str());
 			}
 		}
 		break;
@@ -187,7 +187,7 @@ size_t TCPSocket::Recv(utki::Buf<std::uint8_t> buf){
 	this->clearCanReadFlag();
 
 	if(!*this){
-		throw net::Exc("TCPSocket::Recv(): socket is not opened");
+		throw setka::Exc("TCPSocket::Recv(): socket is not opened");
 	}
 
 #if M_OS == M_OS_WINDOWS
@@ -229,7 +229,7 @@ size_t TCPSocket::Recv(utki::Buf<std::uint8_t> buf){
 #else
 				ss << strerror(errorCode);
 #endif
-				throw net::Exc(ss.str());
+				throw setka::Exc(ss.str());
 			}
 		}
 		break;
@@ -280,7 +280,7 @@ IPAddress CreateIPAddressFromSockaddrStorage(const sockaddr_storage& addr){
 
 IPAddress TCPSocket::GetLocalAddress(){
 	if(!*this){
-		throw net::Exc("Socket::GetLocalAddress(): socket is not valid");
+		throw setka::Exc("Socket::GetLocalAddress(): socket is not valid");
 	}
 
 	sockaddr_storage addr;
@@ -292,7 +292,7 @@ IPAddress TCPSocket::GetLocalAddress(){
 #endif
 
 	if(getsockname(this->socket, reinterpret_cast<sockaddr*>(&addr), &len)  == DSocketError()){
-		throw ting::net::Exc("Socket::GetLocalAddress(): getsockname() failed");
+		throw setka::Exc("Socket::GetLocalAddress(): getsockname() failed");
 	}	
 
 	return CreateIPAddressFromSockaddrStorage(addr);
@@ -302,7 +302,7 @@ IPAddress TCPSocket::GetLocalAddress(){
 
 IPAddress TCPSocket::GetRemoteAddress(){
 	if(!*this){
-		throw net::Exc("TCPSocket::GetRemoteAddress(): socket is not valid");
+		throw setka::Exc("TCPSocket::GetRemoteAddress(): socket is not valid");
 	}
 
 	sockaddr_storage addr;
@@ -327,7 +327,7 @@ IPAddress TCPSocket::GetRemoteAddress(){
 #else
 		ss << strerror(errno);
 #endif
-		throw ting::net::Exc(ss.str());
+		throw setka::Exc(ss.str());
 	}
 
 	return CreateIPAddressFromSockaddrStorage(addr);

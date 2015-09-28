@@ -6,7 +6,7 @@
 
 
 inline void TestTingSocket(){
-	ting::net::Lib netLib;
+	setka::Lib netLib;
 	
 	BasicIPAddressTest::Run();
 	TestIPAddress::Run();

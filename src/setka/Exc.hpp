@@ -4,8 +4,7 @@
 
 
 
-namespace ting{
-namespace net{
+namespace setka{
 
 
 
@@ -32,5 +31,4 @@ public:
 
 
 
-}//~namespace
 }//~namespace

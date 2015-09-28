@@ -40,9 +40,9 @@ bool IsIPv6SupportedByOS(){
 
 namespace BasicClientServerTest{
 
-void SendAll(ting::net::TCPSocket& s, utki::Buf<std::uint8_t> buf){
+void SendAll(setka::TCPSocket& s, utki::Buf<std::uint8_t> buf){
 	if(!s){
-		throw ting::net::Exc("TCPSocket::Send(): socket is not opened");
+		throw setka::Exc("TCPSocket::Send(): socket is not opened");
 	}
 
 	DEBUG_CODE(int left = int(buf.size());)
@@ -70,14 +70,14 @@ class ServerThread : public nitki::MsgThread{
 public:
 	void run()override{
 		try{
-			ting::net::TCPServerSocket listenSock;
+			setka::TCPServerSocket listenSock;
 
 			listenSock.Open(13666);//start listening
 
 			ASSERT_ALWAYS(listenSock.GetLocalPort() == 13666)
 
 			//Accept some connection
-			ting::net::TCPSocket sock;
+			setka::TCPSocket sock;
 			while(!sock && !this->quitFlag){
 				sock = listenSock.Accept();
 				nitki::Thread::sleep(100);
@@ -97,7 +97,7 @@ public:
 			data[2] = '2';
 			data[3] = '4';
 			SendAll(sock, data);
-		}catch(ting::net::Exc &e){
+		}catch(setka::Exc &e){
 			ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
 		}
 	}
@@ -113,9 +113,9 @@ void Run(){
 	nitki::Thread::sleep(1000);
 	
 	try{
-		ting::net::IPAddress ip("127.0.0.1", 13666);
+		setka::IPAddress ip("127.0.0.1", 13666);
 
-		ting::net::TCPSocket sock;
+		setka::TCPSocket sock;
 
 		sock.Open(ip);
 
@@ -143,7 +143,7 @@ void Run(){
 		ASSERT_ALWAYS(data[1] == '1')
 		ASSERT_ALWAYS(data[2] == '2')
 		ASSERT_ALWAYS(data[3] == '4')
-	}catch(ting::net::Exc &e){
+	}catch(setka::Exc &e){
 		ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
 	}
 	
@@ -157,20 +157,20 @@ void Run(){
 namespace SendDataContinuouslyWithWaitSet{
 
 void Run(){
-	ting::net::TCPServerSocket serverSock;
+	setka::TCPServerSocket serverSock;
 
 	serverSock.Open(13666);
 
 
-	ting::net::TCPSocket sockS;
+	setka::TCPSocket sockS;
 	{
-		ting::net::IPAddress ip("127.0.0.1", 13666);
+		setka::IPAddress ip("127.0.0.1", 13666);
 		sockS.Open(ip);
 	}
 
 	//Accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
-	ting::net::TCPSocket sockR;
+	setka::TCPSocket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
 		nitki::Thread::sleep(100);
 		sockR = serverSock.Accept();
@@ -182,8 +182,8 @@ void Run(){
 	//Here we have 2 sockets sockS and sockR
 
 	{
-		ting::net::IPAddress addrS = sockS.GetRemoteAddress();
-		ting::net::IPAddress addrR = sockR.GetRemoteAddress();
+		setka::IPAddress addrS = sockS.GetRemoteAddress();
+		setka::IPAddress addrR = sockR.GetRemoteAddress();
 //		TRACE(<< "SendDataContinuously::Run(): addrS = " << std::hex << addrS.host << ":" << addrS.port << std::dec << std::endl)
 //		TRACE(<< "SendDataContinuously::Run(): addrR = " << std::hex << addrR.host << ":" << addrR.port << std::dec << std::endl)
 		ASSERT_ALWAYS(addrS.host.IPv4Host() == 0x7f000001) //check that IP is 127.0.0.1
@@ -269,7 +269,7 @@ void Run(){
 //						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
 					}
 					ASSERT_ALWAYS(!sockS.canWrite())
-				}catch(ting::net::Exc& e){
+				}catch(setka::Exc& e){
 					ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
 				}
 				ASSERT_ALWAYS(bytesSent <= sendBuffer.size())
@@ -286,7 +286,7 @@ void Run(){
 					unsigned numBytesReceived;
 					try{
 						numBytesReceived = sockR.Recv(buf);
-					}catch(ting::net::Exc& e){
+					}catch(setka::Exc& e){
 						ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 					}
 					ASSERT_ALWAYS(numBytesReceived <= buf.size())
@@ -337,20 +337,20 @@ void Run(){
 namespace SendDataContinuously{
 
 void Run(){
-	ting::net::TCPServerSocket serverSock;
+	setka::TCPServerSocket serverSock;
 
 	serverSock.Open(13666);
 
 
-	ting::net::TCPSocket sockS;
+	setka::TCPSocket sockS;
 	{
-		ting::net::IPAddress ip("127.0.0.1", 13666);
+		setka::IPAddress ip("127.0.0.1", 13666);
 		sockS.Open(ip);
 	}
 
 	//Accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
-	ting::net::TCPSocket sockR;
+	setka::TCPSocket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
 		nitki::Thread::sleep(100);
 		sockR = serverSock.Accept();
@@ -381,7 +381,7 @@ void Run(){
 			}else{
 				ASSERT_ALWAYS(false)
 			}
-		}catch(ting::net::Exc& e){
+		}catch(setka::Exc& e){
 			ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
 		}
 
@@ -393,7 +393,7 @@ void Run(){
 			unsigned numBytesReceived;
 			try{
 				numBytesReceived = sockR.Recv(buf);
-			}catch(ting::net::Exc& e){
+			}catch(setka::Exc& e){
 				ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 			}
 			ASSERT_ALWAYS(numBytesReceived <= buf.size())
@@ -422,7 +422,7 @@ namespace BasicIPAddressTest{
 void Run(){
 	{
 		try{
-			ting::net::IPAddress a("123.124.125.126", 5);
+			setka::IPAddress a("123.124.125.126", 5);
 			ASSERT_ALWAYS(a.host.IPv4Host() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 			ASSERT_ALWAYS(a.port == 5)
 		}catch(std::exception& e){
@@ -431,22 +431,22 @@ void Run(){
 	}
 
 	{
-		ting::net::IPAddress a(123, 124, 125, 126, 5);
+		setka::IPAddress a(123, 124, 125, 126, 5);
 		ASSERT_ALWAYS(a.host.IPv4Host() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 		ASSERT_ALWAYS(a.port == 5)
 	}
 
 	//test copy constructor and operator=()
 	{
-		ting::net::IPAddress a(123, 124, 125, 126, 5);
+		setka::IPAddress a(123, 124, 125, 126, 5);
 		ASSERT_ALWAYS(a.host.IPv4Host() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 		ASSERT_ALWAYS(a.port == 5)
 
-		ting::net::IPAddress a1(a);
+		setka::IPAddress a1(a);
 		ASSERT_ALWAYS(a1.host.IPv4Host() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 		ASSERT_ALWAYS(a1.port == 5)
 
-		ting::net::IPAddress a2;
+		setka::IPAddress a2;
 		a2 = a1;
 		ASSERT_ALWAYS(a2.host.IPv4Host() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 		ASSERT_ALWAYS(a2.port == 5)
@@ -464,17 +464,17 @@ namespace BasicUDPSocketsTest{
 
 void Run(){
 
-	ting::net::UDPSocket recvSock;
+	setka::UDPSocket recvSock;
 
 	try{
 		recvSock.Open(13666);
-	}catch(ting::net::Exc &e){
+	}catch(setka::Exc &e){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 
 	ASSERT_ALWAYS(recvSock.GetLocalPort() == 13666)
 
-	ting::net::UDPSocket sendSock;
+	setka::UDPSocket sendSock;
 
 	try{
 		sendSock.Open();
@@ -486,7 +486,7 @@ void Run(){
 		data[3] = '4';
 		unsigned bytesSent = 0;
 
-		ting::net::IPAddress addr(
+		setka::IPAddress addr(
 				IsIPv6SupportedByOS() ? "::1" : "127.0.0.1",
 				13666
 			);
@@ -501,7 +501,7 @@ void Run(){
 			nitki::Thread::sleep(100);
 		}
 		ASSERT_ALWAYS(bytesSent == 4)
-	}catch(ting::net::Exc &e){
+	}catch(setka::Exc &e){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 
@@ -510,7 +510,7 @@ void Run(){
 		
 		unsigned bytesReceived = 0;
 		for(unsigned i = 0; i < 10; ++i){
-			ting::net::IPAddress ip;
+			setka::IPAddress ip;
 			bytesReceived = recvSock.Recv(buf, ip);
 			ASSERT_ALWAYS(bytesReceived == 0 || bytesReceived == 4)//all or nothing
 			if(bytesReceived == 4){
@@ -529,7 +529,7 @@ void Run(){
 		ASSERT_ALWAYS(buf[1] == '1')
 		ASSERT_ALWAYS(buf[2] == '2')
 		ASSERT_ALWAYS(buf[3] == '4')
-	}catch(ting::net::Exc& e){
+	}catch(setka::Exc& e){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 }
@@ -543,7 +543,7 @@ namespace TestUDPSocketWaitForWriting{
 void Run(){
 
 	try{
-		ting::net::UDPSocket sendSock;
+		setka::UDPSocket sendSock;
 
 		try{
 			sendSock.Open();
@@ -567,7 +567,7 @@ void Run(){
 			}
 
 			ws.remove(sendSock);
-		}catch(ting::net::Exc &e){
+		}catch(setka::Exc &e){
 			ASSERT_INFO_ALWAYS(false, e.what())
 		}
 	}catch(std::exception& e){
@@ -585,41 +585,41 @@ namespace TestIPAddress{
 void Run(){
 	try{//test IP-address without port string parsing
 		try{//test correct string
-			ting::net::IPAddress ip("127.0.0.1", 80);
+			setka::IPAddress ip("127.0.0.1", 80);
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 80)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test correct string
-			ting::net::IPAddress ip("127.0.0.1:23ddqwd", 80);
+			setka::IPAddress ip("127.0.0.1:23ddqwd", 80);
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 80)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(true)
 		}
 		try{//test correct string
-			ting::net::IPAddress ip("127.0.0.2555:23ddqwd", 80);
+			setka::IPAddress ip("127.0.0.2555:23ddqwd", 80);
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f0000ff)
 			ASSERT_ALWAYS(ip.port == 80)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(true)
 		}
 		
 		try{//test incorrect string
-			ting::net::IPAddress ip("127.0.1803:65536");
+			setka::IPAddress ip("127.0.1803:65536");
 			ASSERT_ALWAYS(false)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			//should get here
 		}catch(...){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test incorrect string
-			ting::net::IPAddress ip("127.0.270.1:65536");
+			setka::IPAddress ip("127.0.270.1:65536");
 			ASSERT_ALWAYS(false)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			//should get here
 		}catch(...){
 			ASSERT_ALWAYS(false)
@@ -630,87 +630,87 @@ void Run(){
 	
 	try{//test IP-address with port string parsing
 		try{//test correct string
-			ting::net::IPAddress ip("127.0.0.1:80");
+			setka::IPAddress ip("127.0.0.1:80");
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 80)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test incorrect string
-			ting::net::IPAddress ip("127.0.0.1803:43");
+			setka::IPAddress ip("127.0.0.1803:43");
 			ASSERT_ALWAYS(false)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			//should get here
 		}catch(...){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test incorrect string
-			ting::net::IPAddress ip("127.0.0.180p43");
+			setka::IPAddress ip("127.0.0.180p43");
 			ASSERT_ALWAYS(false)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			//should get here
 		}catch(...){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test incorrect string
-			ting::net::IPAddress ip("127.0.0.180:123456");
+			setka::IPAddress ip("127.0.0.180:123456");
 			ASSERT_ALWAYS(false)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			//should get here
 		}catch(...){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test incorrect string
-			ting::net::IPAddress ip("127.0.0.180:72345");
+			setka::IPAddress ip("127.0.0.180:72345");
 			ASSERT_ALWAYS(false)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			//should get here
 		}catch(...){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test incorrect string
-			ting::net::IPAddress ip("127.0.0.1803:65536");
+			setka::IPAddress ip("127.0.0.1803:65536");
 			ASSERT_ALWAYS(false)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			//should get here
 		}catch(...){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test correct string
-			ting::net::IPAddress ip("127.0.0.1:65535");
+			setka::IPAddress ip("127.0.0.1:65535");
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 0xffff)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test correct string
-			ting::net::IPAddress ip("127.0.0.1:0");
+			setka::IPAddress ip("127.0.0.1:0");
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 0)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test correct string
-			ting::net::IPAddress ip("127.0.0.1:6535 ");
+			setka::IPAddress ip("127.0.0.1:6535 ");
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 6535)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(false)
 		}
 		
 		try{//test correct string
-			ting::net::IPAddress ip("127.0.0.1:6535dwqd 345");
+			setka::IPAddress ip("127.0.0.1:6535dwqd 345");
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 6535)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(false)
 		}
 	}catch(...){
@@ -720,13 +720,13 @@ void Run(){
 	//Test IPv6
 	if(IsIPv6SupportedByOS()){
 		try{
-			ting::net::IPAddress ip("1002:3004:5006::7008:900a");
+			setka::IPAddress ip("1002:3004:5006::7008:900a");
 			ASSERT_ALWAYS(ip.port == 0)
 			ASSERT_ALWAYS(ip.host.Quad0() == 0x10023004)
 			ASSERT_ALWAYS(ip.host.Quad1() == 0x50060000)
 			ASSERT_ALWAYS(ip.host.Quad2() == 0x00000000)
 			ASSERT_ALWAYS(ip.host.Quad3() == 0x7008900a)
-		}catch(ting::net::IPAddress::BadIPAddressFormatExc& e){
+		}catch(setka::IPAddress::BadIPAddressFormatExc& e){
 			ASSERT_ALWAYS(false)
 		}catch(utki::Exc& e){
 			ASSERT_INFO_ALWAYS(false, "exception caught: " << e.what())
@@ -735,7 +735,7 @@ void Run(){
 		}
 
 		try{
-			ting::net::IPAddress ip("[1002:3004:5006::7008:900a]:134");
+			setka::IPAddress ip("[1002:3004:5006::7008:900a]:134");
 			ASSERT_ALWAYS(ip.port == 134)
 			ASSERT_ALWAYS(ip.host.Quad0() == 0x10023004)
 			ASSERT_ALWAYS(ip.host.Quad1() == 0x50060000)
@@ -746,7 +746,7 @@ void Run(){
 		}
 
 		try{
-			ting::net::IPAddress ip("[::ffff:127.0.0.1]:45");
+			setka::IPAddress ip("[::ffff:127.0.0.1]:45");
 			ASSERT_ALWAYS(ip.port == 45)
 			ASSERT_ALWAYS(ip.host.IsIPv4())
 			ASSERT_ALWAYS(ip.host.IPv4Host() == 0x7f000001)

@@ -15,7 +15,7 @@
 
 
 
-using namespace ting::net;
+using namespace setka;
 
 
 
@@ -231,7 +231,7 @@ IPAddress::IPAddress(const char* ip){
 			return;
 		}else{
 	//		TRACE(<< "no colon, *ip = " << (*ip) << std::endl)
-			throw ting::net::IPAddress::BadIPAddressFormatExc();
+			throw setka::IPAddress::BadIPAddressFormatExc();
 		}
 	}
 	
@@ -242,7 +242,7 @@ IPAddress::IPAddress(const char* ip){
 	}
 	if('0' <= *ip && *ip <= '9'){//if still have one more digit
 //		TRACE(<< "still have one more digit" << std::endl)
-		throw ting::net::IPAddress::BadIPAddressFormatExc();
+		throw setka::IPAddress::BadIPAddressFormatExc();
 	}
 	
 	--ip;
@@ -262,7 +262,7 @@ IPAddress::IPAddress(const char* ip){
 	
 	if(port > 0xffff){
 //		TRACE(<< "port number is bigger than 0xffff" << std::endl)
-		throw ting::net::IPAddress::BadIPAddressFormatExc();
+		throw setka::IPAddress::BadIPAddressFormatExc();
 	}
 	
 	this->port = std::uint16_t(port);

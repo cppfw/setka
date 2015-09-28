@@ -15,8 +15,7 @@
 
 
 
-namespace ting{
-namespace net{
+namespace setka{
 
 
 
@@ -103,5 +102,5 @@ private:
 };//~class UDPSocket
 
 
-}//~namespace
+
 }//~namespace
