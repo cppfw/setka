@@ -33,7 +33,7 @@ class HostNameResolver{
 	HostNameResolver& operator=(const HostNameResolver&);
 	
 public:
-	inline HostNameResolver(){}
+	HostNameResolver(){}
 	
 	virtual ~HostNameResolver();
 	
@@ -43,7 +43,7 @@ public:
      */
 	class Exc : public setka::Exc{
 	public:
-		inline Exc(const std::string& message) :
+		Exc(const std::string& message = std::string()) :
 				setka::Exc(message)
 		{}
 	};
@@ -80,7 +80,7 @@ public:
 	 * @throw TooMuchRequestsExc when there are too much active DNS lookup requests are in progress, no resources for another one.
 	 * @throw AlreadyInProgressExc when DNS lookup operation served by this resolver object is already in progress.
      */
-	void Resolve_ts(
+	void resolve_ts(
 			const std::string& hostName,
 			std::uint32_t timeoutMillis = 20000,
 			const setka::IPAddress& dnsIP = setka::IPAddress(setka::IPAddress::Host(0), 0)
@@ -98,12 +98,12 @@ public:
 	 *                 This means that the DNS lookup operation was not started
 	 *                 or has finished before the Cancel_ts() method was called.
      */
-	bool Cancel_ts()noexcept;
+	bool cancel_ts()noexcept;
 	
 	/**
 	 * @brief Enumeration of the DNS lookup operation result.
 	 */
-	enum E_Result{
+	enum class E_Result{
 		/**
 		 * @brief DNS lookup operation completed successfully.
 		 */
@@ -141,11 +141,11 @@ public:
 	 * @param ip - resolved IP-address. This value can later be used to create the
 	 *             ting::net::IPAddress object.
 	 */
-	virtual void OnCompleted_ts(E_Result result, IPAddress::Host ip)noexcept = 0;
+	virtual void onCompleted_ts(E_Result result, IPAddress::Host ip)noexcept = 0;
 	
 private:
 	friend class setka::Lib;
-	static void CleanUp();
+	static void cleanUp();
 };
 
 

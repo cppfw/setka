@@ -16,15 +16,9 @@ class Exc : public utki::Exc{
 public:
 	/**
 	 * @brief Exception constructor.
-	 * Creates exception with empty message.
-     */
-	inline Exc()noexcept{}
-	
-	/**
-	 * @brief Exception constructor.
 	 * @param message - human friendly error description.
 	 */
-	inline Exc(const std::string& message) :
+	Exc(const std::string& message = std::string()) :
 			utki::Exc(message)
 	{}
 };

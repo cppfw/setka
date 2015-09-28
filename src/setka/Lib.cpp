@@ -49,7 +49,7 @@ Lib::Lib(){
 
 Lib::~Lib()noexcept{
 	//check that there are no active dns lookups and finish the DNS request thread
-	HostNameResolver::CleanUp();
+	HostNameResolver::cleanUp();
 	
 #if M_OS == M_OS_WINDOWS
 	// Clean up windows networking

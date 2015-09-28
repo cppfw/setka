@@ -28,12 +28,11 @@ public:
 	std::string hostName;
 	
 	void Resolve(){
-		this->Resolve_ts(this->hostName, 10000);
+		this->resolve_ts(this->hostName, 10000);
 	}
 	
-	//override
-	void OnCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept{
-		TRACE(<< "OnCompleted_ts(): result = " << result << " ip = " << ip.ToString() << std::endl)
+	void onCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept override{
+		TRACE(<< "onCompleted_ts(): result = " << unsigned(result) << " ip = " << ip.ToString() << std::endl)
 		
 //		ASSERT_INFO_ALWAYS(result == ting::net::HostNameResolver::OK, "result = " << result)
 		this->result = result;
@@ -50,7 +49,7 @@ void Run(){
 
 		Resolver r(sema);
 
-		r.Resolve_ts("google.com", 10000);
+		r.resolve_ts("google.com", 10000);
 
 		TRACE(<< "TestSimpleDNSLookup::Run(): waiting on semaphore" << std::endl)
 		
@@ -58,7 +57,7 @@ void Run(){
 			ASSERT_ALWAYS(false)
 		}
 
-		ASSERT_INFO_ALWAYS(r.result == setka::HostNameResolver::OK, "r.result = " << r.result)
+		ASSERT_INFO_ALWAYS(r.result == setka::HostNameResolver::E_Result::OK, "r.result = " << unsigned(r.result))
 
 //		ASSERT_INFO_ALWAYS(r.ip == 0x4D581503 || r.ip == 0x57FAFB03, "r.ip = " << r.ip)
 		ASSERT_INFO_ALWAYS(r.ip.IsValid(), "ip = " << r.ip.ToString())
@@ -92,7 +91,7 @@ void Run(){
 //		TRACE(<< "resolutions done" << std::endl)
 		
 		for(T_ResolverIter i = r.begin(); i != r.end(); ++i){
-			ASSERT_INFO_ALWAYS((*i)->result == setka::HostNameResolver::OK, "result = " << (*i)->result << " host to resolve = " << (*i)->hostName)
+			ASSERT_INFO_ALWAYS((*i)->result == setka::HostNameResolver::E_Result::OK, "result = " << unsigned((*i)->result) << " host to resolve = " << (*i)->hostName)
 //			ASSERT_INFO_ALWAYS((*i)->ip == 0x4D581503 || (*i)->ip == 0x57FAFB03, "(*i)->ip = " << (*i)->ip)
 			ASSERT_ALWAYS((*i)->ip.IsValid())
 		}
@@ -121,16 +120,16 @@ public:
 	
 	E_Result result;
 	
-	//override
-	void OnCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept{
+
+	void onCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept override{
 //		ASSERT_INFO_ALWAYS(result == ting::net::HostNameResolver::OK, "result = " << result)
 		
 		if(this->host.size() == 0){
-			ASSERT_INFO_ALWAYS(result == setka::HostNameResolver::NO_SUCH_HOST, "result = " << result)
+			ASSERT_INFO_ALWAYS(result == setka::HostNameResolver::E_Result::NO_SUCH_HOST, "result = " << unsigned(result))
 			ASSERT_ALWAYS(!ip.IsValid())
 			
 			this->host = "ya.ru";
-			this->Resolve_ts(this->host, 5000);
+			this->resolve_ts(this->host, 5000);
 		}else{
 			ASSERT_ALWAYS(this->host == "ya.ru")
 			this->result = result;
@@ -145,13 +144,13 @@ void Run(){
 	
 	Resolver r(sema);
 	
-	r.Resolve_ts("rfesfdf.ru", 3000);
+	r.resolve_ts("rfesfdf.ru", 3000);
 	
 	if(!sema.wait(8000)){
 		ASSERT_ALWAYS(false)
 	}
 	
-	ASSERT_INFO_ALWAYS(r.result == setka::HostNameResolver::OK, "r.result = " << r.result)
+	ASSERT_INFO_ALWAYS(r.result == setka::HostNameResolver::E_Result::OK, "r.result = " << unsigned(r.result))
 
 //	ASSERT_INFO_ALWAYS(r.ip == 0x4D581503 || r.ip == 0x57FAFB03, "r.ip = " << r.ip)
 	ASSERT_ALWAYS(r.ip.IsValid())
@@ -169,8 +168,7 @@ public:
 	
 	volatile bool called = false;
 	
-	//override
-	void OnCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept{
+	void onCompleted_ts(E_Result result, setka::IPAddress::Host ip)noexcept override{
 		this->called = true;
 	}
 };
@@ -179,11 +177,11 @@ void Run(){
 	TRACE_ALWAYS(<< "\tRunning 'cacnel DNS lookup' test, it will take about 4 seconds" << std::endl)
 	Resolver r;
 	
-	r.Resolve_ts("rfesweefdqfdf.ru", 3000, setka::IPAddress("1.2.3.4", 53));
+	r.resolve_ts("rfesweefdqfdf.ru", 3000, setka::IPAddress("1.2.3.4", 53));
 	
 	nitki::Thread::sleep(500);
 	
-	bool res = r.Cancel_ts();
+	bool res = r.cancel_ts();
 	
 	nitki::Thread::sleep(3000);
 	
