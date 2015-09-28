@@ -40,12 +40,7 @@ endif
 
 $(eval $(prorab-build-app))
 
-define this_rule
-testnet:: $(prorab_this_name)
-	@echo running $$^...
-	@$(this_test_cmd)
-endef
-$(eval $(this_rule))
+include $(prorab_this_dir)../test_target.mk
 
 
 
