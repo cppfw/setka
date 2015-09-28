@@ -19,66 +19,66 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 
 	//create event for implementing Waitable
 #if M_OS == M_OS_WINDOWS
-	this->CreateEventForWaitable();
+	this->createEventForWaitable();
 #endif
 
 	this->socket = ::socket(
-			ip.host.IsIPv4() ? PF_INET : PF_INET6,
+			ip.host.isIPv4() ? PF_INET : PF_INET6,
 			SOCK_STREAM,
 			0
 		);
 	if(this->socket == DInvalidSocket()){
 #if M_OS == M_OS_WINDOWS
-		this->CloseEventForWaitable();
+		this->closeEventForWaitable();
 #endif
 		throw setka::Exc("TCPSocket::Open(): Couldn't create socket");
 	}
 
 	//Disable Naggle algorithm if required
 	if(disableNaggle){
-		this->DisableNaggle();
+		this->disableNaggle();
 	}
 
-	this->SetNonBlockingMode();
+	this->setNonBlockingMode();
 
 	this->clearAllReadinessFlags();
 
 	//Connecting to remote host
 	sockaddr_storage sockAddr;
 	
-	if(ip.host.IsIPv4()){
+	if(ip.host.isIPv4()){
 		sockaddr_in &sa = reinterpret_cast<sockaddr_in&>(sockAddr);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin_family = AF_INET;
-		sa.sin_addr.s_addr = htonl(ip.host.IPv4Host());
+		sa.sin_addr.s_addr = htonl(ip.host.getIPv4Host());
 		sa.sin_port = htons(ip.port);
 	}else{
 		sockaddr_in6 &sa = reinterpret_cast<sockaddr_in6&>(sockAddr);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin6_family = AF_INET6;
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
-		sa.sin6_addr.s6_addr[0] = ip.host.Quad0() >> 24;
-		sa.sin6_addr.s6_addr[1] = (ip.host.Quad0() >> 16) & 0xff;
-		sa.sin6_addr.s6_addr[2] = (ip.host.Quad0() >> 8) & 0xff;
-		sa.sin6_addr.s6_addr[3] = ip.host.Quad0() & 0xff;
-		sa.sin6_addr.s6_addr[4] = ip.host.Quad1() >> 24;
-		sa.sin6_addr.s6_addr[5] = (ip.host.Quad1() >> 16) & 0xff;
-		sa.sin6_addr.s6_addr[6] = (ip.host.Quad1() >> 8) & 0xff;
-		sa.sin6_addr.s6_addr[7] = ip.host.Quad1() & 0xff;
-		sa.sin6_addr.s6_addr[8] = ip.host.Quad2() >> 24;
-		sa.sin6_addr.s6_addr[9] = (ip.host.Quad2() >> 16) & 0xff;
-		sa.sin6_addr.s6_addr[10] = (ip.host.Quad2() >> 8) & 0xff;
-		sa.sin6_addr.s6_addr[11] = ip.host.Quad2() & 0xff;
-		sa.sin6_addr.s6_addr[12] = ip.host.Quad3() >> 24;
-		sa.sin6_addr.s6_addr[13] = (ip.host.Quad3() >> 16) & 0xff;
-		sa.sin6_addr.s6_addr[14] = (ip.host.Quad3() >> 8) & 0xff;
-		sa.sin6_addr.s6_addr[15] = ip.host.Quad3() & 0xff;
+		sa.sin6_addr.s6_addr[0] = ip.host.quad0() >> 24;
+		sa.sin6_addr.s6_addr[1] = (ip.host.quad0() >> 16) & 0xff;
+		sa.sin6_addr.s6_addr[2] = (ip.host.quad0() >> 8) & 0xff;
+		sa.sin6_addr.s6_addr[3] = ip.host.quad0() & 0xff;
+		sa.sin6_addr.s6_addr[4] = ip.host.quad1() >> 24;
+		sa.sin6_addr.s6_addr[5] = (ip.host.quad1() >> 16) & 0xff;
+		sa.sin6_addr.s6_addr[6] = (ip.host.quad1() >> 8) & 0xff;
+		sa.sin6_addr.s6_addr[7] = ip.host.quad1() & 0xff;
+		sa.sin6_addr.s6_addr[8] = ip.host.quad2() >> 24;
+		sa.sin6_addr.s6_addr[9] = (ip.host.quad2() >> 16) & 0xff;
+		sa.sin6_addr.s6_addr[10] = (ip.host.quad2() >> 8) & 0xff;
+		sa.sin6_addr.s6_addr[11] = ip.host.quad2() & 0xff;
+		sa.sin6_addr.s6_addr[12] = ip.host.quad3() >> 24;
+		sa.sin6_addr.s6_addr[13] = (ip.host.quad3() >> 16) & 0xff;
+		sa.sin6_addr.s6_addr[14] = (ip.host.quad3() >> 8) & 0xff;
+		sa.sin6_addr.s6_addr[15] = ip.host.quad3() & 0xff;
 
 #else
-		sa.sin6_addr.__in6_u.__u6_addr32[0] = htonl(ip.host.Quad0());
-		sa.sin6_addr.__in6_u.__u6_addr32[1] = htonl(ip.host.Quad1());
-		sa.sin6_addr.__in6_u.__u6_addr32[2] = htonl(ip.host.Quad2());
-		sa.sin6_addr.__in6_u.__u6_addr32[3] = htonl(ip.host.Quad3());
+		sa.sin6_addr.__in6_u.__u6_addr32[0] = htonl(ip.host.quad0());
+		sa.sin6_addr.__in6_u.__u6_addr32[1] = htonl(ip.host.quad1());
+		sa.sin6_addr.__in6_u.__u6_addr32[2] = htonl(ip.host.quad2());
+		sa.sin6_addr.__in6_u.__u6_addr32[3] = htonl(ip.host.quad3());
 #endif
 		sa.sin6_port = htons(ip.port);
 	}
@@ -87,7 +87,7 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 	if(connect(
 			this->socket,
 			reinterpret_cast<sockaddr *>(&sockAddr),
-			ip.host.IsIPv4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6) //NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
+			ip.host.isIPv4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6) //NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
 		) == DSocketError())
 	{
 #if M_OS == M_OS_WINDOWS
@@ -115,7 +115,7 @@ void TCPSocket::Open(const IPAddress& ip, bool disableNaggle){
 #else
 			ss << strerror(errorCode);
 #endif
-			this->Close();
+			this->close();
 			throw setka::Exc(ss.str());
 		}
 	}
@@ -346,6 +346,6 @@ void TCPSocket::SetWaitingEvents(std::uint32_t flagsToWaitFor){
 	if((flagsToWaitFor & Waitable::WRITE) != 0){
 		flags |= FD_WRITE | FD_CONNECT;
 	}
-	this->SetWaitingEventsForWindows(flags);
+	this->setWaitingEventsForWindows(flags);
 }
 #endif

@@ -20,12 +20,12 @@ using namespace setka;
 
 
 Socket::~Socket()noexcept{
-	this->Close();
+	this->close();
 }
 
 
 
-void Socket::Close()noexcept{
+void Socket::close()noexcept{
 //		TRACE(<< "Socket::Close(): invoked " << this << std::endl)
 	ASSERT_INFO(!this->IsAdded(), "Socket::Close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
 	
@@ -38,9 +38,9 @@ void Socket::Close()noexcept{
 		shutdown(this->socket, SD_BOTH);
 		closesocket(this->socket);
 
-		this->CloseEventForWaitable();
+		this->closeEventForWaitable();
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-		close(this->socket);
+		::close(this->socket);
 #else
 #	error "Unsupported OS"
 #endif
@@ -62,7 +62,7 @@ Socket& Socket::operator=(Socket&& s){
 	//if the waitable is added to some waitset
 	this->Waitable::operator=(std::move(s));
 
-	this->Close();
+	this->close();
 	this->socket = s.socket;
 
 #if M_OS == M_OS_WINDOWS
@@ -76,7 +76,7 @@ Socket& Socket::operator=(Socket&& s){
 
 
 
-void Socket::DisableNaggle(){
+void Socket::disableNaggle(){
 	if(!*this){
 		throw setka::Exc("Socket::DisableNaggle(): socket is not valid");
 	}
@@ -93,7 +93,7 @@ void Socket::DisableNaggle(){
 
 
 
-void Socket::SetNonBlockingMode(){
+void Socket::setNonBlockingMode(){
 	if(!*this){
 		throw setka::Exc("Socket::SetNonBlockingMode(): socket is not valid");
 	}
@@ -123,7 +123,7 @@ void Socket::SetNonBlockingMode(){
 
 
 
-std::uint16_t Socket::GetLocalPort(){
+std::uint16_t Socket::getLocalPort(){
 	if(!*this){
 		throw setka::Exc("Socket::GetLocalPort(): socket is not valid");
 	}
@@ -225,7 +225,7 @@ bool Socket::CheckSignaled(){
 
 
 
-void Socket::CreateEventForWaitable(){
+void Socket::createEventForWaitable(){
 	ASSERT(this->eventForWaitable == WSA_INVALID_EVENT)
 	this->eventForWaitable = WSACreateEvent();
 	if(this->eventForWaitable == WSA_INVALID_EVENT){
@@ -235,7 +235,7 @@ void Socket::CreateEventForWaitable(){
 
 
 
-void Socket::CloseEventForWaitable(){
+void Socket::closeEventForWaitable(){
 	ASSERT(this->eventForWaitable != WSA_INVALID_EVENT)
 	WSACloseEvent(this->eventForWaitable);
 	this->eventForWaitable = WSA_INVALID_EVENT;
@@ -243,7 +243,7 @@ void Socket::CloseEventForWaitable(){
 
 
 
-void Socket::SetWaitingEventsForWindows(long flags){
+void Socket::setWaitingEventsForWindows(long flags){
 	ASSERT_INFO(*this && (this->eventForWaitable != WSA_INVALID_EVENT), "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.")
 
 	if(WSAEventSelect(
@@ -252,7 +252,7 @@ void Socket::SetWaitingEventsForWindows(long flags){
 			flags
 		) != 0)
 	{
-		throw setka::Exc("Socket::SetWaitingEventsForWindows(): could not associate event (Win32) with socket");
+		throw setka::Exc("Socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
 	}
 }
 

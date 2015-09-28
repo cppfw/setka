@@ -19,7 +19,7 @@ void UDPSocket::Open(std::uint16_t port){
 	}
 
 #if M_OS == M_OS_WINDOWS
-	this->CreateEventForWaitable();
+	this->createEventForWaitable();
 #endif
 
 	this->ipv4 = false;
@@ -32,7 +32,7 @@ void UDPSocket::Open(std::uint16_t port){
 
 		if(this->socket == DInvalidSocket()){
 #if M_OS == M_OS_WINDOWS
-			this->CloseEventForWaitable();
+			this->closeEventForWaitable();
 #endif
 			throw setka::Exc("TCPServerSocket::Open(): Couldn't create socket");
 		}
@@ -52,19 +52,19 @@ void UDPSocket::Open(std::uint16_t port){
 		if(setsockopt(this->socket, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
 			//Dual stack is not supported, proceed with IPv4 only.
 			
-			this->Close();//close IPv6 socket
+			this->close();//close IPv6 socket
 			
 			//create IPv4 socket
 			
 #if M_OS == M_OS_WINDOWS
-			this->CreateEventForWaitable();
+			this->createEventForWaitable();
 #endif			
 			
 			this->socket = ::socket(PF_INET, SOCK_DGRAM, 0);
 	
 			if(this->socket == DInvalidSocket()){
 #if M_OS == M_OS_WINDOWS
-				this->CloseEventForWaitable();
+				this->closeEventForWaitable();
 #endif
 				throw setka::Exc("TCPServerSocket::Open(): Couldn't create socket");
 			}
@@ -101,7 +101,7 @@ void UDPSocket::Open(std::uint16_t port){
 				sockAddrLen
 			) == DSocketError())
 		{
-			this->Close();
+			this->close();
 			
 #if M_OS == M_OS_WINDOWS
 			int errorCode = WSAGetLastError();
@@ -126,7 +126,7 @@ void UDPSocket::Open(std::uint16_t port){
 		}
 	}
 
-	this->SetNonBlockingMode();
+	this->setNonBlockingMode();
 
 	//Allow broadcasting
 #if M_OS == M_OS_WINDOWS || M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
@@ -140,7 +140,7 @@ void UDPSocket::Open(std::uint16_t port){
 				sizeof(yes)
 			) == DSocketError())
 		{
-			this->Close();
+			this->close();
 			throw setka::Exc("UDPSocket::Open(): failed setting broadcast option");
 		}
 	}
@@ -168,13 +168,13 @@ size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& desti
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS
 			this->ipv4 &&
 #endif
-			destinationIP.host.IsIPv4()
+			destinationIP.host.isIPv4()
 		)
 	{
 		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(sockAddr);
 		memset(&a, 0, sizeof(a));
 		a.sin_family = AF_INET;
-		a.sin_addr.s_addr = htonl(destinationIP.host.IPv4Host());
+		a.sin_addr.s_addr = htonl(destinationIP.host.getIPv4Host());
 		a.sin_port = htons(destinationIP.port);
 		sockAddrLen = sizeof(a);
 	}else{
@@ -182,27 +182,27 @@ size_t UDPSocket::Send(utki::Buf<const std::uint8_t> buf, const IPAddress& desti
 		memset(&a, 0, sizeof(a));
 		a.sin6_family = AF_INET6;
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
-		a.sin6_addr.s6_addr[0] = destinationIP.host.Quad0() >> 24;
-		a.sin6_addr.s6_addr[1] = (destinationIP.host.Quad0() >> 16) & 0xff;
-		a.sin6_addr.s6_addr[2] = (destinationIP.host.Quad0() >> 8) & 0xff;
-		a.sin6_addr.s6_addr[3] = destinationIP.host.Quad0() & 0xff;
-		a.sin6_addr.s6_addr[4] = destinationIP.host.Quad1() >> 24;
-		a.sin6_addr.s6_addr[5] = (destinationIP.host.Quad1() >> 16) & 0xff;
-		a.sin6_addr.s6_addr[6] = (destinationIP.host.Quad1() >> 8) & 0xff;
-		a.sin6_addr.s6_addr[7] = destinationIP.host.Quad1() & 0xff;
-		a.sin6_addr.s6_addr[8] = destinationIP.host.Quad2() >> 24;
-		a.sin6_addr.s6_addr[9] = (destinationIP.host.Quad2() >> 16) & 0xff;
-		a.sin6_addr.s6_addr[10] = (destinationIP.host.Quad2() >> 8) & 0xff;
-		a.sin6_addr.s6_addr[11] = destinationIP.host.Quad2() & 0xff;
-		a.sin6_addr.s6_addr[12] = destinationIP.host.Quad3() >> 24;
-		a.sin6_addr.s6_addr[13] = (destinationIP.host.Quad3() >> 16) & 0xff;
-		a.sin6_addr.s6_addr[14] = (destinationIP.host.Quad3() >> 8) & 0xff;
-		a.sin6_addr.s6_addr[15] = destinationIP.host.Quad3() & 0xff;
+		a.sin6_addr.s6_addr[0] = destinationIP.host.quad0() >> 24;
+		a.sin6_addr.s6_addr[1] = (destinationIP.host.quad0() >> 16) & 0xff;
+		a.sin6_addr.s6_addr[2] = (destinationIP.host.quad0() >> 8) & 0xff;
+		a.sin6_addr.s6_addr[3] = destinationIP.host.quad0() & 0xff;
+		a.sin6_addr.s6_addr[4] = destinationIP.host.quad1() >> 24;
+		a.sin6_addr.s6_addr[5] = (destinationIP.host.quad1() >> 16) & 0xff;
+		a.sin6_addr.s6_addr[6] = (destinationIP.host.quad1() >> 8) & 0xff;
+		a.sin6_addr.s6_addr[7] = destinationIP.host.quad1() & 0xff;
+		a.sin6_addr.s6_addr[8] = destinationIP.host.quad2() >> 24;
+		a.sin6_addr.s6_addr[9] = (destinationIP.host.quad2() >> 16) & 0xff;
+		a.sin6_addr.s6_addr[10] = (destinationIP.host.quad2() >> 8) & 0xff;
+		a.sin6_addr.s6_addr[11] = destinationIP.host.quad2() & 0xff;
+		a.sin6_addr.s6_addr[12] = destinationIP.host.quad3() >> 24;
+		a.sin6_addr.s6_addr[13] = (destinationIP.host.quad3() >> 16) & 0xff;
+		a.sin6_addr.s6_addr[14] = (destinationIP.host.quad3() >> 8) & 0xff;
+		a.sin6_addr.s6_addr[15] = destinationIP.host.quad3() & 0xff;
 #else
-		a.sin6_addr.__in6_u.__u6_addr32[0] = htonl(destinationIP.host.Quad0());
-		a.sin6_addr.__in6_u.__u6_addr32[1] = htonl(destinationIP.host.Quad1());
-		a.sin6_addr.__in6_u.__u6_addr32[2] = htonl(destinationIP.host.Quad2());
-		a.sin6_addr.__in6_u.__u6_addr32[3] = htonl(destinationIP.host.Quad3());
+		a.sin6_addr.__in6_u.__u6_addr32[0] = htonl(destinationIP.host.quad0());
+		a.sin6_addr.__in6_u.__u6_addr32[1] = htonl(destinationIP.host.quad1());
+		a.sin6_addr.__in6_u.__u6_addr32[2] = htonl(destinationIP.host.quad2());
+		a.sin6_addr.__in6_u.__u6_addr32[3] = htonl(destinationIP.host.quad3());
 #endif
 		a.sin6_port = htons(destinationIP.port);
 		sockAddrLen = sizeof(a);

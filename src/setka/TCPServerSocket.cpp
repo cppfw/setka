@@ -19,7 +19,7 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 	this->disableNaggle = disableNaggle;
 
 #if M_OS == M_OS_WINDOWS
-	this->CreateEventForWaitable();
+	this->createEventForWaitable();
 #endif
 
 	bool ipv4 = false;
@@ -33,7 +33,7 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 
 		if(this->socket == DInvalidSocket()){
 #if M_OS == M_OS_WINDOWS
-			this->CloseEventForWaitable();
+			this->closeEventForWaitable();
 #endif
 			throw setka::Exc("TCPServerSocket::Open(): Couldn't create IPv4 socket");
 		}
@@ -53,19 +53,19 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 		if(setsockopt(this->socket, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
 			//Dual stack is not supported, proceed with IPv4 only.
 			
-			this->Close();//close IPv6 socket
+			this->close();//close IPv6 socket
 			
 			//create IPv4 socket
 			
 #if M_OS == M_OS_WINDOWS
-			this->CreateEventForWaitable();
+			this->createEventForWaitable();
 #endif			
 			
 			this->socket = ::socket(PF_INET, SOCK_STREAM, 0);
 	
 			if(this->socket == DInvalidSocket()){
 #if M_OS == M_OS_WINDOWS
-				this->CloseEventForWaitable();
+				this->closeEventForWaitable();
 #endif
 				throw setka::Exc("TCPServerSocket::Open(): Couldn't create IPv4 socket");
 			}
@@ -127,16 +127,16 @@ void TCPServerSocket::Open(std::uint16_t port, bool disableNaggle, std::uint16_t
 #else
 		ss << strerror(errorCode);
 #endif
-		this->Close();
+		this->close();
 		throw setka::Exc(ss.str());
 	}
 
 	if(listen(this->socket, int(queueLength)) == DSocketError()){
-		this->Close();
+		this->close();
 		throw setka::Exc("TCPServerSocket::Open(): Couldn't listen to local port");
 	}
 
-	this->SetNonBlockingMode();
+	this->setNonBlockingMode();
 }
 
 
@@ -171,17 +171,17 @@ TCPSocket TCPServerSocket::Accept(){
 	}
 
 #if M_OS == M_OS_WINDOWS
-	sock.CreateEventForWaitable();
+	sock.createEventForWaitable();
 
 	//NOTE: accepted socket is associated with the same event object as the listening socket which accepted it.
 	//Re-associate the socket with its own event object.
 	sock.SetWaitingEvents(0);
 #endif
 
-	sock.SetNonBlockingMode();
+	sock.setNonBlockingMode();
 
 	if(this->disableNaggle){
-		sock.DisableNaggle();
+		sock.disableNaggle();
 	}
 
 	return sock;//return a newly created socket
@@ -200,6 +200,6 @@ void TCPServerSocket::SetWaitingEvents(std::uint32_t flagsToWaitFor){
 	if((flagsToWaitFor & Waitable::READ) != 0){
 		flags |= FD_ACCEPT;
 	}
-	this->SetWaitingEventsForWindows(flags);
+	this->setWaitingEventsForWindows(flags);
 }
 #endif

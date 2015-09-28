@@ -56,46 +56,46 @@ protected:
 #if M_OS == M_OS_WINDOWS
 	typedef SOCKET T_Socket;
 
-	inline static T_Socket DInvalidSocket(){
+	static T_Socket DInvalidSocket(){
 		return INVALID_SOCKET;
 	}
 
-	inline static int DSocketError(){
+	static int DSocketError(){
 		return SOCKET_ERROR;
 	}
 
-	inline static int DEIntr(){
+	static int DEIntr(){
 		return WSAEINTR;
 	}
 	
-	inline static int DEAgain(){
+	static int DEAgain(){
 		return WSAEWOULDBLOCK;
 	}
 
-	inline static int DEInProgress(){
+	static int DEInProgress(){
 		return WSAEWOULDBLOCK;
 	}
 
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 	typedef int T_Socket;
 
-	inline static T_Socket DInvalidSocket(){
+	static T_Socket DInvalidSocket(){
 		return -1;
 	}
 
-	inline static T_Socket DSocketError(){
+	static T_Socket DSocketError(){
 		return -1;
 	}
 
-	inline static int DEIntr(){
+	static int DEIntr(){
 		return EINTR;
 	}
 
-	inline static int DEAgain(){
+	static int DEAgain(){
 		return EAGAIN;
 	}
 
-	inline static int DEInProgress(){
+	static int DEInProgress(){
 		return EINPROGRESS;
 	}
 #else
@@ -123,11 +123,11 @@ protected:
 
 
 
-	void DisableNaggle();
+	void disableNaggle();
 
 
 
-	void SetNonBlockingMode();
+	void setNonBlockingMode();
 
 
 
@@ -160,7 +160,7 @@ public:
 	/**
 	 * @brief Closes the socket disconnecting it if necessary.
 	 */
-	void Close()noexcept;
+	void close()noexcept;
 
 
 
@@ -169,7 +169,7 @@ public:
 	 * @return local port number to which this socket is bound,
 	 *         0 means that the socket is not bound to a port.
 	 */
-	std::uint16_t GetLocalPort();
+	std::uint16_t getLocalPort();
 
 
 
@@ -180,11 +180,11 @@ private:
 	bool checkSignaled()override;
 
 protected:
-	void CreateEventForWaitable();
+	void createEventForWaitable();
 
-	void CloseEventForWaitable();
+	void closeEventForWaitable();
 
-	void SetWaitingEventsForWindows(long flags);
+	void setWaitingEventsForWindows(long flags);
 
 
 

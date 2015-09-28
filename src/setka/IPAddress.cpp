@@ -38,18 +38,18 @@ bool IsIPv4String(const char* ip){
 
 
 //static
-IPAddress::Host IPAddress::Host::Parse(const char* ip){
+IPAddress::Host IPAddress::Host::parse(const char* ip){
 	if(IsIPv4String(ip)){
-		return Host::ParseIPv4(ip);
+		return Host::parseIPv4(ip);
 	}else{
-		return Host::ParseIPv6(ip);
+		return Host::parseIPv6(ip);
 	}
 }
 
 
 
 //static
-IPAddress::Host IPAddress::Host::ParseIPv4(const char* ip){
+IPAddress::Host IPAddress::Host::parseIPv4(const char* ip){
 	sockaddr_in a;
 	
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
@@ -85,7 +85,7 @@ IPAddress::Host IPAddress::Host::ParseIPv4(const char* ip){
 
 
 //static
-IPAddress::Host IPAddress::Host::ParseIPv6(const char* ip){
+IPAddress::Host IPAddress::Host::parseIPv6(const char* ip){
 #if M_OS == M_OS_WINDOWS
 	sockaddr_in6 aa;
 	in6_addr& a = aa.sin6_addr;
@@ -165,7 +165,7 @@ IPAddress::Host IPAddress::Host::ParseIPv6(const char* ip){
 
 
 IPAddress::IPAddress(const char* ip, std::uint16_t p) :
-		host(Host::Parse(ip)),
+		host(Host::parse(ip)),
 		port(p)
 {}
 
@@ -193,7 +193,7 @@ IPAddress::IPAddress(const char* ip){
 		ASSERT(utki::Buf<char>(buf).Overlaps(dst))
 		*dst = 0;//null-terminate
 				
-		this->host = Host::ParseIPv6(&*buf.begin());
+		this->host = Host::parseIPv6(&*buf.begin());
 		
 		++ip;//move to port ':' separator
 	}else{
@@ -214,10 +214,10 @@ IPAddress::IPAddress(const char* ip){
 			ASSERT(utki::Buf<char>(buf).Overlaps(dst))
 			*dst = 0;//null-terminate
 
-			this->host = Host::ParseIPv4(&*buf.begin());
+			this->host = Host::parseIPv4(&*buf.begin());
 		}else{
 			//IPv6 without port
-			this->host = Host::ParseIPv6(ip);
+			this->host = Host::parseIPv6(ip);
 			this->port = 0;
 			return;
 		}
@@ -270,12 +270,12 @@ IPAddress::IPAddress(const char* ip){
 
 
 
-std::string IPAddress::Host::ToString()const{
+std::string IPAddress::Host::toString()const{
 	std::stringstream ss;
-	if(this->IsIPv4()){
+	if(this->isIPv4()){
 		for(unsigned i = 4;;){
 			--i;
-			ss << (((this->IPv4Host()) >> (8 * i)) & 0xff);
+			ss << (((this->getIPv4Host()) >> (8 * i)) & 0xff);
 			if(i == 0){
 				break;
 			}

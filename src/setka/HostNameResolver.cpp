@@ -259,7 +259,7 @@ public:
 		ASSERT(&*buf.begin() <= p && p <= &*buf.end());
 		ASSERT(size_t(p - &*buf.begin()) == packetSize);
 		
-		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.IPv4Host()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
+		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.getIPv4Host()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
 		size_t ret = this->socket.Send(utki::Buf<std::uint8_t>(&*buf.begin(), packetSize), r->dns);
 		
 		ASSERT(ret == packetSize || ret == 0)
@@ -687,7 +687,7 @@ private:
 		
 		this->InitDNS();
 		
-		TRACE(<< "this->dns.host = " << this->dns.host.ToString() << std::endl)
+		TRACE(<< "this->dns.host = " << this->dns.host.toString() << std::endl)
 		
 		{
 			std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);//mutex is needed because socket opening may fail and we will have to set isExiting flag which should be protected by mutex
@@ -789,11 +789,11 @@ private:
 					try{
 						while(this->sendList.size() != 0){
 							dns::Resolver* r = this->sendList.front();
-							if(r->dns.host.IPv4Host() == 0){
+							if(r->dns.host.getIPv4Host() == 0){
 								r->dns = this->dns;
 							}
 
-							if(r->dns.host.IsValid()){
+							if(r->dns.host.isValid()){
 								if(!this->SendRequestToDNS(r)){
 									TRACE(<< "request not sent" << std::endl)
 									break;//socket is not ready for sending, go out of requests sending loop.
