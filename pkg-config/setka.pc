@@ -1,6 +1,6 @@
 Name: setka   # human-readable name
 Description: C++ network library # human-readable description
-Version: 1.0.0
+Version: 1.0.1
 URL: https://github.com/igagis/setka
 Requires:
 Conflicts:
