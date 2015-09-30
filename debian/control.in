@@ -23,9 +23,9 @@ Description: debugging symbols for libsetka$(soname) package.
 Package: libsetka-dev
 Section: devel
 Architecture: all
-Depends: libsetka$(soname) (= ${binary:Version}), ${misc:Depends},
+Depends: libsetka$(soname) (= ${binary:Version}), libsetka$(soname)-dbg (= ${binary:Version}), ${misc:Depends},
 		libutki-dev, libpogodi-dev, libnitki-dev, libaika-dev, libpapki-dev
-Suggests: libsetka$(soname)-dbg (= ${binary:Version}), libsetka-doc
+Suggests: libsetka-doc
 Description: cross-platform C++ network library.
  Network library.
 
