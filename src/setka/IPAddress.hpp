@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include <utki/config.hpp>
+
 #include "Exc.hpp"
 
 
@@ -19,7 +21,7 @@ namespace setka{
  * @brief a structure which holds IP address.
  * IP address consists of IP host address and an IP port.
  */
-class IPAddress{
+class DLLEXPORT IPAddress{
 public:
 	/**
 	 * @brief Bad IP address format error.

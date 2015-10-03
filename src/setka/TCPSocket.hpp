@@ -5,6 +5,7 @@
 #pragma once
 
 #include <utki/Buf.hpp>
+#include <utki/config.hpp>
 
 #include "Socket.hpp"
 #include "IPAddress.hpp"
@@ -24,7 +25,7 @@ class TCPServerSocket;
 /**
  * @brief a class which represents a TCP socket.
  */
-class TCPSocket : public Socket{
+class DLLEXPORT TCPSocket : public Socket{
 	friend class setka::TCPServerSocket;
 public:
 	

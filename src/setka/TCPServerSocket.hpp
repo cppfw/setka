@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <utki/config.hpp>
 
 #include "Socket.hpp"
 #include "TCPSocket.hpp"
@@ -23,7 +24,7 @@ namespace setka{
  * TCP server socket is the socket which can listen for new connections
  * and accept them creating an ordinary TCP socket for it.
  */
-class TCPServerSocket : public Socket{
+class DLLEXPORT TCPServerSocket : public Socket{
 	bool disableNaggle = false;//this flag indicates if accepted sockets should be created with disabled Naggle
 public:
 	/**

@@ -8,7 +8,7 @@
 
 
 #include <utki/Singleton.hpp>
-
+#include <utki/config.hpp>
 
 
 namespace setka{
@@ -23,7 +23,7 @@ namespace setka{
  * destructor will be called and the library will be de-initialized automatically.
  * This is what C++ RAII is all about.
  */
-class Lib : public utki::IntrusiveSingleton<Lib>{
+class DLLEXPORT Lib : public utki::IntrusiveSingleton<Lib>{
 	friend class utki::IntrusiveSingleton<Lib>;
 	static utki::IntrusiveSingleton<Lib>::T_Instance instance;
 	
