@@ -29,7 +29,7 @@ class Lib;
  * One has to derive his/her own class from this class to override the
  * OnCompleted_ts() method which will be called upon the DNS lookup operation has finished.
  */
-class DLLEXPORT HostNameResolver{
+class HostNameResolver{
 public:
 	HostNameResolver(const HostNameResolver&) = delete;
 	HostNameResolver& operator=(const HostNameResolver&) = delete;

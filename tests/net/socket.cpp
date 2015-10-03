@@ -249,13 +249,13 @@ void Run(){
 							<< (sendBuffer.size() % sizeof(std::uint32_t))
 						)
 
-					std::uint8_t* p = &*sendBuffer.begin();
-					for(; p != &*sendBuffer.end(); p += sizeof(std::uint32_t)){
-						ASSERT_INFO_ALWAYS(p < (&*sendBuffer.end() - (sizeof(std::uint32_t) - 1)), "p = " << p << " sendBuffer.End() = " << &*sendBuffer.end())
+					std::uint8_t* p = &sendBuffer[0];
+					for(; p != (&sendBuffer[0]) + sendBuffer.size(); p += sizeof(std::uint32_t)){
+						ASSERT_INFO_ALWAYS(p < (((&sendBuffer[0]) + sendBuffer.size()) - (sizeof(std::uint32_t) - 1)), "p = " << p << " sendBuffer.End() = " << &*sendBuffer.end())
 						utki::serialize32LE(scnt, p);
 						++scnt;
 					}
-					ASSERT_ALWAYS(p == &*sendBuffer.end())
+					ASSERT_ALWAYS(p == (&sendBuffer[0]) + sendBuffer.size())
 				}
 
 				ASSERT_ALWAYS(sendBuffer.size() > 0)

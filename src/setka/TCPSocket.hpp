@@ -25,7 +25,7 @@ class TCPServerSocket;
 /**
  * @brief a class which represents a TCP socket.
  */
-class DLLEXPORT TCPSocket : public Socket{
+class TCPSocket : public Socket{
 	friend class setka::TCPServerSocket;
 public:
 	

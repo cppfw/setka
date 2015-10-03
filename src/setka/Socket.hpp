@@ -51,7 +51,7 @@ namespace setka{
  * @brief Basic socket class.
  * This is a base class for all socket types such as TCP sockets or UDP sockets.
  */
-class DLLEXPORT Socket : public pogodi::Waitable{
+class Socket : public pogodi::Waitable{
 protected:
 #if M_OS == M_OS_WINDOWS
 	typedef SOCKET T_Socket;
