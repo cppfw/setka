@@ -19,37 +19,37 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E9EE8B8E-5890-4A54-BDF2-2516A8A63D0E}</ProjectGuid>
+    <ProjectGuid>{5984AC94-C2B4-469D-849B-6F91E58D9176}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>libsetka</RootNamespace>
+    <RootNamespace>test_net</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -87,12 +87,11 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBSETKA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -101,12 +100,11 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;LIBSETKA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -117,14 +115,13 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBSETKA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -135,46 +132,41 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;LIBSETKA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\setka\Exc.hpp" />
-    <ClInclude Include="..\..\src\setka\HostNameResolver.hpp" />
-    <ClInclude Include="..\..\src\setka\IPAddress.hpp" />
-    <ClInclude Include="..\..\src\setka\Lib.hpp" />
-    <ClInclude Include="..\..\src\setka\Socket.hpp" />
-    <ClInclude Include="..\..\src\setka\TCPServerSocket.hpp" />
-    <ClInclude Include="..\..\src\setka\TCPSocket.hpp" />
-    <ClInclude Include="..\..\src\setka\UDPSocket.hpp" />
+    <ClInclude Include="..\..\tests\net\dns.hpp" />
+    <ClInclude Include="..\..\tests\net\main.hpp" />
+    <ClInclude Include="..\..\tests\net\socket.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\setka\HostNameResolver.cpp" />
-    <ClCompile Include="..\..\src\setka\IPAddress.cpp" />
-    <ClCompile Include="..\..\src\setka\Lib.cpp" />
-    <ClCompile Include="..\..\src\setka\Socket.cpp" />
-    <ClCompile Include="..\..\src\setka\TCPServerSocket.cpp" />
-    <ClCompile Include="..\..\src\setka\TCPSocket.cpp" />
-    <ClCompile Include="..\..\src\setka\UDPSocket.cpp" />
+    <ClCompile Include="..\..\tests\net\dns.cpp" />
+    <ClCompile Include="..\..\tests\net\main.cpp" />
+    <ClCompile Include="..\..\tests\net\socket.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\libsetka\libsetka.vcxproj">
+      <Project>{e9ee8b8e-5890-4a54-bdf2-2516a8a63d0e}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\packages\libutki.1.0.8.4\build\native\libutki.targets" Condition="Exists('..\packages\libutki.1.0.8.4\build\native\libutki.targets')" />
+    <Import Project="..\packages\libnitki.redist.1.0.1.4\build\native\libnitki.redist.targets" Condition="Exists('..\packages\libnitki.redist.1.0.1.4\build\native\libnitki.redist.targets')" />
+    <Import Project="..\packages\libaika.redist.1.0.1.2\build\native\libaika.redist.targets" Condition="Exists('..\packages\libaika.redist.1.0.1.2\build\native\libaika.redist.targets')" />
     <Import Project="..\packages\libpogodi.redist.1.0.1.4\build\native\libpogodi.redist.targets" Condition="Exists('..\packages\libpogodi.redist.1.0.1.4\build\native\libpogodi.redist.targets')" />
     <Import Project="..\packages\libpogodi.1.0.1.4\build\native\libpogodi.targets" Condition="Exists('..\packages\libpogodi.1.0.1.4\build\native\libpogodi.targets')" />
-    <Import Project="..\packages\libnitki.redist.1.0.1.4\build\native\libnitki.redist.targets" Condition="Exists('..\packages\libnitki.redist.1.0.1.4\build\native\libnitki.redist.targets')" />
     <Import Project="..\packages\libnitki.1.0.1.4\build\native\libnitki.targets" Condition="Exists('..\packages\libnitki.1.0.1.4\build\native\libnitki.targets')" />
-    <Import Project="..\packages\libaika.redist.1.0.1.2\build\native\libaika.redist.targets" Condition="Exists('..\packages\libaika.redist.1.0.1.2\build\native\libaika.redist.targets')" />
     <Import Project="..\packages\libaika.1.0.1.2\build\native\libaika.targets" Condition="Exists('..\packages\libaika.1.0.1.2\build\native\libaika.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
@@ -182,11 +174,11 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\libutki.1.0.8.4\build\native\libutki.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libutki.1.0.8.4\build\native\libutki.targets'))" />
+    <Error Condition="!Exists('..\packages\libnitki.redist.1.0.1.4\build\native\libnitki.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libnitki.redist.1.0.1.4\build\native\libnitki.redist.targets'))" />
+    <Error Condition="!Exists('..\packages\libaika.redist.1.0.1.2\build\native\libaika.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libaika.redist.1.0.1.2\build\native\libaika.redist.targets'))" />
     <Error Condition="!Exists('..\packages\libpogodi.redist.1.0.1.4\build\native\libpogodi.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libpogodi.redist.1.0.1.4\build\native\libpogodi.redist.targets'))" />
     <Error Condition="!Exists('..\packages\libpogodi.1.0.1.4\build\native\libpogodi.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libpogodi.1.0.1.4\build\native\libpogodi.targets'))" />
-    <Error Condition="!Exists('..\packages\libnitki.redist.1.0.1.4\build\native\libnitki.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libnitki.redist.1.0.1.4\build\native\libnitki.redist.targets'))" />
     <Error Condition="!Exists('..\packages\libnitki.1.0.1.4\build\native\libnitki.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libnitki.1.0.1.4\build\native\libnitki.targets'))" />
-    <Error Condition="!Exists('..\packages\libaika.redist.1.0.1.2\build\native\libaika.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libaika.redist.1.0.1.2\build\native\libaika.redist.targets'))" />
     <Error Condition="!Exists('..\packages\libaika.1.0.1.2\build\native\libaika.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libaika.1.0.1.2\build\native\libaika.targets'))" />
   </Target>
 </Project>
