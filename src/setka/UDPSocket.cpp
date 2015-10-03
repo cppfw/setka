@@ -218,7 +218,7 @@ size_t UDPSocket::send(const utki::Buf<std::uint8_t> buf, const IPAddress& desti
 		len = ::sendto(
 				this->socket,
 				reinterpret_cast<const char*>(buf.begin()),
-				buf.size(),
+				int(buf.size()),
 				0,
 				reinterpret_cast<struct sockaddr*>(&sockAddr),
 				sockAddrLen
@@ -300,7 +300,7 @@ size_t UDPSocket::recieve(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 		len = ::recvfrom(
 				this->socket,
 				reinterpret_cast<char*>(buf.begin()),
-				buf.size(),
+				int(buf.size()),
 				0,
 				reinterpret_cast<sockaddr*>(&sockAddr),
 				&sockLen
@@ -374,7 +374,7 @@ size_t UDPSocket::recieve(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 
 #if M_OS == M_OS_WINDOWS
 //override
-void UDPSocket::SetWaitingEvents(std::uint32_t flagsToWaitFor){
+void UDPSocket::setWaitingEvents(std::uint32_t flagsToWaitFor){
 	long flags = FD_CLOSE;
 	if((flagsToWaitFor & Waitable::READ) != 0){
 		flags |= FD_READ;
@@ -382,6 +382,6 @@ void UDPSocket::SetWaitingEvents(std::uint32_t flagsToWaitFor){
 	if((flagsToWaitFor & Waitable::WRITE) != 0){
 		flags |= FD_WRITE;
 	}
-	this->SetWaitingEventsForWindows(flags);
+	this->setWaitingEventsForWindows(flags);
 }
 #endif

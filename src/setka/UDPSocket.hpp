@@ -25,7 +25,7 @@ namespace setka{
  * NOTE: Win32 specific: when using UDP socket with WaitSet be aware that waiting on UDP socket for writing does not work on Win32 OS.
  *       On other operating systems it works OK.
  */
-class UDPSocket : public Socket{
+class DLLEXPORT UDPSocket : public Socket{
 	bool ipv4;
 public:
 	UDPSocket(){}

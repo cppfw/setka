@@ -140,7 +140,7 @@ size_t TCPSocket::send(const utki::Buf<std::uint8_t> buf){
 		len = ::send(
 				this->socket,
 				reinterpret_cast<const char*>(&*buf.begin()),
-				buf.size(),
+				int(buf.size()),
 				0
 			);
 		if(len == DSocketError()){
@@ -200,7 +200,7 @@ size_t TCPSocket::recieve(utki::Buf<std::uint8_t> buf){
 		len = ::recv(
 				this->socket,
 				reinterpret_cast<char*>(&*buf.begin()),
-				buf.size(),
+				int(buf.size()),
 				0
 			);
 		if(len == DSocketError()){
@@ -336,10 +336,9 @@ IPAddress TCPSocket::getRemoteAddress(){
 
 
 #if M_OS == M_OS_WINDOWS
-//override
-void TCPSocket::SetWaitingEvents(std::uint32_t flagsToWaitFor){
+void TCPSocket::setWaitingEvents(std::uint32_t flagsToWaitFor){
 	long flags = FD_CLOSE;
-	if((flagsToWaitFor & Waitable::READ) != 0){
+	if((flagsToWaitFor & pogodi::Waitable::READ) != 0){
 		flags |= FD_READ;
 		//NOTE: since it is not a TCPServerSocket, FD_ACCEPT is not needed here.
 	}

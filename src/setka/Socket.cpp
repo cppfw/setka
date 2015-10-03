@@ -27,10 +27,10 @@ Socket::~Socket()noexcept{
 
 void Socket::close()noexcept{
 //		TRACE(<< "Socket::Close(): invoked " << this << std::endl)
-	ASSERT_INFO(!this->IsAdded(), "Socket::Close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
+	ASSERT_INFO(!this->isAdded(), "Socket::Close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
 	
 	if(*this){
-		ASSERT(!this->IsAdded()) //make sure the socket is not added to WaitSet
+		ASSERT(!this->isAdded()) //make sure the socket is not added to WaitSet
 
 #if M_OS == M_OS_WINDOWS
 		//Closing socket in Win32.
@@ -160,17 +160,14 @@ std::uint16_t Socket::getLocalPort(){
 
 
 #if M_OS == M_OS_WINDOWS
-
-//override
-HANDLE Socket::GetHandle(){
+HANDLE Socket::getHandle(){
 	//return event handle
 	return this->eventForWaitable;
 }
 
 
 
-//override
-bool Socket::CheckSignaled(){
+bool Socket::checkSignaled(){
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
 	ASSERT(*this)
@@ -182,34 +179,34 @@ bool Socket::CheckSignaled(){
 //		ASSERT(events.lNetworkEvents != 0)
 
 	if((events.lNetworkEvents & FD_CLOSE) != 0){
-		this->SetErrorFlag();
+		this->setErrorFlag();
 	}
 
 	if((events.lNetworkEvents & FD_READ) != 0){
-		this->SetCanReadFlag();
+		this->setCanReadFlag();
 		if(events.iErrorCode[ASSCOND(FD_READ_BIT, < FD_MAX_EVENTS)] != 0){
-			this->SetErrorFlag();
+			this->setErrorFlag();
 		}
 	}
 
 	if((events.lNetworkEvents & FD_ACCEPT) != 0){
-		this->SetCanReadFlag();
+		this->setCanReadFlag();
 		if(events.iErrorCode[ASSCOND(FD_ACCEPT_BIT, < FD_MAX_EVENTS)] != 0){
-			this->SetErrorFlag();
+			this->setErrorFlag();
 		}
 	}
 
 	if((events.lNetworkEvents & FD_WRITE) != 0){
-		this->SetCanWriteFlag();
+		this->setCanWriteFlag();
 		if(events.iErrorCode[ASSCOND(FD_WRITE_BIT, < FD_MAX_EVENTS)] != 0){
-			this->SetErrorFlag();
+			this->setErrorFlag();
 		}
 	}
 
 	if((events.lNetworkEvents & FD_CONNECT) != 0){
-		this->SetCanWriteFlag();
+		this->setCanWriteFlag();
 		if(events.iErrorCode[ASSCOND(FD_CONNECT_BIT, < FD_MAX_EVENTS)] != 0){
-			this->SetErrorFlag();
+			this->setErrorFlag();
 		}
 	}
 
@@ -220,7 +217,7 @@ bool Socket::CheckSignaled(){
 	}
 #endif
 
-	return this->Waitable::CheckSignaled();
+	return this->Waitable::checkSignaled();
 }
 
 

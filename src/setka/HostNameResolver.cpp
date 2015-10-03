@@ -5,6 +5,7 @@
 #include <utki/config.hpp>
 #include <utki/PoolStored.hpp>
 #include <utki/types.hpp>
+#include <utki/Unique.hpp>
 
 #include <nitki/MsgThread.hpp>
 
@@ -398,7 +399,7 @@ public:
 			}
 		}
 		
-		ASSERT(buf.Overlaps(p) || p == buf.end())
+		ASSERT(buf.overlaps(p) || p == buf.end())
 		
 		//loop through the answers
 		for(std::uint16_t n = 0; n != numAnswers; ++n){
@@ -410,7 +411,7 @@ public:
 			if(((*p) >> 6) == 0){ //check if two high bits are set
 				//skip possible domain name
 				for(; p != buf.end() && *p != 0; ++p){
-					ASSERT(buf.Overlaps(p))
+					ASSERT(buf.overlaps(p))
 				}
 				if(p == buf.end()){
 					return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
@@ -479,7 +480,7 @@ public:
 						break;
 				}
 				
-				TRACE(<< "host resolved: " << r->hostName << " = " << h.ToString() << std::endl)
+				TRACE(<< "host resolved: " << r->hostName << " = " << h.toString() << std::endl)
 				return ParseResult(setka::HostNameResolver::E_Result::OK, h);
 			}
 			p += dataLen;
@@ -496,7 +497,7 @@ public:
 			timeMap1(&resolversByTime1),
 			timeMap2(&resolversByTime2)
 	{
-		ASSERT_INFO(setka::Lib::IsCreated(), "ting::net::Lib is not initialized before doing the DNS request")
+		ASSERT_INFO(setka::Lib::isCreated(), "ting::net::Lib is not initialized before doing the DNS request")
 	}
 public:
 	~LookupThread()noexcept{
@@ -576,7 +577,7 @@ private:
 			
 			std::array<char, 256> subkey;//according to MSDN docs maximum key name length is 255 chars.
 			
-			for(unsigned i = 0; RegEnumKey(key.key, i, &*subkey.begin(), subkey.size()) == ERROR_SUCCESS; ++i){
+			for(unsigned i = 0; RegEnumKey(key.key, i, &*subkey.begin(), DWORD(subkey.size())) == ERROR_SUCCESS; ++i){
 				HKEY hSub;
 				if(RegOpenKey(key.key, &*subkey.begin(), &hSub) != ERROR_SUCCESS){
 					continue;
@@ -584,7 +585,7 @@ private:
 				
 				std::array<BYTE, 1024> value;
 				
-				DWORD len = value.size();
+				DWORD len = DWORD(value.size());
 				
 				if(RegQueryValueEx(hSub, "NameServer", 0, NULL, &*value.begin(), &len) != ERROR_SUCCESS){
 					TRACE(<< "NameServer reading failed " << std::endl)
@@ -602,7 +603,7 @@ private:
 					}catch(...){}
 				}
 
-				len = value.size();
+				len = DWORD(value.size());
 				if(RegQueryValueEx(hSub, "DhcpNameServer", 0, NULL, &*value.begin(), &len) != ERROR_SUCCESS){
 					TRACE(<< "DhcpNameServer reading failed " << std::endl)
 					RegCloseKey(hSub);
@@ -878,7 +879,7 @@ private:
 //Wait() method until timeout is hit. So, just check every 100ms if it is OK to write to UDP socket.
 #if M_OS == M_OS_WINDOWS
 			if(this->sendList.size() > 0){
-				setka::util::ClampTop(timeout, std::uint32_t(100));
+				utki::clampTop(timeout, std::uint32_t(100));
 			}
 #endif
 			
@@ -933,7 +934,7 @@ HostNameResolver::~HostNameResolver(){
 void HostNameResolver::resolve_ts(const std::string& hostName, std::uint32_t timeoutMillis, const setka::IPAddress& dnsIP){
 //	TRACE(<< "HostNameResolver::Resolve_ts(): enter" << std::endl)
 	
-	ASSERT(setka::Lib::IsCreated())
+	ASSERT(setka::Lib::isCreated())
 	
 	if(hostName.size() > 253){
 		throw DomainNameTooLongExc();
