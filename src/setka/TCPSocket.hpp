@@ -5,6 +5,7 @@
 #pragma once
 
 #include <utki/Buf.hpp>
+#include <utki/config.hpp>
 
 #include "Socket.hpp"
 #include "IPAddress.hpp"

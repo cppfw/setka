@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <utki/config.hpp>
 
 #include "Socket.hpp"
 #include "TCPSocket.hpp"

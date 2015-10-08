@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include <utki/config.hpp>
+
 #include "Exc.hpp"
 #include "IPAddress.hpp"
 
@@ -28,11 +30,10 @@ class Lib;
  * OnCompleted_ts() method which will be called upon the DNS lookup operation has finished.
  */
 class HostNameResolver{
-	//no copying
-	HostNameResolver(const HostNameResolver&);
-	HostNameResolver& operator=(const HostNameResolver&);
-	
 public:
+	HostNameResolver(const HostNameResolver&) = delete;
+	HostNameResolver& operator=(const HostNameResolver&) = delete;
+
 	HostNameResolver(){}
 	
 	virtual ~HostNameResolver();

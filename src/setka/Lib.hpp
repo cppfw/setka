@@ -8,7 +8,7 @@
 
 
 #include <utki/Singleton.hpp>
-
+#include <utki/config.hpp>
 
 
 namespace setka{

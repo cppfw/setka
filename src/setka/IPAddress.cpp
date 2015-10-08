@@ -190,7 +190,7 @@ IPAddress::IPAddress(const char* ip){
 			*dst = *ip;
 		}
 		
-		ASSERT(utki::wrapBuf(buf).Overlaps(dst))
+		ASSERT(utki::wrapBuf(buf).overlaps(dst))
 		*dst = 0;//null-terminate
 				
 		this->host = Host::parseIPv6(&*buf.begin());
@@ -211,7 +211,7 @@ IPAddress::IPAddress(const char* ip){
 				*dst = *ip;
 			}
 
-			ASSERT(utki::Buf<char>(buf).Overlaps(dst))
+			ASSERT(utki::wrapBuf(buf).overlaps(dst))
 			*dst = 0;//null-terminate
 
 			this->host = Host::parseIPv4(&*buf.begin());

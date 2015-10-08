@@ -175,7 +175,7 @@ TCPSocket TCPServerSocket::accept(){
 
 	//NOTE: accepted socket is associated with the same event object as the listening socket which accepted it.
 	//Re-associate the socket with its own event object.
-	sock.SetWaitingEvents(0);
+	sock.setWaitingEvents(0);
 #endif
 
 	sock.setNonBlockingMode();

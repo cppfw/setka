@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include <utki/config.hpp>
+
 #include "Exc.hpp"
 
 
