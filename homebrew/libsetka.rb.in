@@ -5,10 +5,11 @@ class Libsetka < Formula
   sha256 "$(sha256)"
 
   depends_on "prorab" => :build
-  depends_on "libnitki"
-  depends_on "libpogodi"
+  depends_on "libnitki" => :build
+  depends_on "libpogodi" => :build
   depends_on "libutki"
-  depends_on "libaika"
+  depends_on "libaika" => :build
+  depends_on "libpapki" => :build
 
   def install
     ENV['PATH'] += ':/usr/local/bin'
