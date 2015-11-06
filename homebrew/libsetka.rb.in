@@ -8,6 +8,7 @@ class Libsetka < Formula
   depends_on "libnitki"
   depends_on "libpogodi"
   depends_on "libutki"
+  depends_on "libaika"
 
   def install
     ENV['PATH'] += ':/usr/local/bin'
