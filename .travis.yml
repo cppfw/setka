@@ -28,7 +28,7 @@ before_install:
 - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     brew tap igagis/tap;
     brew update > /dev/null;
-    brew install prorab libutki libnitki libpogodi;
+    brew install prorab libutki libnitki libpogodi libaika;
   fi
 
 
