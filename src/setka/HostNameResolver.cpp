@@ -891,7 +891,7 @@ private:
 			}
 			
 			if(this->queue.canRead()){
-				while(auto m = std::move(this->queue.peekMsg())){
+				while(auto m = this->queue.peekMsg()){
 					m();
 				}
 			}			
