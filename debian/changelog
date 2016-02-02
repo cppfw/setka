@@ -1,3 +1,9 @@
+libsetka (1.0.3) stable; urgency=medium
+
+  * homebrew do not install tests
+
+ -- Ivan Gagis <igagis@gmail.com>  Tue, 02 Feb 2016 23:25:52 +0200
+
 libsetka (1.0.2-1) stable; urgency=medium
 
   * updating for ci
