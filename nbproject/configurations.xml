@@ -23,7 +23,7 @@
                    displayName="Important Files"
                    projectFiles="false"
                    kind="IMPORTANT_FILES_FOLDER">
-      <itemPath>../svgdom/.travis.yml</itemPath>
+      <itemPath>.travis.yml</itemPath>
       <itemPath>debian/changelog</itemPath>
       <itemPath>nbproject/private/launcher.properties</itemPath>
       <itemPath>homebrew/libsetka.rb.in</itemPath>
