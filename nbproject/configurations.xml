@@ -24,7 +24,9 @@
                    projectFiles="false"
                    kind="IMPORTANT_FILES_FOLDER">
       <itemPath>../svgdom/.travis.yml</itemPath>
+      <itemPath>debian/changelog</itemPath>
       <itemPath>nbproject/private/launcher.properties</itemPath>
+      <itemPath>homebrew/libsetka.rb.in</itemPath>
       <itemPath>src/makefile</itemPath>
     </logicalFolder>
   </logicalFolder>
