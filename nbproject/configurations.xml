@@ -28,6 +28,7 @@
       <itemPath>nbproject/private/launcher.properties</itemPath>
       <itemPath>homebrew/libsetka.rb.in</itemPath>
       <itemPath>src/makefile</itemPath>
+      <itemPath>nuget/nuget.autopkg.in</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
