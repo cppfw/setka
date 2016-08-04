@@ -17,7 +17,7 @@
 
 #include "HostNameResolver.hpp"
 #include "UDPSocket.hpp"
-#include "Lib.hpp"
+#include "Setka.hpp"
 
 
 
@@ -497,7 +497,7 @@ public:
 			timeMap1(&resolversByTime1),
 			timeMap2(&resolversByTime2)
 	{
-		ASSERT_INFO(setka::Lib::isCreated(), "ting::net::Lib is not initialized before doing the DNS request")
+		ASSERT_INFO(setka::Setka::isCreated(), "ting::net::Lib is not initialized before doing the DNS request")
 	}
 public:
 	~LookupThread()noexcept{
@@ -810,7 +810,7 @@ private:
 								this->CallCallback(removedResolver.operator->(), HostNameResolver::E_Result::ERROR, 0);
 							}
 						}
-					}catch(setka::Exc& DEBUG_CODE(e)){
+					}catch(setka::Exc& e){
 						TRACE(<< "writing to a socket failed: " << e.what() << std::endl)
 						this->isExiting = true;
 						this->RemoveAllResolvers();
@@ -934,7 +934,7 @@ HostNameResolver::~HostNameResolver(){
 void HostNameResolver::resolve_ts(const std::string& hostName, std::uint32_t timeoutMillis, const setka::IPAddress& dnsIP){
 //	TRACE(<< "HostNameResolver::Resolve_ts(): enter" << std::endl)
 	
-	ASSERT(setka::Lib::isCreated())
+	ASSERT(setka::Setka::isCreated())
 	
 	if(hostName.size() > 253){
 		throw DomainNameTooLongExc();

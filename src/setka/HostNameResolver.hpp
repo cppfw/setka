@@ -19,7 +19,7 @@ namespace setka{
 
 
 //forward declarations
-class Lib;
+class Setka;
 
 
 
@@ -145,7 +145,7 @@ public:
 	virtual void onCompleted_ts(E_Result result, IPAddress::Host ip)noexcept = 0;
 	
 private:
-	friend class setka::Lib;
+	friend class setka::Setka;
 	static void cleanUp();
 };
 

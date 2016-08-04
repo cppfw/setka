@@ -1,12 +1,12 @@
 #include <utki/debug.hpp>
-#include "../../src/setka/Lib.hpp"
+#include "../../src/setka/Setka.hpp"
 
 #include "dns.hpp"
 #include "socket.hpp"
 
 
 inline void TestTingSocket(){
-	setka::Lib netLib;
+	setka::Setka netLib;
 	
 	BasicIPAddressTest::Run();
 	TestIPAddress::Run();

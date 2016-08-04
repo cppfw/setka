@@ -1,6 +1,6 @@
 #include <utki/config.hpp>
 
-#include "Lib.hpp"
+#include "Setka.hpp"
 #include "Exc.hpp"
 #include "HostNameResolver.hpp"
 
@@ -22,11 +22,11 @@ using namespace setka;
 
 
 
-utki::IntrusiveSingleton<Lib>::T_Instance Lib::instance;
+utki::IntrusiveSingleton<Setka>::T_Instance Setka::instance;
 
 
 
-Lib::Lib(){
+Setka::Setka(){
 #if M_OS == M_OS_WINDOWS
 	WORD versionWanted = MAKEWORD(2,2);
 	WSADATA wsaData;
@@ -47,7 +47,7 @@ Lib::Lib(){
 
 
 
-Lib::~Lib()noexcept{
+Setka::~Setka()noexcept{
 	//check that there are no active dns lookups and finish the DNS request thread
 	HostNameResolver::cleanUp();
 	

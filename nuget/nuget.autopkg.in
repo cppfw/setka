@@ -25,30 +25,30 @@ nuget{
 		};
 	}
 	files {
-		include: { "..\src\**\*.hpp" };
+		//this is needed to put headers in the base folder
+		nestedInclude: {
+			#destination = ${d_include}setka;
+			"..\src\setka\**\*.hpp"
+		};
 		
 		[x86,release] { 
 			lib: ..\msvs_solution\Release\libsetka.lib;
 			symbols: ..\msvs_solution\libsetka\Release\libsetka.pdb;
-//			bin: ..\msvs_solution\Release\libsetka.dll;
 		}
 
 		[x86,debug] { 
 			lib: ..\msvs_solution\Debug\libsetka.lib;
 			symbols: ..\msvs_solution\libsetka\Debug\libsetka.pdb;
-//			bin: ..\msvs_solution\Debug\libsetka.dll;
 		}
 
 		[x64,release] { 
 			lib: ..\msvs_solution\x64\Release\libsetka.lib;
 			symbols: ..\msvs_solution\libsetka\x64\Release\libsetka.pdb;
-//			bin: ..\msvs_solution\x64\Release\libsetka.dll;
 		}
 
 		[x64,debug] { 
 			lib: ..\msvs_solution\x64\Debug\libsetka.lib;
 			symbols: ..\msvs_solution\libsetka\x64\Debug\libsetka.pdb;
-//			bin: ..\msvs_solution\x64\Debug\libsetka.dll;
 		}  
 	}
 }

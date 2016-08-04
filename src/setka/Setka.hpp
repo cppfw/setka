@@ -1,8 +1,3 @@
-/**
- * @author Ivan Gagis <igagis@gmail.com>
- * @brief Socket network library singleton.
- */
-
 #pragma once
 
 
@@ -23,14 +18,14 @@ namespace setka{
  * destructor will be called and the library will be de-initialized automatically.
  * This is what C++ RAII is all about.
  */
-class Lib : public utki::IntrusiveSingleton<Lib>{
-	friend class utki::IntrusiveSingleton<Lib>;
-	static utki::IntrusiveSingleton<Lib>::T_Instance instance;
+class Setka : public utki::IntrusiveSingleton<Setka>{
+	friend class utki::IntrusiveSingleton<Setka>;
+	static utki::IntrusiveSingleton<Setka>::T_Instance instance;
 	
 public:
-	Lib();
+	Setka();
 
-	~Lib()noexcept;
+	~Setka()noexcept;
 };
 
 
