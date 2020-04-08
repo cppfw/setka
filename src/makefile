@@ -4,6 +4,8 @@ debug := false
 
 this_name := setka
 
+this_out_dir := build
+
 this_soname := $(shell cat $(prorab_this_dir)soname.txt)
 
 this_srcs :=

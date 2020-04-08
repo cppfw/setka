@@ -20,24 +20,16 @@ else
     this_ldlibs += -lpthread
 endif
 
-this_ldflags += -L$(d)../../src/
+this_ldflags += -L$(d)../../src/build/
 
 this_ldlibs += -lstdc++
-
-ifeq ($(os),windows)
-    this_test_cmd := (cd $(d); cp ../../src/libsetka.dll .; ./$$(notdir $$^))
-else ifeq ($(os),macosx)
-    this_test_cmd := (cd $(d); DYLD_LIBRARY_PATH=../../src ./$$(notdir $$^))
-else
-    this_test_cmd := (cd $(d); LD_LIBRARY_PATH=../../src ./$$(notdir $$^))
-endif
 
 $(eval $(prorab-build-app))
 
 include $(d)../test_target.mk
 
 # add dependency on libsetka.so
-$(prorab_this_name): $(abspath $(d)../../src/libsetka$(dot_so))
+$(prorab_this_name): $(abspath $(d)../../src/build/libsetka$(dot_so))
 
 # include makefile for building setka
-$(eval $(call prorab-include,../../src/makefile))
+$(eval $(call prorab-include, ../../src/makefile))

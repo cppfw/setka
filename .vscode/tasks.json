@@ -23,10 +23,21 @@
 			"label": "test_debug",
 			"type": "shell",
 			"command": "make debug=true test",
-			"problemMatcher": [
-				"$gcc"
-			],
+			"problemMatcher": [],
 			"dependsOn": "build_debug"
+		},
+		{
+			"label": "test",
+			"type": "shell",
+			"command": "make test",
+			"problemMatcher": [],
+			"dependsOn": "build"
+		},
+		{
+			"label": "clean",
+			"type": "shell",
+			"command": "make clean",
+			"problemMatcher": []
 		}
 	]
 }
