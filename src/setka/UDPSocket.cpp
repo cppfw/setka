@@ -34,7 +34,7 @@ void UDPSocket::open(uint16_t port){
 #if M_OS == M_OS_WINDOWS
 			this->closeEventForWaitable();
 #endif
-			throw setka::Exc("TCPServerSocket::Open(): Couldn't create socket");
+			throw setka::Exc("tcp_server_socket::Open(): Couldn't create socket");
 		}
 
 		this->ipv4 = true;
@@ -66,7 +66,7 @@ void UDPSocket::open(uint16_t port){
 #if M_OS == M_OS_WINDOWS
 				this->closeEventForWaitable();
 #endif
-				throw setka::Exc("TCPServerSocket::Open(): Couldn't create socket");
+				throw setka::Exc("tcp_server_socket::Open(): Couldn't create socket");
 			}
 			
 			this->ipv4 = true;

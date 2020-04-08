@@ -340,7 +340,7 @@ void TCPSocket::setWaitingEvents(uint32_t flagsToWaitFor){
 	long flags = FD_CLOSE;
 	if((flagsToWaitFor & pogodi::Waitable::READ) != 0){
 		flags |= FD_READ;
-		//NOTE: since it is not a TCPServerSocket, FD_ACCEPT is not needed here.
+		//NOTE: since it is not a tcp_server_socket, FD_ACCEPT is not needed here.
 	}
 	if((flagsToWaitFor & Waitable::WRITE) != 0){
 		flags |= FD_WRITE | FD_CONNECT;

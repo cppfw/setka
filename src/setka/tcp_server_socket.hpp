@@ -16,46 +16,36 @@ namespace setka{
  * TCP server socket is the socket which can listen for new connections
  * and accept them creating an ordinary TCP socket for it.
  */
-class TCPServerSocket : public socket{
-	bool disableNaggle = false; // this flag indicates if accepted sockets should be created with disabled Naggle
+class tcp_server_socket : public socket{
+	bool disable_naggle = false; // this flag indicates if accepted sockets should be created with disabled Naggle
 public:
 	/**
 	 * @brief Creates an invalid (unopened) TCP server socket.
 	 */
-	TCPServerSocket(){}
+	tcp_server_socket(){}
 
+	tcp_server_socket(const tcp_server_socket&) = delete;
+	tcp_server_socket& operator=(const tcp_server_socket&) = delete;
 	
-	
-
-	TCPServerSocket(const TCPServerSocket&) = delete;
-	
-	TCPServerSocket(TCPServerSocket&& s) :
+	tcp_server_socket(tcp_server_socket&& s) :
 			socket(std::move(s)),
-			disableNaggle(s.disableNaggle)
+			disable_naggle(s.disable_naggle)
 	{}
-
 	
-	
-	TCPServerSocket& operator=(const TCPServerSocket&) = delete;
-	
-	TCPServerSocket& operator=(TCPServerSocket&& s){
-		this->disableNaggle = s.disableNaggle;
+	tcp_server_socket& operator=(tcp_server_socket&& s){
+		this->disable_naggle = s.disable_naggle;
 		this->socket::operator=(std::move(s));
 		return *this;
 	}
 
-	
-	
 	/**
 	 * @brief Connects the socket or starts listening on it.
 	 * This method starts listening on the socket for incoming connections.
 	 * @param port - IP port number to listen on.
-	 * @param disableNaggle - enable/disable Naggle algorithm for all accepted connections.
-	 * @param queueLength - the maximum length of the queue of pending connections.
+	 * @param disable_naggle - enable/disable Naggle algorithm for all accepted connections.
+	 * @param queue_size - the maximum number of pending connections.
 	 */
-	void open(uint16_t port, bool disableNaggle = false, uint16_t queueLength = 50);
-	
-	
+	void open(uint16_t port, bool disable_naggle = false, uint16_t queue_size = 50);
 	
 	/**
 	 * @brief Accepts one of the pending connections, non-blocking.
@@ -64,20 +54,15 @@ public:
 	 * This function does not block if there is no any pending connections, it just returns invalid
 	 * socket object in this case. One can periodically check for incoming connections by calling this method.
 	 * @return TCPSocket object. One can later check if the returned socket object
-	 *         is valid or not by calling Socket::IsValid() method on that object.
+	 *         is valid or not by calling socket::is_valid() method on that object.
 	 *         - if the socket is valid then it is a newly connected socket, further it can be used to send or receive data.
 	 *         - if the socket is invalid then there was no any connections pending, so no connection was accepted.
 	 */
 	TCPSocket accept();
 
-
-
 #if M_OS == M_OS_WINDOWS
 private:
-	void setWaitingEvents(uint32_t flagsToWaitFor)override;
+	void set_waiting_events(uint32_t flagsToWaitFor)override;
 #endif
-};//~class TCPServerSocket
-
-
-
-}//~namespace
+};
+}

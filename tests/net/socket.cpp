@@ -1,7 +1,7 @@
 #include <nitki/MsgThread.hpp>
 
 #include "../../src/setka/TCPSocket.hpp"
-#include "../../src/setka/TCPServerSocket.hpp"
+#include "../../src/setka/tcp_server_socket.hpp"
 #include "../../src/setka/UDPSocket.hpp"
 
 #include <opros/wait_set.hpp>
@@ -65,7 +65,7 @@ class ServerThread : public nitki::MsgThread{
 public:
 	void run()override{
 		try{
-			setka::TCPServerSocket listenSock;
+			setka::tcp_server_socket listenSock;
 
 			listenSock.open(13666);//start listening
 
@@ -152,7 +152,7 @@ void Run(){
 namespace SendDataContinuouslyWithWaitSet{
 
 void Run(){
-	setka::TCPServerSocket serverSock;
+	setka::tcp_server_socket serverSock;
 
 	serverSock.open(13666);
 
@@ -331,7 +331,7 @@ void Run(){
 namespace SendDataContinuously{
 
 void Run(){
-	setka::TCPServerSocket serverSock;
+	setka::tcp_server_socket serverSock;
 
 	serverSock.open(13666);
 

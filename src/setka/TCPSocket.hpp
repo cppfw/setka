@@ -8,13 +8,13 @@
 
 namespace setka{
 
-class TCPServerSocket;
+class tcp_server_socket;
 
 /**
  * @brief a class which represents a TCP socket.
  */
 class TCPSocket : public socket{
-	friend class setka::TCPServerSocket;
+	friend class setka::tcp_server_socket;
 public:
 	
 	/**
