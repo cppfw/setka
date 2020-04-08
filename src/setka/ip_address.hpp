@@ -1,9 +1,4 @@
-/**
- * @author Ivan Gagis <igagis@gmail.com>
- */
-
 #pragma once
-
 
 #include <string>
 
@@ -11,35 +6,21 @@
 
 #include "Exc.hpp"
 
-
-
 namespace setka{
-
-
 
 /**
  * @brief a structure which holds IP address.
  * IP address consists of IP host address and an IP port.
  */
-class IPAddress{
+class ip_address{
 public:
-	/**
-	 * @brief Bad IP address format error.
-	 * This exception is thrown when trying to parse and IP address from string and
-	 * that string does not contain a valid IP address.
-	 */
-	class BadIPAddressFormatExc : public setka::Exc{
-	public:
-		BadIPAddressFormatExc(){}
-	};
-	
 	/**
 	 * @brief IP host address.
 	 * This class encapsulates an IP address.
 	 * The address is IPv6. IPv4 addresses are represented as IPv4 mapped to IPv6 addresses.
 	 */
 	class Host{
-		std::uint32_t host[4];//IPv6 address
+		uint32_t host[4];//IPv6 address
 	public:
 		
 		/**
@@ -48,7 +29,7 @@ public:
 		 * The return value will be 0x12345678.
 		 * @return 32 bit value, zeroth quad of IPv6 address.
 		 */
-		std::uint32_t quad0()const noexcept{
+		uint32_t quad0()const noexcept{
 			return this->host[0];
 		}
 		
@@ -58,7 +39,7 @@ public:
 		 * The return value will be 0x93454243.
 		 * @return 32 bit value, first quad of IPv6 address.
 		 */
-		std::uint32_t quad1()const noexcept{
+		uint32_t quad1()const noexcept{
 			return this->host[1];
 		}
 		
@@ -68,7 +49,7 @@ public:
 		 * The return value will be 0x22223333.
 		 * @return 32 bit value, second quad of IPv6 address.
 		 */
-		std::uint32_t quad2()const noexcept{
+		uint32_t quad2()const noexcept{
 			return this->host[2];
 		}
 		
@@ -78,7 +59,7 @@ public:
 		 * The return value will be 0x11112342.
 		 * @return 32 bit value, third quad of IPv6 address.
 		 */
-		std::uint32_t quad3()const noexcept{
+		uint32_t quad3()const noexcept{
 			return this->host[3];
 		}
 		
@@ -90,7 +71,7 @@ public:
 		 * @param q2 - second quad.
 		 * @param q3 - third quad.
 		 */
-		void init(std::uint32_t q0, std::uint32_t q1, std::uint32_t q2, std::uint32_t q3)noexcept{
+		void init(uint32_t q0, uint32_t q1, uint32_t q2, uint32_t q3)noexcept{
 			this->host[0] = q0;
 			this->host[1] = q1;
 			this->host[2] = q2;
@@ -102,7 +83,7 @@ public:
 		 * Initializes this Host object to a IPv6 mapped IPv4 address.
 		 * @param h - IPv4 host address.
 		 */
-		void init(std::uint32_t h)noexcept{
+		void init(uint32_t h)noexcept{
 			this->init(0, 0, 0xffff, h);
 		}
 		
@@ -119,17 +100,17 @@ public:
 		 */
 		void init(std::uint16_t a0, std::uint16_t a1, std::uint16_t a2, std::uint16_t a3, std::uint16_t a4, std::uint16_t a5, std::uint16_t a6, std::uint16_t a7)noexcept{
 			this->init(
-					(std::uint32_t(a0) << 16) | std::uint32_t(a1),
-					(std::uint32_t(a2) << 16) | std::uint32_t(a3),
-					(std::uint32_t(a4) << 16) | std::uint32_t(a5),
-					(std::uint32_t(a6) << 16) | std::uint32_t(a7)
+					(uint32_t(a0) << 16) | uint32_t(a1),
+					(uint32_t(a2) << 16) | uint32_t(a3),
+					(uint32_t(a4) << 16) | uint32_t(a5),
+					(uint32_t(a6) << 16) | uint32_t(a7)
 				);
 		}
 		
 		/**
 		 * @brief Initialize to given bytes.
 		 */
-		void init(std::uint8_t a0, std::uint8_t a1, std::uint8_t a2, std::uint8_t a3, std::uint8_t a4, std::uint8_t a5, std::uint8_t a6, std::uint8_t a7, std::uint8_t a8, std::uint8_t a9, std::uint8_t a10, std::uint8_t a11, std::uint8_t a12, std::uint8_t a13, std::uint8_t a14, std::uint8_t a15)noexcept{
+		void init(uint8_t a0, uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4, uint8_t a5, uint8_t a6, uint8_t a7, uint8_t a8, uint8_t a9, uint8_t a10, uint8_t a11, uint8_t a12, uint8_t a13, uint8_t a14, uint8_t a15)noexcept{
 			this->init(
 					(std::uint16_t(a0) << 8) | std::uint16_t(a1),
 					(std::uint16_t(a2) << 8) | std::uint16_t(a3),
@@ -141,16 +122,6 @@ public:
 					(std::uint16_t(a14) << 8) | std::uint16_t(a15)
 				);
 		}
-	
-		/**
-		 * @brief Bad IP host address format error.
-		 * This exception is thrown when trying to parse and IP host address from string and
-		 * that string does not contain a valid IP address.
-		 */
-		class BadIPHostFormatExc : public BadIPAddressFormatExc{
-		public:
-			BadIPHostFormatExc(){}
-		};
 		
 		/**
 		 * @brief Creates an undefined Host object.
@@ -161,14 +132,14 @@ public:
 		 * @brief Creates a host object initialized to IPv6 mapped IPv4 using given IPv4.
 		 * @param h - IPv4 host to use for initialization.
 		 */
-		Host(std::uint32_t h)noexcept{
+		Host(uint32_t h)noexcept{
 			this->init(h);
 		}
 		
 		/**
 		 * @brief Creates a Host object using given IPv6 quads.
 		 */
-		Host(std::uint32_t q0, std::uint32_t q1, std::uint32_t q2, std::uint32_t q3)noexcept{
+		Host(uint32_t q0, uint32_t q1, uint32_t q2, uint32_t q3)noexcept{
 			this->init(q0, q1, q2, q3);
 		}
 		
@@ -182,7 +153,7 @@ public:
 		/**
 		 * @brief Creates a Host object using IPv6 bytes.
          */
-		Host(std::uint8_t a0, std::uint8_t a1, std::uint8_t a2, std::uint8_t a3, std::uint8_t a4, std::uint8_t a5, std::uint8_t a6, std::uint8_t a7, std::uint8_t a8, std::uint8_t a9, std::uint8_t a10, std::uint8_t a11, std::uint8_t a12, std::uint8_t a13, std::uint8_t a14, std::uint8_t a15)noexcept{
+		Host(uint8_t a0, uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4, uint8_t a5, uint8_t a6, uint8_t a7, uint8_t a8, uint8_t a9, uint8_t a10, uint8_t a11, uint8_t a12, uint8_t a13, uint8_t a14, uint8_t a15)noexcept{
 			this->init(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
 		}
 		
@@ -227,7 +198,7 @@ public:
          * @return IPv4 host if this is a IPv4 mapped to IPv6.
 		 * @return undefined value otherwise.
          */
-		std::uint32_t getIPv4Host()const noexcept{
+		uint32_t getIPv4Host()const noexcept{
 			return this->host[3];
 		}
 		
@@ -272,14 +243,14 @@ public:
 	/**
 	 * @brief Construct IP address with undefined host and port.
      */
-	IPAddress()noexcept{}
+	ip_address()noexcept{}
 
 	/**
 	 * @brief Create IPv4-address specifying exact IP-address and port number.
 	 * @param h - IPv4 address. For example, 0x7f000001 represents "127.0.0.1" IP address value.
 	 * @param p - IP port number.
 	 */
-	IPAddress(std::uint32_t h, std::uint16_t p)noexcept :
+	ip_address(uint32_t h, std::uint16_t p)noexcept :
 			host(h),
 			port(p)
 	{}
@@ -288,7 +259,7 @@ public:
 	 * @brief Create IPv4-address specifying exact IP-address as 4 bytes and port number.
 	 * The IPv4-address can be specified as 4 separate byte values, for example:
 	 * @code
-	 * ting::net::IPAddress ip(127, 0, 0, 1, 80); //"127.0.0.1" port 80
+	 * ting::net::ip_address ip(127, 0, 0, 1, 80); //"127.0.0.1" port 80
 	 * @endcode
 	 * @param h1 - 1st triplet of IPv4 address.
 	 * @param h2 - 2nd triplet of IPv4 address.
@@ -296,8 +267,8 @@ public:
 	 * @param h4 - 4th triplet of IPv4 address.
 	 * @param p - IP port number.
 	 */
-	IPAddress(std::uint8_t h1, std::uint8_t h2, std::uint8_t h3, std::uint8_t h4, std::uint16_t p)noexcept :
-			host((std::uint32_t(h1) << 24) + (std::uint32_t(h2) << 16) + (std::uint32_t(h3) << 8) + std::uint32_t(h4)),
+	ip_address(uint8_t h1, uint8_t h2, uint8_t h3, uint8_t h4, std::uint16_t p)noexcept :
+			host((uint32_t(h1) << 24) + (uint32_t(h2) << 16) + (uint32_t(h3) << 8) + uint32_t(h4)),
 			port(p)
 	{}
 
@@ -306,7 +277,7 @@ public:
      * @param h - host to use for construction.
      * @param p - port to use for construction.
      */
-	IPAddress(Host h, std::uint16_t p)noexcept :
+	ip_address(Host h, std::uint16_t p)noexcept :
 			host(h),
 			port(p)
 	{}
@@ -316,9 +287,9 @@ public:
 	 * The string passed as argument should contain properly formatted IPv4 or IPv6 host address.
 	 * @param ip - IPv4 or IPv6 host address null-terminated string. Example: "127.0.0.1".
 	 * @param p - IP port number.
-	 * @throw BadIPAddressFormatExc - when passed string does not contain properly formatted IP address.
+	 * @throw Badip_addressFormatExc - when passed string does not contain properly formatted IP address.
 	 */
-	IPAddress(const char* ip, std::uint16_t p);
+	ip_address(const char* ip, std::uint16_t p);
 	
 	/**
 	 * @brief Create IP address specifying IP host address and IP port as string.
@@ -326,9 +297,9 @@ public:
 	 * If there is no port number specified after the IP-address the format of the IP-address
 	 * is regarded as invalid and corresponding exception is thrown.
      * @param ip - null-terminated string representing IP address with port number, e.g. "127.0.0.1:80" or "[42f4:234a::23]:432".
-	 * @throw BadIPAddressFormatExc - when passed string does not contain properly formatted IP-address.
+	 * @throw Badip_addressFormatExc - when passed string does not contain properly formatted IP-address.
      */
-	IPAddress(const char* ip);
+	ip_address(const char* ip);
 
 	/**
 	 * @brief compares two IP addresses for equality.
@@ -336,7 +307,7 @@ public:
 	 * @return true if hosts and ports of the two IP addresses are equal accordingly.
 	 * @return false otherwise.
 	 */
-	bool operator==(const IPAddress& ip){
+	bool operator==(const ip_address& ip){
 		return (this->host == ip.host) && (this->port == ip.port);
 	}
 };

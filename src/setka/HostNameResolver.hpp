@@ -10,7 +10,7 @@
 #include <utki/config.hpp>
 
 #include "Exc.hpp"
-#include "IPAddress.hpp"
+#include "ip_address.hpp"
 
 
 
@@ -83,8 +83,8 @@ public:
      */
 	void resolve_ts(
 			const std::string& hostName,
-			std::uint32_t timeoutMillis = 20000,
-			const setka::IPAddress& dnsIP = setka::IPAddress(setka::IPAddress::Host(0), 0)
+			uint32_t timeoutMillis = 20000,
+			const setka::ip_address& dnsIP = setka::ip_address(setka::ip_address::Host(0), 0)
 		);
 	
 	/**
@@ -140,9 +140,9 @@ public:
 	 * Note, that the method has to be thread-safe.
 	 * @param result - the result of DNS lookup operation.
 	 * @param ip - resolved IP-address. This value can later be used to create the
-	 *             ting::net::IPAddress object.
+	 *             ting::net::ip_address object.
 	 */
-	virtual void onCompleted_ts(E_Result result, IPAddress::Host ip)noexcept = 0;
+	virtual void onCompleted_ts(E_Result result, ip_address::Host ip)noexcept = 0;
 	
 private:
 	friend class setka::Setka;

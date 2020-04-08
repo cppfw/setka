@@ -190,7 +190,7 @@ TCPSocket TCPServerSocket::accept(){
 
 
 #if M_OS == M_OS_WINDOWS
-void TCPServerSocket::setWaitingEvents(std::uint32_t flagsToWaitFor){
+void TCPServerSocket::setWaitingEvents(uint32_t flagsToWaitFor){
 	if(flagsToWaitFor != 0 && flagsToWaitFor != Waitable::READ){
 		throw setka::Exc("TCPServerSocket::SetWaitingEvents(): only Waitable::READ flag allowed");
 	}

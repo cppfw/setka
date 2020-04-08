@@ -6,7 +6,7 @@
 #include <utki/Buf.hpp>
 
 #include "socket.hpp"
-#include "IPAddress.hpp"
+#include "ip_address.hpp"
 
 namespace setka{
 
@@ -58,7 +58,7 @@ public:
 	 * @return number of bytes actually sent. Actually it is either 0 or the size of the
 	 *         datagram passed in as argument.
 	 */
-	size_t send(const utki::Buf<std::uint8_t> buf, const IPAddress& destinationIP);
+	size_t send(const utki::Buf<uint8_t> buf, const ip_address& destinationIP);
 
 
 
@@ -77,13 +77,13 @@ public:
 	 *                       of the sender will be stored.
 	 * @return number of bytes stored in the output buffer.
 	 */
-	size_t recieve(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP);
+	size_t recieve(utki::Buf<uint8_t> buf, ip_address &out_SenderIP);
 
 
 
 #if M_OS == M_OS_WINDOWS
 private:
-	void setWaitingEvents(std::uint32_t flagsToWaitFor)override;
+	void setWaitingEvents(uint32_t flagsToWaitFor)override;
 #endif
 };
 

@@ -30,7 +30,7 @@ struct Resolver;
 
 // After the successful completion the 'p' points to the byte right after the host name.
 // In case of unsuccessful completion 'p' is undefined.
-std::string ParseHostNameFromDNSPacket(const std::uint8_t* & p, const std::uint8_t* end){
+std::string ParseHostNameFromDNSPacket(const uint8_t* & p, const uint8_t* end){
 	std::string host;
 			
 	for(;;){
@@ -38,7 +38,7 @@ std::string ParseHostNameFromDNSPacket(const std::uint8_t* & p, const std::uint8
 			return "";
 		}
 
-		std::uint8_t len = *p;
+		uint8_t len = *p;
 		++p;
 
 		if(len == 0){
@@ -67,7 +67,7 @@ std::string ParseHostNameFromDNSPacket(const std::uint8_t* & p, const std::uint8
 //this mutex is used to protect the dns::thread access.
 std::mutex mutex;
 
-typedef std::multimap<std::uint32_t, Resolver*> T_ResolversTimeMap;
+typedef std::multimap<uint32_t, Resolver*> T_ResolversTimeMap;
 typedef T_ResolversTimeMap::iterator T_ResolversTimeIter;
 
 typedef std::map<std::uint16_t, Resolver*> T_IdMap;
@@ -96,7 +96,7 @@ struct Resolver{
 	
 	T_RequestsToSendIter sendIter;
 	
-	setka::IPAddress dns;
+	setka::ip_address dns;
 };
 
 
@@ -134,7 +134,7 @@ public:
 	T_ResolversMap resolversMap;
 	T_IdMap idMap;
 	
-	setka::IPAddress dns;
+	setka::ip_address dns;
 	
 	void StartSending(){
 		this->waitSet.change(this->socket, utki::make_flags({opros::ready::read, opros::ready::write}));
@@ -170,7 +170,7 @@ public:
 	//NOTE: call to this function should be protected by mutex, to make sure the request is not canceled while sending.
 	//returns true if request is sent, false otherwise.
 	bool SendRequestToDNS(const dns::Resolver* r){
-		std::array<std::uint8_t, 512> buf; //RFC 1035 limits DNS request UDP packet size to 512 bytes.
+		std::array<uint8_t, 512> buf; //RFC 1035 limits DNS request UDP packet size to 512 bytes.
 		
 		size_t packetSize =
 				2 + //ID
@@ -186,7 +186,7 @@ public:
 		
 		ASSERT(packetSize <= buf.size())
 		
-		std::uint8_t* p = &*buf.begin();
+		uint8_t* p = &*buf.begin();
 		
 		// ID
 		utki::serialize16be(r->id, p);
@@ -224,7 +224,7 @@ public:
 			size_t labelLength = dotPos - oldDotPos;
 			ASSERT(labelLength <= 0xff)
 			
-			*p = std::uint8_t(labelLength);//save label length
+			*p = uint8_t(labelLength);//save label length
 			++p;
 			//copy the label bytes
 			memcpy(p, r->hostName.c_str() + oldDotPos, labelLength);
@@ -265,7 +265,7 @@ public:
 	
 	
 	//NOTE: call to this function should be protected by mutex
-	inline void CallCallback(dns::Resolver* r, setka::HostNameResolver::E_Result result, IPAddress::Host ip = IPAddress::Host(0, 0, 0, 0))noexcept{
+	inline void CallCallback(dns::Resolver* r, setka::HostNameResolver::E_Result result, ip_address::Host ip = ip_address::Host(0, 0, 0, 0))noexcept{
 		this->completedMutex.lock();
 		this->mutex.unlock();
 		r->hnr->onCompleted_ts(result, ip);
@@ -275,9 +275,9 @@ public:
 	
 	struct ParseResult{
 		setka::HostNameResolver::E_Result result;
-		setka::IPAddress::Host host;
+		setka::ip_address::Host host;
 		
-		ParseResult(setka::HostNameResolver::E_Result result, setka::IPAddress::Host host = setka::IPAddress::Host(0, 0, 0, 0)) :
+		ParseResult(setka::HostNameResolver::E_Result result, setka::ip_address::Host host = setka::ip_address::Host(0, 0, 0, 0)) :
 				result(result),
 				host(host)
 		{}
@@ -285,7 +285,7 @@ public:
 	
 	//NOTE: call to this function should be protected by mutex
 	//This function will call the Resolver callback.
-	ParseResult ParseReplyFromDNS(dns::Resolver* r, const utki::Buf<std::uint8_t> buf){
+	ParseResult ParseReplyFromDNS(dns::Resolver* r, const utki::Buf<uint8_t> buf){
 		TRACE(<< "dns::Resolver::ParseReplyFromDNS(): enter" << std::endl)
 #ifdef DEBUG
 		for(unsigned i = 0; i < buf.size(); ++i){
@@ -305,7 +305,7 @@ public:
 			return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);
 		}
 		
-		const std::uint8_t* p = buf.begin();
+		const uint8_t* p = buf.begin();
 		p += 2;//skip ID
 		
 		{
@@ -426,7 +426,7 @@ public:
 			if(buf.end() - p < 4){
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
-//			std::uint32_t ttl = ting::util::Deserialize32(p);//time till the returned value can be cached.
+//			uint32_t ttl = ting::util::Deserialize32(p);//time till the returned value can be cached.
 			p += 4;
 			
 			if(buf.end() - p < 2){
@@ -439,7 +439,7 @@ public:
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
 			if(type == r->recordType){
-				IPAddress::Host h;
+				ip_address::Host h;
 				
 				switch(type){
 					case D_DNSRecordA: //'A' type answer
@@ -447,14 +447,14 @@ public:
 							return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 						}
 
-						h = IPAddress::Host(utki::deserialize32be(p));
+						h = ip_address::Host(utki::deserialize32be(p));
 						break;
 					case D_DNSRecordAAAA: //'AAAA' type answer
 						if(dataLen < 2 * 8){
 							return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 						}
 
-						h = IPAddress::Host(
+						h = ip_address::Host(
 								utki::deserialize32be(p),
 								utki::deserialize32be(p + 4),
 								utki::deserialize32be(p + 8),
@@ -464,7 +464,7 @@ public:
 					default:
 						//we should not get here since if type is not the record type which we know then 'if(type == r->recordType)' condition will not trigger.
 						ASSERT(false)
-						h = IPAddress::Host(0,0,0,0);
+						h = ip_address::Host(0,0,0,0);
 						break;
 				}
 				
@@ -585,7 +585,7 @@ private:
 						std::string ip = str.substr(0, spaceIndex);
 						TRACE(<< "NameServer ip = " << ip << std::endl)
 				
-						this->dns = setka::IPAddress(ip.c_str(), 53);
+						this->dns = setka::ip_address(ip.c_str(), 53);
 						RegCloseKey(hSub);
 						return;
 					}catch(...){}
@@ -605,7 +605,7 @@ private:
 					std::string ip = str.substr(0, spaceIndex);
 					TRACE(<< "DhcpNameServer ip = " << ip << std::endl)
 				
-					this->dns = setka::IPAddress(ip.c_str(), 53);
+					this->dns = setka::ip_address(ip.c_str(), 53);
 					RegCloseKey(hSub);
 					return;
 				}catch(...){}
@@ -615,10 +615,10 @@ private:
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 			papki::FSFile f("/etc/resolv.conf");
 			
-			std::vector<std::uint8_t> buf = f.loadWholeFileIntoMemory(0xfff);//4kb max
+			std::vector<uint8_t> buf = f.loadWholeFileIntoMemory(0xfff);//4kb max
 			
-			for(std::uint8_t* p = &*buf.begin(); p != &*buf.end(); ++p){
-				std::uint8_t* start = p;
+			for(uint8_t* p = &*buf.begin(); p != &*buf.end(); ++p){
+				uint8_t* start = p;
 				
 				while(p != &*buf.end() && *p != '\n'){
 					++p;
@@ -646,7 +646,7 @@ private:
 				TRACE(<< "dns ipstr = " << ipstr << std::endl)
 				
 				try{
-					this->dns = setka::IPAddress(ipstr.c_str(), 53);
+					this->dns = setka::ip_address(ipstr.c_str(), 53);
 					return;
 				}catch(...){}
 			}
@@ -655,7 +655,7 @@ private:
 #endif
 		}catch(...){
 		}
-		this->dns = setka::IPAddress(std::uint32_t(0), 0);
+		this->dns = setka::ip_address(uint32_t(0), 0);
 	}
 	
 	
@@ -694,7 +694,7 @@ private:
 		this->waitSet.add(this->socket, utki::make_flags({opros::ready::read}));
 		
 		while(!this->quitFlag){
-			std::uint32_t timeout;
+			uint32_t timeout;
 			{
 				std::lock_guard<decltype(this->mutex)> mutexGuard(this->mutex);
 				
@@ -707,8 +707,8 @@ private:
 				if(this->socket.flags().get(opros::ready::read)){
 					TRACE(<< "can read" << std::endl)
 					try{
-						std::array<std::uint8_t, 512> buf;//RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
-						setka::IPAddress address;
+						std::array<uint8_t, 512> buf;//RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
+						setka::ip_address address;
 						size_t ret = this->socket.recieve(utki::wrapBuf(buf), address);
 						
 						ASSERT(ret != 0)
@@ -721,11 +721,11 @@ private:
 								ASSERT(id == i->second->id)
 								
 								//check by host name also
-								const std::uint8_t* p = &*buf.begin() + 12;//start of the host name
+								const uint8_t* p = &*buf.begin() + 12;//start of the host name
 								std::string host = dns::ParseHostNameFromDNSPacket(p, &*buf.end());
 								
 								if(host == i->second->hostName){
-									ParseResult res = this->ParseReplyFromDNS(i->second, utki::Buf<std::uint8_t>(&*buf.begin(), ret));
+									ParseResult res = this->ParseReplyFromDNS(i->second, utki::Buf<uint8_t>(&*buf.begin(), ret));
 									
 									if(res.result == setka::HostNameResolver::E_Result::NO_SUCH_HOST && i->second->recordType == D_DNSRecordAAAA){
 										//try getting record type A
@@ -812,9 +812,9 @@ private:
 					}
 				}
 				
-				std::uint32_t curTime = utki::get_ticks_ms();
+				uint32_t curTime = utki::get_ticks_ms();
 				{//check if time has warped around and it is necessary to swap time maps
-					bool isFirstHalf = curTime < (std::uint32_t(-1) / 2);
+					bool isFirstHalf = curTime < (uint32_t(-1) / 2);
 					if(isFirstHalf && !this->lastTicksInFirstHalf){
 						//Time warped.
 						//Timeout all requests from first time map
@@ -860,14 +860,14 @@ private:
 			}
 			
 			//Make sure that ting::GetTicks is called at least 4 times per full time warp around cycle.
-			utki::clampTop(timeout, std::uint32_t(-1) / 4);
+			utki::clampTop(timeout, uint32_t(-1) / 4);
 			
 //Workaround for strange bug on Win32 (reproduced on WinXP at least).
 //For some reason waiting for WRITE on UDP socket does not work. It hangs in the
 //Wait() method until timeout is hit. So, just check every 100ms if it is OK to write to UDP socket.
 #if M_OS == M_OS_WINDOWS
 			if(this->sendList.size() > 0){
-				utki::clampTop(timeout, std::uint32_t(100));
+				utki::clampTop(timeout, uint32_t(100));
 			}
 #endif
 			
@@ -919,7 +919,7 @@ HostNameResolver::~HostNameResolver(){
 
 
 
-void HostNameResolver::resolve_ts(const std::string& hostName, std::uint32_t timeoutMillis, const setka::IPAddress& dnsIP){
+void HostNameResolver::resolve_ts(const std::string& hostName, uint32_t timeoutMillis, const setka::ip_address& dnsIP){
 //	TRACE(<< "HostNameResolver::Resolve_ts(): enter" << std::endl)
 	
 	ASSERT(setka::Setka::isCreated())
@@ -992,9 +992,9 @@ void HostNameResolver::resolve_ts(const std::string& hostName, std::uint32_t tim
 	}
 	
 	//calculate time
-	std::uint32_t curTime = utki::get_ticks_ms();
+	uint32_t curTime = utki::get_ticks_ms();
 	{
-		std::uint32_t endTime = curTime + timeoutMillis;
+		uint32_t endTime = curTime + timeoutMillis;
 //		TRACE(<< "HostNameResolver::Resolve_ts(): curTime = " << curTime << std::endl)
 //		TRACE(<< "HostNameResolver::Resolve_ts(): endTime = " << endTime << std::endl)
 		if(endTime < curTime){//if warped around
@@ -1003,7 +1003,7 @@ void HostNameResolver::resolve_ts(const std::string& hostName, std::uint32_t tim
 			r->timeMap = dns::thread->timeMap1;
 		}
 		try{
-			r->timeMapIter = r->timeMap->insert(std::pair<std::uint32_t, dns::Resolver*>(endTime, r.operator->()));
+			r->timeMapIter = r->timeMap->insert(std::pair<uint32_t, dns::Resolver*>(endTime, r.operator->()));
 		}catch(...){
 			dns::thread->idMap.erase(r->idIter);
 			throw;
@@ -1037,7 +1037,7 @@ void HostNameResolver::resolve_ts(const std::string& hostName, std::uint32_t tim
 
 		//Start the thread if we created the new one.
 		if(needStartTheThread){
-			dns::thread->lastTicksInFirstHalf = curTime < (std::uint32_t(-1) / 2);
+			dns::thread->lastTicksInFirstHalf = curTime < (uint32_t(-1) / 2);
 			dns::thread->start();
 			dns::thread->isExiting = false;//thread has just started, clear the exiting flag
 			TRACE(<< "HostNameResolver::Resolve_ts(): thread started" << std::endl)

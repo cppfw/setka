@@ -12,7 +12,7 @@ using namespace setka;
 
 
 
-void TCPSocket::open(const IPAddress& ip, bool disableNaggle){
+void TCPSocket::open(const ip_address& ip, bool disableNaggle){
 	if(*this){
 		throw setka::Exc("TCPSocket::Open(): socket already opened");
 	}
@@ -123,7 +123,7 @@ void TCPSocket::open(const IPAddress& ip, bool disableNaggle){
 
 
 
-size_t TCPSocket::send(const utki::Buf<std::uint8_t> buf){
+size_t TCPSocket::send(const utki::Buf<uint8_t> buf){
 	if(!*this){
 		throw setka::Exc("TCPSocket::Send(): socket is not opened");
 	}
@@ -180,7 +180,7 @@ size_t TCPSocket::send(const utki::Buf<std::uint8_t> buf){
 
 
 
-size_t TCPSocket::recieve(utki::Buf<std::uint8_t> buf){
+size_t TCPSocket::recieve(utki::Buf<uint8_t> buf){
 	// the 'ready to read' flag shall be cleared even if this function fails to avoid subsequent
 	// calls to recv() because it indicates that there's activity.
 	// So, do it at the beginning of the function.
@@ -243,11 +243,11 @@ size_t TCPSocket::recieve(utki::Buf<std::uint8_t> buf){
 
 namespace{
 
-IPAddress CreateIPAddressFromSockaddrStorage(const sockaddr_storage& addr){
+ip_address Createip_addressFromSockaddrStorage(const sockaddr_storage& addr){
 	if(addr.ss_family == AF_INET){
 		const sockaddr_in &a = reinterpret_cast<const sockaddr_in&>(addr);
-		return IPAddress(
-			std::uint32_t(ntohl(a.sin_addr.s_addr)),
+		return ip_address(
+			uint32_t(ntohl(a.sin_addr.s_addr)),
 			std::uint16_t(ntohs(a.sin_port))
 		);
 	}else{
@@ -255,18 +255,18 @@ IPAddress CreateIPAddressFromSockaddrStorage(const sockaddr_storage& addr){
 		
 		const sockaddr_in6 &a = reinterpret_cast<const sockaddr_in6&>(addr);
 		
-		return IPAddress(
-				IPAddress::Host(
+		return ip_address(
+				ip_address::Host(
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
-						(std::uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (std::uint32_t(a.sin6_addr.s6_addr[1]) << 16) | (std::uint32_t(a.sin6_addr.s6_addr[2]) << 8) | std::uint32_t(a.sin6_addr.s6_addr[3]),
-						(std::uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (std::uint32_t(a.sin6_addr.s6_addr[5]) << 16) | (std::uint32_t(a.sin6_addr.s6_addr[6]) << 8) | std::uint32_t(a.sin6_addr.s6_addr[7]),
-						(std::uint32_t(a.sin6_addr.s6_addr[8]) << 24) | (std::uint32_t(a.sin6_addr.s6_addr[9]) << 16) | (std::uint32_t(a.sin6_addr.s6_addr[10]) << 8) | std::uint32_t(a.sin6_addr.s6_addr[11]),
-						(std::uint32_t(a.sin6_addr.s6_addr[12]) << 24) | (std::uint32_t(a.sin6_addr.s6_addr[13]) << 16) | (std::uint32_t(a.sin6_addr.s6_addr[14]) << 8) | std::uint32_t(a.sin6_addr.s6_addr[15])
+						(uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (uint32_t(a.sin6_addr.s6_addr[1]) << 16) | (uint32_t(a.sin6_addr.s6_addr[2]) << 8) | uint32_t(a.sin6_addr.s6_addr[3]),
+						(uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (uint32_t(a.sin6_addr.s6_addr[5]) << 16) | (uint32_t(a.sin6_addr.s6_addr[6]) << 8) | uint32_t(a.sin6_addr.s6_addr[7]),
+						(uint32_t(a.sin6_addr.s6_addr[8]) << 24) | (uint32_t(a.sin6_addr.s6_addr[9]) << 16) | (uint32_t(a.sin6_addr.s6_addr[10]) << 8) | uint32_t(a.sin6_addr.s6_addr[11]),
+						(uint32_t(a.sin6_addr.s6_addr[12]) << 24) | (uint32_t(a.sin6_addr.s6_addr[13]) << 16) | (uint32_t(a.sin6_addr.s6_addr[14]) << 8) | uint32_t(a.sin6_addr.s6_addr[15])
 #else
-						std::uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])),
-						std::uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])),
-						std::uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[2])),
-						std::uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
+						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])),
+						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])),
+						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[2])),
+						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
 #endif
 					),
 				std::uint16_t(ntohs(a.sin6_port))
@@ -278,7 +278,7 @@ IPAddress CreateIPAddressFromSockaddrStorage(const sockaddr_storage& addr){
 
 
 
-IPAddress TCPSocket::getLocalAddress(){
+ip_address TCPSocket::getLocalAddress(){
 	if(!*this){
 		throw setka::Exc("Socket::GetLocalAddress(): socket is not valid");
 	}
@@ -295,12 +295,12 @@ IPAddress TCPSocket::getLocalAddress(){
 		throw setka::Exc("Socket::GetLocalAddress(): getsockname() failed");
 	}	
 
-	return CreateIPAddressFromSockaddrStorage(addr);
+	return Createip_addressFromSockaddrStorage(addr);
 }
 
 
 
-IPAddress TCPSocket::getRemoteAddress(){
+ip_address TCPSocket::getRemoteAddress(){
 	if(!*this){
 		throw setka::Exc("TCPSocket::GetRemoteAddress(): socket is not valid");
 	}
@@ -330,13 +330,13 @@ IPAddress TCPSocket::getRemoteAddress(){
 		throw setka::Exc(ss.str());
 	}
 
-	return CreateIPAddressFromSockaddrStorage(addr);
+	return Createip_addressFromSockaddrStorage(addr);
 }
 
 
 
 #if M_OS == M_OS_WINDOWS
-void TCPSocket::setWaitingEvents(std::uint32_t flagsToWaitFor){
+void TCPSocket::setWaitingEvents(uint32_t flagsToWaitFor){
 	long flags = FD_CLOSE;
 	if((flagsToWaitFor & pogodi::Waitable::READ) != 0){
 		flags |= FD_READ;

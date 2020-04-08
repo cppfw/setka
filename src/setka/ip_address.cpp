@@ -1,6 +1,6 @@
 #include <sstream>
 
-#include "IPAddress.hpp"
+#include "ip_address.hpp"
 
 #include <utki/config.hpp>
 #include <utki/Buf.hpp>
@@ -13,14 +13,9 @@
 #	error "Unknown OS"
 #endif
 
-
-
 using namespace setka;
 
-
-
 namespace{
-
 bool IsIPv4String(const char* ip){
 	for(const char* p = ip; *p != 0; ++p){
 		if(*p == '.'){
@@ -32,13 +27,9 @@ bool IsIPv4String(const char* ip){
 	}
 	return false;
 }
+}
 
-}//~namespace
-
-
-
-//static
-IPAddress::Host IPAddress::Host::parse(const char* ip){
+ip_address::Host ip_address::Host::parse(const char* ip){
 	if(IsIPv4String(ip)){
 		return Host::parseIPv4(ip);
 	}else{
@@ -46,10 +37,7 @@ IPAddress::Host IPAddress::Host::parse(const char* ip){
 	}
 }
 
-
-
-//static
-IPAddress::Host IPAddress::Host::parseIPv4(const char* ip){
+ip_address::Host ip_address::Host::parseIPv4(const char* ip){
 	sockaddr_in a;
 	
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
@@ -60,7 +48,7 @@ IPAddress::Host IPAddress::Host::parseIPv4(const char* ip){
 		);
 	
 	if(res != 1){
-		throw BadIPHostFormatExc();
+		throw std::runtime_error("bad IP address format");
 	}
 
 #elif M_OS == M_OS_WINDOWS
@@ -82,10 +70,7 @@ IPAddress::Host IPAddress::Host::parseIPv4(const char* ip){
 	return Host(ntohl(a.sin_addr.s_addr));
 }
 
-
-
-//static
-IPAddress::Host IPAddress::Host::parseIPv6(const char* ip){
+ip_address::Host ip_address::Host::parseIPv6(const char* ip){
 #if M_OS == M_OS_WINDOWS
 	sockaddr_in6 aa;
 	in6_addr& a = aa.sin6_addr;
@@ -101,7 +86,7 @@ IPAddress::Host IPAddress::Host::parseIPv6(const char* ip){
 		);
 	
 	if(res != 1){
-		throw BadIPHostFormatExc();
+		throw std::runtime_error("bad IP address format");
 	}
 
 #elif M_OS == M_OS_WINDOWS
@@ -114,7 +99,7 @@ IPAddress::Host IPAddress::Host::parseIPv6(const char* ip){
 			&len
 		);
 	if(res != 0){
-		TRACE(<< "IPAddress::Host::ParseIPv6(): WSAStringToAddress() failed, error = " <<  WSAGetLastError()<< ". Maybe IPv6 protocol is not installed in the Windows system, WSAStringToAddress() only supports IPv6 if it is installed." << std::endl)
+		TRACE(<< "ip_address::Host::ParseIPv6(): WSAStringToAddress() failed, error = " <<  WSAGetLastError()<< ". Maybe IPv6 protocol is not installed in the Windows system, WSAStringToAddress() only supports IPv6 if it is installed." << std::endl)
 		throw BadIPHostFormatExc();
 	}
 #else
@@ -162,18 +147,14 @@ IPAddress::Host IPAddress::Host::parseIPv6(const char* ip){
 #endif
 }
 
-
-
-IPAddress::IPAddress(const char* ip, std::uint16_t p) :
+ip_address::ip_address(const char* ip, std::uint16_t p) :
 		host(Host::parse(ip)),
 		port(p)
 {}
 
-
-
-IPAddress::IPAddress(const char* ip){
-	if(*ip == 0){//if zero length string
-		throw BadIPAddressFormatExc();
+ip_address::ip_address(const char* ip){
+	if(*ip == 0){ // if zero length string
+		throw std::runtime_error("bad IP address format");
 	}
 	
 	if(*ip == '['){//IPv6 with port
@@ -184,20 +165,20 @@ IPAddress::IPAddress(const char* ip){
 		char* dst;
 		for(dst = &*buf.begin(); *ip != ']'; ++dst, ++ip){
 			if(*ip == 0 || !utki::wrapBuf(buf).overlaps(dst + 1)){
-				throw BadIPAddressFormatExc();
+				throw std::runtime_error("bad IP address format");
 			}
 			
 			*dst = *ip;
 		}
 		
 		ASSERT(utki::wrapBuf(buf).overlaps(dst))
-		*dst = 0;//null-terminate
+		*dst = 0; // null-terminate
 				
 		this->host = Host::parseIPv6(&*buf.begin());
 		
-		++ip;//move to port ':' separator
+		++ip; // move to port ':' separator
 	}else{
-		//IPv4 or IPv6 without port
+		// IPv4 or IPv6 without port
 		
 		if(IsIPv4String(ip)){
 			std::array<char, (3 * 4 + 3 + 1)> buf;
@@ -205,25 +186,25 @@ IPAddress::IPAddress(const char* ip){
 			char* dst;
 			for(dst = &*buf.begin(); *ip != ':' && *ip != 0; ++dst, ++ip){
 				if(!utki::wrapBuf(buf).overlaps(dst + 1)){
-					throw BadIPAddressFormatExc();
+					throw std::runtime_error("bad IP address format");
 				}
 
 				*dst = *ip;
 			}
 
 			ASSERT(utki::wrapBuf(buf).overlaps(dst))
-			*dst = 0;//null-terminate
+			*dst = 0; // null-terminate
 
 			this->host = Host::parseIPv4(&*buf.begin());
 		}else{
-			//IPv6 without port
+			// IPv6 without port
 			this->host = Host::parseIPv6(ip);
 			this->port = 0;
 			return;
 		}
 	}
 	
-	//parse port
+	// parse port
 	
 	if(*ip != ':'){
 		if(*ip == 0){
@@ -231,7 +212,7 @@ IPAddress::IPAddress(const char* ip){
 			return;
 		}else{
 	//		TRACE(<< "no colon, *ip = " << (*ip) << std::endl)
-			throw setka::IPAddress::BadIPAddressFormatExc();
+			throw std::runtime_error("bad IP address format");
 		}
 	}
 	
@@ -242,15 +223,15 @@ IPAddress::IPAddress(const char* ip){
 	}
 	if('0' <= *ip && *ip <= '9'){//if still have one more digit
 //		TRACE(<< "still have one more digit" << std::endl)
-		throw setka::IPAddress::BadIPAddressFormatExc();
+		throw std::runtime_error("bad IP address format");
 	}
 	
 	--ip;
 	
-	std::uint32_t port = 0;
+	uint32_t port = 0;
 	
 	for(unsigned i = 0; *ip != ':'; ++i, --ip){
-		std::uint32_t pow = 1;
+		uint32_t pow = 1;
 		for(unsigned j = 0; j < i; ++j){
 			pow *= 10;
 		}
@@ -262,15 +243,13 @@ IPAddress::IPAddress(const char* ip){
 	
 	if(port > 0xffff){
 //		TRACE(<< "port number is bigger than 0xffff" << std::endl)
-		throw setka::IPAddress::BadIPAddressFormatExc();
+		throw std::runtime_error("bad IP address format");
 	}
 	
 	this->port = std::uint16_t(port);
 }
 
-
-
-std::string IPAddress::Host::toString()const{
+std::string ip_address::Host::toString()const{
 	std::stringstream ss;
 	if(this->isIPv4()){
 		for(unsigned i = 4;;){

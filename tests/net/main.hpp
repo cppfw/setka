@@ -8,8 +8,8 @@
 inline void TestTingSocket(){
 	setka::Setka netLib;
 	
-	BasicIPAddressTest::Run();
-	TestIPAddress::Run();
+	Basicip_addressTest::Run();
+	Testip_address::Run();
 		
 	BasicClientServerTest::Run();
 	BasicUDPSocketsTest::Run();

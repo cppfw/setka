@@ -74,7 +74,7 @@ public:
 
 #if M_OS == M_OS_WINDOWS
 private:
-	void setWaitingEvents(std::uint32_t flagsToWaitFor)override;
+	void setWaitingEvents(uint32_t flagsToWaitFor)override;
 #endif
 };//~class TCPServerSocket
 

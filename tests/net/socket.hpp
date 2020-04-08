@@ -1,6 +1,6 @@
 #pragma once
 
-namespace TestIPAddress{
+namespace Testip_address{
 void Run();
 }//~namespace
 
@@ -28,7 +28,7 @@ void Run();
 
 
 
-namespace BasicIPAddressTest{
+namespace Basicip_addressTest{
 
 void Run();
 

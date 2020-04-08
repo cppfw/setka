@@ -4,7 +4,7 @@
 #include <utki/config.hpp>
 
 #include "socket.hpp"
-#include "IPAddress.hpp"
+#include "ip_address.hpp"
 
 namespace setka{
 
@@ -50,7 +50,7 @@ public:
 	 * @param ip - IP address.
 	 * @param disableNaggle - enable/disable Naggle algorithm.
 	 */
-	void open(const IPAddress& ip, bool disableNaggle = false);
+	void open(const ip_address& ip, bool disableNaggle = false);
 
 
 
@@ -61,7 +61,7 @@ public:
 	 * @param buf - pointer to the buffer with data to send.
 	 * @return the number of bytes actually sent.
 	 */
-	size_t send(const utki::Buf<std::uint8_t> buf);
+	size_t send(const utki::Buf<uint8_t> buf);
 
 
 
@@ -75,7 +75,7 @@ public:
 	 * @param buf - pointer to the buffer where to put received data.
 	 * @return the number of bytes written to the buffer.
 	 */
-	size_t recieve(utki::Buf<std::uint8_t> buf);
+	size_t recieve(utki::Buf<uint8_t> buf);
 
 	
 	
@@ -83,7 +83,7 @@ public:
 	 * @brief Get local IP address and port.
 	 * @return IP address and port of the local socket.
 	 */
-	IPAddress getLocalAddress();
+	ip_address getLocalAddress();
 	
 	
 	
@@ -91,13 +91,13 @@ public:
 	 * @brief Get remote IP address and port.
 	 * @return IP address and port of the peer socket.
 	 */
-	IPAddress getRemoteAddress();
+	ip_address getRemoteAddress();
 
 
 
 #if M_OS == M_OS_WINDOWS
 private:
-	void setWaitingEvents(std::uint32_t flagsToWaitFor)override;
+	void setWaitingEvents(uint32_t flagsToWaitFor)override;
 #endif
 
 };//~class TCPSocket
