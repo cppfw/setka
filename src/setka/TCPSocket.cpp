@@ -23,7 +23,7 @@ void TCPSocket::open(const ip_address& ip, bool disableNaggle){
 #endif
 
 	this->sock = ::socket(
-			ip.host.isIPv4() ? PF_INET : PF_INET6,
+			ip.host.is_v4() ? PF_INET : PF_INET6,
 			SOCK_STREAM,
 			0
 		);
@@ -46,11 +46,11 @@ void TCPSocket::open(const ip_address& ip, bool disableNaggle){
 	// connecting to remote host
 	sockaddr_storage sockAddr;
 	
-	if(ip.host.isIPv4()){
+	if(ip.host.is_v4()){
 		sockaddr_in &sa = reinterpret_cast<sockaddr_in&>(sockAddr);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin_family = AF_INET;
-		sa.sin_addr.s_addr = htonl(ip.host.getIPv4Host());
+		sa.sin_addr.s_addr = htonl(ip.host.get_v4());
 		sa.sin_port = htons(ip.port);
 	}else{
 		sockaddr_in6 &sa = reinterpret_cast<sockaddr_in6&>(sockAddr);
@@ -75,10 +75,10 @@ void TCPSocket::open(const ip_address& ip, bool disableNaggle){
 		sa.sin6_addr.s6_addr[15] = ip.host.quad3() & 0xff;
 
 #else
-		sa.sin6_addr.__in6_u.__u6_addr32[0] = htonl(ip.host.quad0());
-		sa.sin6_addr.__in6_u.__u6_addr32[1] = htonl(ip.host.quad1());
-		sa.sin6_addr.__in6_u.__u6_addr32[2] = htonl(ip.host.quad2());
-		sa.sin6_addr.__in6_u.__u6_addr32[3] = htonl(ip.host.quad3());
+		sa.sin6_addr.__in6_u.__u6_addr32[0] = htonl(ip.host.quad[0]);
+		sa.sin6_addr.__in6_u.__u6_addr32[1] = htonl(ip.host.quad[1]);
+		sa.sin6_addr.__in6_u.__u6_addr32[2] = htonl(ip.host.quad[2]);
+		sa.sin6_addr.__in6_u.__u6_addr32[3] = htonl(ip.host.quad[3]);
 #endif
 		sa.sin6_port = htons(ip.port);
 	}
@@ -87,7 +87,7 @@ void TCPSocket::open(const ip_address& ip, bool disableNaggle){
 	if(connect(
 			this->sock,
 			reinterpret_cast<sockaddr *>(&sockAddr),
-			ip.host.isIPv4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6) // NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
+			ip.host.is_v4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6) // NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
 		) == socket_error)
 	{
 #if M_OS == M_OS_WINDOWS
@@ -248,7 +248,7 @@ ip_address Createip_addressFromSockaddrStorage(const sockaddr_storage& addr){
 		const sockaddr_in &a = reinterpret_cast<const sockaddr_in&>(addr);
 		return ip_address(
 			uint32_t(ntohl(a.sin_addr.s_addr)),
-			std::uint16_t(ntohs(a.sin_port))
+			uint16_t(ntohs(a.sin_port))
 		);
 	}else{
 		ASSERT(addr.ss_family == AF_INET6)
@@ -256,7 +256,7 @@ ip_address Createip_addressFromSockaddrStorage(const sockaddr_storage& addr){
 		const sockaddr_in6 &a = reinterpret_cast<const sockaddr_in6&>(addr);
 		
 		return ip_address(
-				ip_address::Host(
+				ip_address::ip(
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
 						(uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (uint32_t(a.sin6_addr.s6_addr[1]) << 16) | (uint32_t(a.sin6_addr.s6_addr[2]) << 8) | uint32_t(a.sin6_addr.s6_addr[3]),
 						(uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (uint32_t(a.sin6_addr.s6_addr[5]) << 16) | (uint32_t(a.sin6_addr.s6_addr[6]) << 8) | uint32_t(a.sin6_addr.s6_addr[7]),
@@ -269,7 +269,7 @@ ip_address Createip_addressFromSockaddrStorage(const sockaddr_storage& addr){
 						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
 #endif
 					),
-				std::uint16_t(ntohs(a.sin6_port))
+				uint16_t(ntohs(a.sin6_port))
 			);
 	}
 }

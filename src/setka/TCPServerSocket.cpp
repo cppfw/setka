@@ -11,7 +11,7 @@ using namespace setka;
 
 
 
-void TCPServerSocket::open(std::uint16_t port, bool disableNaggle, std::uint16_t queueLength){
+void TCPServerSocket::open(uint16_t port, bool disableNaggle, uint16_t queueLength){
 	if(*this){
 		throw setka::Exc("TCPServerSocket::Open(): socket already opened");
 	}

@@ -13,7 +13,7 @@ using namespace setka;
 
 
 
-void UDPSocket::open(std::uint16_t port){
+void UDPSocket::open(uint16_t port){
 	if(*this){
 		throw setka::Exc("UDPSocket::Open(): the socket is already opened");
 	}
@@ -168,13 +168,13 @@ size_t UDPSocket::send(const utki::Buf<uint8_t> buf, const ip_address& destinati
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS
 			this->ipv4 &&
 #endif
-			destinationIP.host.isIPv4()
+			destinationIP.host.is_v4()
 		)
 	{
 		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(sockAddr);
 		memset(&a, 0, sizeof(a));
 		a.sin_family = AF_INET;
-		a.sin_addr.s_addr = htonl(destinationIP.host.getIPv4Host());
+		a.sin_addr.s_addr = htonl(destinationIP.host.get_v4());
 		a.sin_port = htons(destinationIP.port);
 		sockAddrLen = sizeof(a);
 	}else{
@@ -199,10 +199,10 @@ size_t UDPSocket::send(const utki::Buf<uint8_t> buf, const ip_address& destinati
 		a.sin6_addr.s6_addr[14] = (destinationIP.host.quad3() >> 8) & 0xff;
 		a.sin6_addr.s6_addr[15] = destinationIP.host.quad3() & 0xff;
 #else
-		a.sin6_addr.__in6_u.__u6_addr32[0] = htonl(destinationIP.host.quad0());
-		a.sin6_addr.__in6_u.__u6_addr32[1] = htonl(destinationIP.host.quad1());
-		a.sin6_addr.__in6_u.__u6_addr32[2] = htonl(destinationIP.host.quad2());
-		a.sin6_addr.__in6_u.__u6_addr32[3] = htonl(destinationIP.host.quad3());
+		a.sin6_addr.__in6_u.__u6_addr32[0] = htonl(destinationIP.host.quad[0]);
+		a.sin6_addr.__in6_u.__u6_addr32[1] = htonl(destinationIP.host.quad[1]);
+		a.sin6_addr.__in6_u.__u6_addr32[2] = htonl(destinationIP.host.quad[2]);
+		a.sin6_addr.__in6_u.__u6_addr32[3] = htonl(destinationIP.host.quad[3]);
 #endif
 		a.sin6_port = htons(destinationIP.port);
 		sockAddrLen = sizeof(a);
@@ -343,13 +343,13 @@ size_t UDPSocket::recieve(utki::Buf<uint8_t> buf, ip_address &out_SenderIP){
 		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(sockAddr);
 		out_SenderIP = ip_address(
 				ntohl(a.sin_addr.s_addr),
-				std::uint16_t(ntohs(a.sin_port))
+				uint16_t(ntohs(a.sin_port))
 			);
 	}else{
 		ASSERT_INFO(sockAddr.ss_family == AF_INET6, "sockAddr.ss_family = " << unsigned(sockAddr.ss_family) << " AF_INET = " << AF_INET << " AF_INET6 = " << AF_INET6)
 		sockaddr_in6& a = reinterpret_cast<sockaddr_in6&>(sockAddr);
 		out_SenderIP = ip_address(
-				ip_address::Host(
+				ip_address::ip(
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
 						(uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (uint32_t(a.sin6_addr.s6_addr[1]) << 16) | (uint32_t(a.sin6_addr.s6_addr[2]) << 8) | uint32_t(a.sin6_addr.s6_addr[3]),
 						(uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (uint32_t(a.sin6_addr.s6_addr[5]) << 16) | (uint32_t(a.sin6_addr.s6_addr[6]) << 8) | uint32_t(a.sin6_addr.s6_addr[7]),
@@ -362,7 +362,7 @@ size_t UDPSocket::recieve(utki::Buf<uint8_t> buf, ip_address &out_SenderIP){
 						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
 #endif
 					),
-				std::uint16_t(ntohs(a.sin6_port))
+				uint16_t(ntohs(a.sin6_port))
 			);
 	}
 	

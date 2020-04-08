@@ -16,8 +16,8 @@
 using namespace setka;
 
 namespace{
-bool IsIPv4String(const char* ip){
-	for(const char* p = ip; *p != 0; ++p){
+bool IsIPv4String(const char* str){
+	for(const char* p = str; *p != 0; ++p){
 		if(*p == '.'){
 			return true;
 		}
@@ -29,21 +29,21 @@ bool IsIPv4String(const char* ip){
 }
 }
 
-ip_address::Host ip_address::Host::parse(const char* ip){
-	if(IsIPv4String(ip)){
-		return Host::parseIPv4(ip);
+ip_address::ip ip_address::ip::parse(const char* str){
+	if(IsIPv4String(str)){
+		return ip::parse_v4(str);
 	}else{
-		return Host::parseIPv6(ip);
+		return ip::parse_v6(str);
 	}
 }
 
-ip_address::Host ip_address::Host::parseIPv4(const char* ip){
+ip_address::ip ip_address::ip::parse_v4(const char* str){
 	sockaddr_in a;
 	
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
 	int res = inet_pton(
 			AF_INET,
-			ip,
+			str,
 			&a.sin_addr
 		);
 	
@@ -54,7 +54,7 @@ ip_address::Host ip_address::Host::parseIPv4(const char* ip){
 #elif M_OS == M_OS_WINDOWS
 	INT len = sizeof(a);
 	INT res = WSAStringToAddress(
-			const_cast<char*>(ip), //NOTE: when compiling in MS Visual Studio, set "Use multi-byte character set" in project properties to avoid usage of wchar_t
+			const_cast<char*>(str), //NOTE: when compiling in MS Visual Studio, set "Use multi-byte character set" in project properties to avoid usage of wchar_t
 			AF_INET,
 			NULL,
 			reinterpret_cast<sockaddr*>(&a),
@@ -67,10 +67,10 @@ ip_address::Host ip_address::Host::parseIPv4(const char* ip){
 #	error "Unknown OS"
 #endif
 	
-	return Host(ntohl(a.sin_addr.s_addr));
+	return ip_address::ip(ntohl(a.sin_addr.s_addr));
 }
 
-ip_address::Host ip_address::Host::parseIPv6(const char* ip){
+ip_address::ip ip_address::ip::parse_v6(const char* str){
 #if M_OS == M_OS_WINDOWS
 	sockaddr_in6 aa;
 	in6_addr& a = aa.sin6_addr;
@@ -81,7 +81,7 @@ ip_address::Host ip_address::Host::parseIPv6(const char* ip){
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
 	int res = inet_pton(
 			AF_INET6,
-			ip,
+			str,
 			&a
 		);
 	
@@ -92,22 +92,22 @@ ip_address::Host ip_address::Host::parseIPv6(const char* ip){
 #elif M_OS == M_OS_WINDOWS
 	INT len = sizeof(aa);
 	INT res = WSAStringToAddress(
-			const_cast<char*>(ip),
+			const_cast<char*>(str),
 			AF_INET6,
 			NULL,
 			reinterpret_cast<sockaddr*>(&aa),
 			&len
 		);
 	if(res != 0){
-		TRACE(<< "ip_address::Host::ParseIPv6(): WSAStringToAddress() failed, error = " <<  WSAGetLastError()<< ". Maybe IPv6 protocol is not installed in the Windows system, WSAStringToAddress() only supports IPv6 if it is installed." << std::endl)
-		throw BadIPHostFormatExc();
+		TRACE(<< "ip_address::ip::ParseIPv6(): WSAStringToAddress() failed, error = " <<  WSAGetLastError()<< ". Maybe IPv6 protocol is not installed in the Windows system, WSAStringToAddress() only supports IPv6 if it is installed." << std::endl)
+		throw std::runtime_error("invalid IPv6 address string");
 	}
 #else
 #	error "Unknown OS"
 #endif
 
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
-	return Host(
+	return ip_address::ip(
 			a.s6_addr[0],
 			a.s6_addr[1],
 			a.s6_addr[2],
@@ -126,7 +126,7 @@ ip_address::Host ip_address::Host::parseIPv6(const char* ip){
 			a.s6_addr[15]
 		);
 #else
-	return Host(
+	return ip_address::ip(
 			a.__in6_u.__u6_addr8[0],
 			a.__in6_u.__u6_addr8[1],
 			a.__in6_u.__u6_addr8[2],
@@ -147,58 +147,58 @@ ip_address::Host ip_address::Host::parseIPv6(const char* ip){
 #endif
 }
 
-ip_address::ip_address(const char* ip, std::uint16_t p) :
-		host(Host::parse(ip)),
+ip_address::ip_address(const char* host_str, uint16_t p) :
+		host(ip_address::ip::parse(host_str)),
 		port(p)
 {}
 
-ip_address::ip_address(const char* ip){
-	if(*ip == 0){ // if zero length string
+ip_address::ip_address(const char* str){
+	if(*str == 0){ // if zero length string
 		throw std::runtime_error("bad IP address format");
 	}
 	
-	if(*ip == '['){//IPv6 with port
+	if(*str == '['){//IPv6 with port
 		std::array<char, (4 * 6 + 6 + (3 * 4 + 3) + 1)> buf;
 		
-		++ip;
+		++str;
 		
 		char* dst;
-		for(dst = &*buf.begin(); *ip != ']'; ++dst, ++ip){
-			if(*ip == 0 || !utki::wrapBuf(buf).overlaps(dst + 1)){
+		for(dst = &*buf.begin(); *str != ']'; ++dst, ++str){
+			if(*str == 0 || !utki::wrapBuf(buf).overlaps(dst + 1)){
 				throw std::runtime_error("bad IP address format");
 			}
 			
-			*dst = *ip;
+			*dst = *str;
 		}
 		
 		ASSERT(utki::wrapBuf(buf).overlaps(dst))
 		*dst = 0; // null-terminate
 				
-		this->host = Host::parseIPv6(&*buf.begin());
+		this->host = ip::parse_v6(&*buf.begin());
 		
-		++ip; // move to port ':' separator
+		++str; // move to port ':' separator
 	}else{
 		// IPv4 or IPv6 without port
 		
-		if(IsIPv4String(ip)){
+		if(IsIPv4String(str)){
 			std::array<char, (3 * 4 + 3 + 1)> buf;
 			
 			char* dst;
-			for(dst = &*buf.begin(); *ip != ':' && *ip != 0; ++dst, ++ip){
+			for(dst = &*buf.begin(); *str != ':' && *str != 0; ++dst, ++str){
 				if(!utki::wrapBuf(buf).overlaps(dst + 1)){
 					throw std::runtime_error("bad IP address format");
 				}
 
-				*dst = *ip;
+				*dst = *str;
 			}
 
 			ASSERT(utki::wrapBuf(buf).overlaps(dst))
 			*dst = 0; // null-terminate
 
-			this->host = Host::parseIPv4(&*buf.begin());
+			this->host = ip::parse_v4(&*buf.begin());
 		}else{
 			// IPv6 without port
-			this->host = Host::parseIPv6(ip);
+			this->host = ip::parse_v6(str);
 			this->port = 0;
 			return;
 		}
@@ -206,8 +206,8 @@ ip_address::ip_address(const char* ip){
 	
 	// parse port
 	
-	if(*ip != ':'){
-		if(*ip == 0){
+	if(*str != ':'){
+		if(*str == 0){
 			this->port = 0;
 			return;
 		}else{
@@ -216,29 +216,29 @@ ip_address::ip_address(const char* ip){
 		}
 	}
 	
-	++ip;
+	++str;
 	
-	//move to the end of port number, maximum 5 digits.
-	for(unsigned i = 0; '0' <= *ip && *ip <= '9' && i < 5; ++i, ++ip){
+	// move to the end of port number, maximum 5 digits.
+	for(unsigned i = 0; '0' <= *str && *str <= '9' && i < 5; ++i, ++str){
 	}
-	if('0' <= *ip && *ip <= '9'){//if still have one more digit
+	if('0' <= *str && *str <= '9'){//if still have one more digit
 //		TRACE(<< "still have one more digit" << std::endl)
 		throw std::runtime_error("bad IP address format");
 	}
 	
-	--ip;
+	--str;
 	
 	uint32_t port = 0;
 	
-	for(unsigned i = 0; *ip != ':'; ++i, --ip){
+	for(unsigned i = 0; *str != ':'; ++i, --str){
 		uint32_t pow = 1;
 		for(unsigned j = 0; j < i; ++j){
 			pow *= 10;
 		}
 	
-		ASSERT('0' <= *ip && *ip <= '9')
+		ASSERT('0' <= *str && *str <= '9')
 		
-		port += (*ip - '0') * pow;
+		port += (*str - '0') * pow;
 	}
 	
 	if(port > 0xffff){
@@ -246,15 +246,15 @@ ip_address::ip_address(const char* ip){
 		throw std::runtime_error("bad IP address format");
 	}
 	
-	this->port = std::uint16_t(port);
+	this->port = uint16_t(port);
 }
 
-std::string ip_address::Host::toString()const{
+std::string ip_address::ip::to_string()const{
 	std::stringstream ss;
-	if(this->isIPv4()){
+	if(this->is_v4()){
 		for(unsigned i = 4;;){
 			--i;
-			ss << (((this->getIPv4Host()) >> (8 * i)) & 0xff);
+			ss << (((this->get_v4()) >> (8 * i)) & 0xff);
 			if(i == 0){
 				break;
 			}
@@ -264,7 +264,7 @@ std::string ip_address::Host::toString()const{
 		ss << std::hex;
 		for(unsigned i = 8;;){
 			--i;
-			ss << ((this->host[(i * 2) / 4] >> (16 * (i % 2))) & 0xffff);
+			ss << ((this->quad[(i * 2) / 4] >> (16 * (i % 2))) & 0xffff);
 			if(i == 0){
 				break;
 			}

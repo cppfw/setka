@@ -21,8 +21,8 @@ using namespace setka;
 
 namespace{
 
-const std::uint16_t D_DNSRecordA = 1;
-const std::uint16_t D_DNSRecordAAAA = 28;
+const uint16_t D_DNSRecordA = 1;
+const uint16_t D_DNSRecordAAAA = 28;
 
 namespace dns{
 
@@ -70,7 +70,7 @@ std::mutex mutex;
 typedef std::multimap<uint32_t, Resolver*> T_ResolversTimeMap;
 typedef T_ResolversTimeMap::iterator T_ResolversTimeIter;
 
-typedef std::map<std::uint16_t, Resolver*> T_IdMap;
+typedef std::map<uint16_t, Resolver*> T_IdMap;
 typedef T_IdMap::iterator T_IdIter;
 
 typedef std::list<Resolver*> T_RequestsToSendList;
@@ -86,12 +86,12 @@ struct Resolver{
 	
 	std::string hostName; //host name to resolve
 	
-	std::uint16_t recordType; //type of DNS record to get
+	uint16_t recordType; //type of DNS record to get
 	
 	T_ResolversTimeMap* timeMap;
 	T_ResolversTimeIter timeMapIter;
 	
-	std::uint16_t id;
+	uint16_t id;
 	T_IdIter idIter;
 	
 	T_RequestsToSendIter sendIter;
@@ -142,7 +142,7 @@ public:
 	
 	//NOTE: call to this function should be protected by mutex.
 	//throws HostNameResolver::TooMuchRequestsExc if all IDs are occupied.
-	std::uint16_t FindFreeId(){
+	uint16_t FindFreeId(){
 		if(this->idMap.size() == 0){
 			return 0;
 		}
@@ -151,7 +151,7 @@ public:
 			return this->idMap.begin()->first - 1;
 		}
 		
-		if((--(this->idMap.end()))->first != std::uint16_t(-1)){
+		if((--(this->idMap.end()))->first != uint16_t(-1)){
 			return (--(this->idMap.end()))->first + 1;
 		}
 		
@@ -248,7 +248,7 @@ public:
 		ASSERT(&*buf.begin() <= p && p <= &*buf.end());
 		ASSERT(size_t(p - &*buf.begin()) == packetSize);
 		
-		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.getIPv4Host()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
+		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
 		size_t ret = this->socket.send(utki::wrapBuf(&*buf.begin(), packetSize), r->dns);
 		
 		ASSERT(ret == packetSize || ret == 0)
@@ -265,7 +265,7 @@ public:
 	
 	
 	//NOTE: call to this function should be protected by mutex
-	inline void CallCallback(dns::Resolver* r, setka::HostNameResolver::E_Result result, ip_address::Host ip = ip_address::Host(0, 0, 0, 0))noexcept{
+	inline void CallCallback(dns::Resolver* r, setka::HostNameResolver::E_Result result, ip_address::ip ip = ip_address::ip(0, 0, 0, 0))noexcept{
 		this->completedMutex.lock();
 		this->mutex.unlock();
 		r->hnr->onCompleted_ts(result, ip);
@@ -275,9 +275,9 @@ public:
 	
 	struct ParseResult{
 		setka::HostNameResolver::E_Result result;
-		setka::ip_address::Host host;
+		setka::ip_address::ip host;
 		
-		ParseResult(setka::HostNameResolver::E_Result result, setka::ip_address::Host host = setka::ip_address::Host(0, 0, 0, 0)) :
+		ParseResult(setka::HostNameResolver::E_Result result, setka::ip_address::ip host = setka::ip_address::ip(0, 0, 0, 0)) :
 				result(result),
 				host(host)
 		{}
@@ -309,7 +309,7 @@ public:
 		p += 2;//skip ID
 		
 		{
-			std::uint16_t flags = utki::deserialize16be(p);
+			uint16_t flags = utki::deserialize16be(p);
 			p += 2;
 			
 			if((flags & 0x8000) == 0){//we expect it to be a response, not query.
@@ -329,7 +329,7 @@ public:
 		}
 		
 		{//check number of questions
-			std::uint16_t numQuestions = utki::deserialize16be(p);
+			uint16_t numQuestions = utki::deserialize16be(p);
 			p += 2;
 			
 			if(numQuestions != 1){
@@ -337,7 +337,7 @@ public:
 			}
 		}
 		
-		std::uint16_t numAnswers = utki::deserialize16be(p);
+		uint16_t numAnswers = utki::deserialize16be(p);
 		p += 2;
 		ASSERT(buf.begin() <= p)
 		ASSERT(p <= (buf.end() - 1) || p == buf.end())
@@ -347,12 +347,12 @@ public:
 		}
 		
 		{
-//			std::uint16_t nscount = utki::deserialize16be(p);
+//			uint16_t nscount = utki::deserialize16be(p);
 			p += 2;
 		}
 		
 		{
-//			std::uint16_t arcount = utki::deserialize16be(p);
+//			uint16_t arcount = utki::deserialize16be(p);
 			p += 2;
 		}
 		
@@ -369,7 +369,7 @@ public:
 		
 		//check query type, we sent question type 1 (A query).
 		{
-			std::uint16_t type = utki::deserialize16be(p);
+			uint16_t type = utki::deserialize16be(p);
 			p += 2;
 			
 			if(type != r->recordType){
@@ -379,7 +379,7 @@ public:
 		
 		//check query class, we sent question class 1 (inet).
 		{
-			std::uint16_t cls = utki::deserialize16be(p);
+			uint16_t cls = utki::deserialize16be(p);
 			p += 2;
 			
 			if(cls != 1){
@@ -390,7 +390,7 @@ public:
 		ASSERT(buf.overlaps(p) || p == buf.end())
 		
 		//loop through the answers
-		for(std::uint16_t n = 0; n != numAnswers; ++n){
+		for(uint16_t n = 0; n != numAnswers; ++n){
 			if(p == buf.end()){
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
@@ -414,13 +414,13 @@ public:
 			if(buf.end() - p < 2){
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
-			std::uint16_t type = utki::deserialize16be(p);
+			uint16_t type = utki::deserialize16be(p);
 			p += 2;
 			
 			if(buf.end() - p < 2){
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
-//			std::uint16_t cls = ting::util::Deserialize16(p);
+//			uint16_t cls = ting::util::Deserialize16(p);
 			p += 2;
 			
 			if(buf.end() - p < 4){
@@ -432,14 +432,14 @@ public:
 			if(buf.end() - p < 2){
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
-			std::uint16_t dataLen = utki::deserialize16be(p);
+			uint16_t dataLen = utki::deserialize16be(p);
 			p += 2;
 			
 			if(buf.end() - p < dataLen){
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
 			if(type == r->recordType){
-				ip_address::Host h;
+				ip_address::ip h;
 				
 				switch(type){
 					case D_DNSRecordA: //'A' type answer
@@ -447,14 +447,14 @@ public:
 							return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 						}
 
-						h = ip_address::Host(utki::deserialize32be(p));
+						h = ip_address::ip(utki::deserialize32be(p));
 						break;
 					case D_DNSRecordAAAA: //'AAAA' type answer
 						if(dataLen < 2 * 8){
 							return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 						}
 
-						h = ip_address::Host(
+						h = ip_address::ip(
 								utki::deserialize32be(p),
 								utki::deserialize32be(p + 4),
 								utki::deserialize32be(p + 8),
@@ -464,11 +464,11 @@ public:
 					default:
 						//we should not get here since if type is not the record type which we know then 'if(type == r->recordType)' condition will not trigger.
 						ASSERT(false)
-						h = ip_address::Host(0,0,0,0);
+						h = ip_address::ip(0,0,0,0);
 						break;
 				}
 				
-				TRACE(<< "host resolved: " << r->hostName << " = " << h.toString() << std::endl)
+				TRACE(<< "host resolved: " << r->hostName << " = " << h.to_string() << std::endl)
 				return ParseResult(setka::HostNameResolver::E_Result::OK, h);
 			}
 			p += dataLen;
@@ -676,7 +676,7 @@ private:
 		
 		this->InitDNS();
 		
-		TRACE(<< "this->dns.host = " << this->dns.host.toString() << std::endl)
+		TRACE(<< "this->dns.host = " << this->dns.host.to_string() << std::endl)
 		
 		{
 			std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex); // mutex is needed because socket opening may fail and we will have to set isExiting flag which should be protected by mutex
@@ -714,7 +714,7 @@ private:
 						ASSERT(ret != 0)
 						ASSERT(ret <= buf.size())
 						if(ret >= 13){//at least there should be standard header and host name, otherwise ignore received UDP packet
-							std::uint16_t id = utki::deserialize16be(&*buf.begin());
+							uint16_t id = utki::deserialize16be(&*buf.begin());
 							
 							T_IdIter i = this->idMap.find(id);
 							if(i != this->idMap.end()){
@@ -778,11 +778,11 @@ private:
 					try{
 						while(this->sendList.size() != 0){
 							dns::Resolver* r = this->sendList.front();
-							if(r->dns.host.getIPv4Host() == 0){
+							if(r->dns.host.get_v4() == 0){
 								r->dns = this->dns;
 							}
 
-							if(r->dns.host.isValid()){
+							if(r->dns.host.is_valid()){
 								if(!this->SendRequestToDNS(r)){
 									TRACE(<< "request not sent" << std::endl)
 									break;//socket is not ready for sending, go out of requests sending loop.
@@ -986,7 +986,7 @@ void HostNameResolver::resolve_ts(const std::string& hostName, uint32_t timeoutM
 	{
 		r->id = dns::thread->FindFreeId();
 		std::pair<dns::T_IdIter, bool> res =
-				dns::thread->idMap.insert(std::pair<std::uint16_t, dns::Resolver*>(r->id, r.operator->()));
+				dns::thread->idMap.insert(std::pair<uint16_t, dns::Resolver*>(r->id, r.operator->()));
 		ASSERT(res.second)
 		r->idIter = res.first;
 	}

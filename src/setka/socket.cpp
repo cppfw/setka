@@ -106,7 +106,7 @@ void socket::set_nonblocking_mode(){
 #endif
 }
 
-std::uint16_t socket::get_local_port(){
+uint16_t socket::get_local_port(){
 	if(!*this){
 		throw setka::Exc("socket::GetLocalPort(): socket is not valid");
 	}
@@ -132,11 +132,11 @@ std::uint16_t socket::get_local_port(){
 	
 	if(addr.ss_family == AF_INET){
 		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(addr);
-		return std::uint16_t(ntohs(a.sin_port));
+		return uint16_t(ntohs(a.sin_port));
 	}else{
 		ASSERT(addr.ss_family == AF_INET6)
 		sockaddr_in6& a = reinterpret_cast<sockaddr_in6&>(addr);
-		return std::uint16_t(ntohs(a.sin6_port));
+		return uint16_t(ntohs(a.sin6_port));
 	}
 }
 

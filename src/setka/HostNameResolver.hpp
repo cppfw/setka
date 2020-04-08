@@ -84,7 +84,7 @@ public:
 	void resolve_ts(
 			const std::string& hostName,
 			uint32_t timeoutMillis = 20000,
-			const setka::ip_address& dnsIP = setka::ip_address(setka::ip_address::Host(0), 0)
+			const setka::ip_address& dnsIP = setka::ip_address(setka::ip_address::ip(0), 0)
 		);
 	
 	/**
@@ -142,13 +142,10 @@ public:
 	 * @param ip - resolved IP-address. This value can later be used to create the
 	 *             ting::net::ip_address object.
 	 */
-	virtual void onCompleted_ts(E_Result result, ip_address::Host ip)noexcept = 0;
+	virtual void onCompleted_ts(E_Result result, ip_address::ip ip)noexcept = 0;
 	
 private:
 	friend class setka::Setka;
 	static void cleanUp();
 };
-
-
-
-}//~namespace
+}
