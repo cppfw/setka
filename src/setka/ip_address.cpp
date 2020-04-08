@@ -16,7 +16,7 @@
 using namespace setka;
 
 namespace{
-bool IsIPv4String(const char* str){
+bool is_ip_v4_string(const char* str){
 	for(const char* p = str; *p != 0; ++p){
 		if(*p == '.'){
 			return true;
@@ -30,7 +30,7 @@ bool IsIPv4String(const char* str){
 }
 
 ip_address::ip ip_address::ip::parse(const char* str){
-	if(IsIPv4String(str)){
+	if(is_ip_v4_string(str)){
 		return ip::parse_v4(str);
 	}else{
 		return ip::parse_v6(str);
@@ -157,7 +157,7 @@ ip_address::ip_address(const char* str){
 		throw std::runtime_error("bad IP address format");
 	}
 	
-	if(*str == '['){//IPv6 with port
+	if(*str == '['){ // IPv6 with port
 		std::array<char, (4 * 6 + 6 + (3 * 4 + 3) + 1)> buf;
 		
 		++str;
@@ -180,7 +180,7 @@ ip_address::ip_address(const char* str){
 	}else{
 		// IPv4 or IPv6 without port
 		
-		if(IsIPv4String(str)){
+		if(is_ip_v4_string(str)){
 			std::array<char, (3 * 4 + 3 + 1)> buf;
 			
 			char* dst;
