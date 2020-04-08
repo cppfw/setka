@@ -24,14 +24,14 @@ void TCPServerSocket::open(std::uint16_t port, bool disableNaggle, std::uint16_t
 
 	bool ipv4 = false;
 	
-	this->socket = ::socket(PF_INET6, SOCK_STREAM, 0);
+	this->sock = ::socket(PF_INET6, SOCK_STREAM, 0);
 	
-	if(this->socket == DInvalidSocket()){
+	if(this->sock == invalid_socket){
 		//maybe IPv6 is not supported by OS, try creating IPv4 socket
 		
-		this->socket = ::socket(PF_INET, SOCK_STREAM, 0);
+		this->sock = ::socket(PF_INET, SOCK_STREAM, 0);
 
-		if(this->socket == DInvalidSocket()){
+		if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
 			this->closeEventForWaitable();
 #endif
@@ -50,7 +50,7 @@ void TCPServerSocket::open(std::uint16_t port, bool disableNaggle, std::uint16_t
 		int no = 0;
 		void* noPtr = &no;
 #endif
-		if(setsockopt(this->socket, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
+		if(setsockopt(this->sock, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
 			//Dual stack is not supported, proceed with IPv4 only.
 			
 			this->close();//close IPv6 socket
@@ -61,9 +61,9 @@ void TCPServerSocket::open(std::uint16_t port, bool disableNaggle, std::uint16_t
 			this->createEventForWaitable();
 #endif			
 			
-			this->socket = ::socket(PF_INET, SOCK_STREAM, 0);
+			this->sock = ::socket(PF_INET, SOCK_STREAM, 0);
 	
-			if(this->socket == DInvalidSocket()){
+			if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
 				this->closeEventForWaitable();
 #endif
@@ -77,7 +77,7 @@ void TCPServerSocket::open(std::uint16_t port, bool disableNaggle, std::uint16_t
 	// allow local address reuse
 	{
 		int yes = 1;
-		setsockopt(this->socket, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes));
+		setsockopt(this->sock, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes));
 	}
 
 	sockaddr_storage sockAddr;
@@ -101,10 +101,10 @@ void TCPServerSocket::open(std::uint16_t port, bool disableNaggle, std::uint16_t
 
 	// Bind the socket for listening
 	if(bind(
-			this->socket,
+			this->sock,
 			reinterpret_cast<sockaddr*>(&sockAddr),
 			sockAddrLen
-		) == DSocketError())
+		) == socket_error)
 	{
 #if M_OS == M_OS_WINDOWS
 		int errorCode = WSAGetLastError();
@@ -131,12 +131,12 @@ void TCPServerSocket::open(std::uint16_t port, bool disableNaggle, std::uint16_t
 		throw setka::Exc(ss.str());
 	}
 
-	if(listen(this->socket, int(queueLength)) == DSocketError()){
+	if(listen(this->sock, int(queueLength)) == socket_error){
 		this->close();
 		throw setka::Exc("TCPServerSocket::Open(): Couldn't listen to local port");
 	}
 
-	this->setNonBlockingMode();
+	this->set_nonblocking_mode();
 }
 
 
@@ -158,16 +158,16 @@ TCPSocket TCPServerSocket::accept(){
 #	error "Unsupported OS"
 #endif
 
-	TCPSocket sock;//allocate a new socket object
+	TCPSocket s;
 
-	sock.socket = ::accept(
-			this->socket,
+	s.sock = ::accept(
+			this->sock,
 			reinterpret_cast<sockaddr*>(&sockAddr),
 			&sock_alen
 		);
 
-	if(sock.socket == DInvalidSocket()){
-		return sock;//no connections to be accepted, return invalid socket
+	if(s.sock == invalid_socket){
+		return s; // no connections to be accepted, return invalid socket
 	}
 
 #if M_OS == M_OS_WINDOWS
@@ -178,19 +178,18 @@ TCPSocket TCPServerSocket::accept(){
 	sock.setWaitingEvents(0);
 #endif
 
-	sock.setNonBlockingMode();
+	s.set_nonblocking_mode();
 
 	if(this->disableNaggle){
-		sock.disableNaggle();
+		s.disable_naggle();
 	}
 
-	return sock;//return a newly created socket
+	return s; // return a newly created socket
 }
 
 
 
 #if M_OS == M_OS_WINDOWS
-//override
 void TCPServerSocket::setWaitingEvents(std::uint32_t flagsToWaitFor){
 	if(flagsToWaitFor != 0 && flagsToWaitFor != Waitable::READ){
 		throw setka::Exc("TCPServerSocket::SetWaitingEvents(): only Waitable::READ flag allowed");

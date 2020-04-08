@@ -69,7 +69,7 @@ public:
 
 			listenSock.open(13666);//start listening
 
-			ASSERT_ALWAYS(listenSock.getLocalPort() == 13666)
+			ASSERT_ALWAYS(listenSock.get_local_port() == 13666)
 
 			//Accept some connection
 			setka::TCPSocket sock;
@@ -465,7 +465,7 @@ void Run(){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 
-	ASSERT_ALWAYS(recvSock.getLocalPort() == 13666)
+	ASSERT_ALWAYS(recvSock.get_local_port() == 13666)
 
 	setka::UDPSocket sendSock;
 

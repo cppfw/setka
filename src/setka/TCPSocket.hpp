@@ -1,31 +1,19 @@
-/**
- * @author Ivan Gagis <igagis@gmail.com>
- */
-
 #pragma once
 
 #include <utki/Buf.hpp>
 #include <utki/config.hpp>
 
-#include "Socket.hpp"
+#include "socket.hpp"
 #include "IPAddress.hpp"
-
-
-
 
 namespace setka{
 
-
-
-//forward declarations
 class TCPServerSocket;
-
-
 
 /**
  * @brief a class which represents a TCP socket.
  */
-class TCPSocket : public Socket{
+class TCPSocket : public socket{
 	friend class setka::TCPServerSocket;
 public:
 	
@@ -41,7 +29,7 @@ public:
 	TCPSocket(const TCPSocket&) = delete;
 	
 	TCPSocket(TCPSocket&& s) :
-			Socket(std::move(s))
+			socket(std::move(s))
 	{}
 
 	
@@ -50,7 +38,7 @@ public:
 	
 	
 	TCPSocket& operator=(TCPSocket&& s){
-		this->Socket::operator=(std::move(s));
+		this->socket::operator=(std::move(s));
 		return *this;
 	}
 

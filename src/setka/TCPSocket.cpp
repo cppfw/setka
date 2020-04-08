@@ -17,33 +17,33 @@ void TCPSocket::open(const IPAddress& ip, bool disableNaggle){
 		throw setka::Exc("TCPSocket::Open(): socket already opened");
 	}
 
-	//create event for implementing Waitable
+	// create event for implementing waitable
 #if M_OS == M_OS_WINDOWS
 	this->createEventForWaitable();
 #endif
 
-	this->socket = ::socket(
+	this->sock = ::socket(
 			ip.host.isIPv4() ? PF_INET : PF_INET6,
 			SOCK_STREAM,
 			0
 		);
-	if(this->socket == DInvalidSocket()){
+	if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
-		this->closeEventForWaitable();
+		this->close_event_for_waitable();
 #endif
 		throw setka::Exc("TCPSocket::Open(): Couldn't create socket");
 	}
 
-	//Disable Naggle algorithm if required
+	// disable Naggle algorithm if required
 	if(disableNaggle){
-		this->disableNaggle();
+		this->disable_naggle();
 	}
 
-	this->setNonBlockingMode();
+	this->set_nonblocking_mode();
 
 	this->readiness_flags.clear();
 
-	//Connecting to remote host
+	// connecting to remote host
 	sockaddr_storage sockAddr;
 	
 	if(ip.host.isIPv4()){
@@ -85,10 +85,10 @@ void TCPSocket::open(const IPAddress& ip, bool disableNaggle){
 
 	// Connect to the remote host
 	if(connect(
-			this->socket,
+			this->sock,
 			reinterpret_cast<sockaddr *>(&sockAddr),
-			ip.host.isIPv4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6) //NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
-		) == DSocketError())
+			ip.host.isIPv4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6) // NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
+		) == socket_error)
 	{
 #if M_OS == M_OS_WINDOWS
 		int errorCode = WSAGetLastError();
@@ -97,9 +97,9 @@ void TCPSocket::open(const IPAddress& ip, bool disableNaggle){
 #else
 #	error "Unsupported OS"
 #endif
-		if(errorCode == DEIntr()){
+		if(errorCode == error_interrupted){
 			//do nothing, for non-blocking socket the connection request still should remain active
-		}else if(errorCode == DEInProgress()){
+		}else if(errorCode == error_in_progress){
 			//do nothing, this is not an error, we have non-blocking socket
 		}else{
 			std::stringstream ss;
@@ -138,20 +138,20 @@ size_t TCPSocket::send(const utki::Buf<std::uint8_t> buf){
 
 	while(true){
 		len = ::send(
-				this->socket,
+				this->sock,
 				reinterpret_cast<const char*>(&*buf.begin()),
 				int(buf.size()),
 				0
 			);
-		if(len == DSocketError()){
+		if(len == socket_error){
 #if M_OS == M_OS_WINDOWS
 			int errorCode = WSAGetLastError();
 #else
 			int errorCode = errno;
 #endif
-			if(errorCode == DEIntr()){
+			if(errorCode == error_interrupted){
 				continue;
-			}else if(errorCode == DEAgain()){
+			}else if(errorCode == error_again){
 				//can't send more bytes, return 0 bytes sent
 				len = 0;
 			}else{
@@ -198,21 +198,21 @@ size_t TCPSocket::recieve(utki::Buf<std::uint8_t> buf){
 
 	while(true){
 		len = ::recv(
-				this->socket,
+				this->sock,
 				reinterpret_cast<char*>(&*buf.begin()),
 				int(buf.size()),
 				0
 			);
-		if(len == DSocketError()){
+		if(len == socket_error){
 #if M_OS == M_OS_WINDOWS
 			int errorCode = WSAGetLastError();
 #else
 			int errorCode = errno;
 #endif
 
-			if(errorCode == DEIntr()){
+			if(errorCode == error_interrupted){
 				continue;
-			}else if(errorCode == DEAgain()){
+			}else if(errorCode == error_again){
 				//no data available, return 0 bytes received
 				len = 0;
 			}else{
@@ -291,7 +291,7 @@ IPAddress TCPSocket::getLocalAddress(){
 	socklen_t len = sizeof(addr);
 #endif
 
-	if(getsockname(this->socket, reinterpret_cast<sockaddr*>(&addr), &len)  == DSocketError()){
+	if(getsockname(this->sock, reinterpret_cast<sockaddr*>(&addr), &len)  == socket_error){
 		throw setka::Exc("Socket::GetLocalAddress(): getsockname() failed");
 	}	
 
@@ -313,7 +313,7 @@ IPAddress TCPSocket::getRemoteAddress(){
 	socklen_t len = sizeof(addr);
 #endif
 
-	if(getpeername(this->socket, reinterpret_cast<sockaddr*>(&addr), &len) == DSocketError()){
+	if(getpeername(this->sock, reinterpret_cast<sockaddr*>(&addr), &len) == socket_error){
 		std::stringstream ss;
 		ss << "TCPSocket::GetRemoteAddress(): getpeername() failed: ";
 #if M_COMPILER == M_COMPILER_MSVC

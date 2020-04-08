@@ -24,13 +24,13 @@ void UDPSocket::open(std::uint16_t port){
 
 	this->ipv4 = false;
 	
-	this->socket = ::socket(PF_INET6, SOCK_DGRAM, 0);
+	this->sock = ::socket(PF_INET6, SOCK_DGRAM, 0);
 	
-	if(this->socket == DInvalidSocket()){
+	if(this->sock == invalid_socket){
 		//maybe IPv6 is not supported by OS, try to proceed with IPv4 socket then
-		this->socket = ::socket(PF_INET, SOCK_DGRAM, 0);
+		this->sock = ::socket(PF_INET, SOCK_DGRAM, 0);
 
-		if(this->socket == DInvalidSocket()){
+		if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
 			this->closeEventForWaitable();
 #endif
@@ -49,7 +49,7 @@ void UDPSocket::open(std::uint16_t port){
 		int no = 0;
 		void* noPtr = &no;
 #endif
-		if(setsockopt(this->socket, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
+		if(setsockopt(this->sock, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
 			//Dual stack is not supported, proceed with IPv4 only.
 			
 			this->close();//close IPv6 socket
@@ -60,9 +60,9 @@ void UDPSocket::open(std::uint16_t port){
 			this->createEventForWaitable();
 #endif			
 			
-			this->socket = ::socket(PF_INET, SOCK_DGRAM, 0);
+			this->sock = ::socket(PF_INET, SOCK_DGRAM, 0);
 	
-			if(this->socket == DInvalidSocket()){
+			if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
 				this->closeEventForWaitable();
 #endif
@@ -96,10 +96,10 @@ void UDPSocket::open(std::uint16_t port){
 
 		// Bind the socket for listening
 		if(::bind(
-				this->socket,
+				this->sock,
 				reinterpret_cast<struct sockaddr*>(&sockAddr),
 				sockAddrLen
-			) == DSocketError())
+			) == socket_error)
 		{
 			this->close();
 			
@@ -126,19 +126,19 @@ void UDPSocket::open(std::uint16_t port){
 		}
 	}
 
-	this->setNonBlockingMode();
+	this->set_nonblocking_mode();
 
 	//Allow broadcasting
 #if M_OS == M_OS_WINDOWS || M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 	{
 		int yes = 1;
 		if(setsockopt(
-				this->socket,
+				this->sock,
 				SOL_SOCKET,
 				SO_BROADCAST,
 				reinterpret_cast<char*>(&yes),
 				sizeof(yes)
-			) == DSocketError())
+			) == socket_error)
 		{
 			this->close();
 			throw setka::Exc("UDPSocket::Open(): failed setting broadcast option");
@@ -216,7 +216,7 @@ size_t UDPSocket::send(const utki::Buf<std::uint8_t> buf, const IPAddress& desti
 
 	while(true){
 		len = ::sendto(
-				this->socket,
+				this->sock,
 				reinterpret_cast<const char*>(buf.begin()),
 				int(buf.size()),
 				0,
@@ -224,7 +224,7 @@ size_t UDPSocket::send(const utki::Buf<std::uint8_t> buf, const IPAddress& desti
 				sockAddrLen
 			);
 
-		if(len == DSocketError()){
+		if(len == socket_error){
 #if M_OS == M_OS_WINDOWS
 			int errorCode = WSAGetLastError();
 			
@@ -234,9 +234,9 @@ size_t UDPSocket::send(const utki::Buf<std::uint8_t> buf, const IPAddress& desti
 #else
 			int errorCode = errno;
 #endif
-			if(errorCode == DEIntr()){
+			if(errorCode == error_interrupted){
 				continue;
-			}else if(errorCode == DEAgain()){
+			}else if(errorCode == error_again){
 				//can't send more bytes, return 0 bytes sent
 				len = 0;
 			}else{
@@ -298,7 +298,7 @@ size_t UDPSocket::recieve(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 
 	while(true){
 		len = ::recvfrom(
-				this->socket,
+				this->sock,
 				reinterpret_cast<char*>(buf.begin()),
 				int(buf.size()),
 				0,
@@ -306,15 +306,15 @@ size_t UDPSocket::recieve(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 				&sockLen
 			);
 
-		if(len == DSocketError()){
+		if(len == socket_error){
 #if M_OS == M_OS_WINDOWS
 			int errorCode = WSAGetLastError();
 #else
 			int errorCode = errno;
 #endif
-			if(errorCode == DEIntr()){
+			if(errorCode == error_interrupted){
 				continue;
-			}else if(errorCode == DEAgain()){
+			}else if(errorCode == error_again){
 				return 0; //no data available, return 0 bytes received
 			}else{
 				std::stringstream ss;

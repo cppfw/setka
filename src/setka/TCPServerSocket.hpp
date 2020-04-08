@@ -1,15 +1,9 @@
-/**
- * @author Ivan Gagis <igagis@gmail.com>
- */
-
 #pragma once
 
 #include <utki/config.hpp>
 
-#include "Socket.hpp"
+#include "socket.hpp"
 #include "TCPSocket.hpp"
-
-
 
 /**
  * @brief the main namespace of ting library.
@@ -17,15 +11,13 @@
  */
 namespace setka{
 
-
-
 /**
  * @brief a class which represents a TCP server socket.
  * TCP server socket is the socket which can listen for new connections
  * and accept them creating an ordinary TCP socket for it.
  */
-class TCPServerSocket : public Socket{
-	bool disableNaggle = false;//this flag indicates if accepted sockets should be created with disabled Naggle
+class TCPServerSocket : public socket{
+	bool disableNaggle = false; // this flag indicates if accepted sockets should be created with disabled Naggle
 public:
 	/**
 	 * @brief Creates an invalid (unopened) TCP server socket.
@@ -38,7 +30,7 @@ public:
 	TCPServerSocket(const TCPServerSocket&) = delete;
 	
 	TCPServerSocket(TCPServerSocket&& s) :
-			Socket(std::move(s)),
+			socket(std::move(s)),
 			disableNaggle(s.disableNaggle)
 	{}
 
@@ -48,7 +40,7 @@ public:
 	
 	TCPServerSocket& operator=(TCPServerSocket&& s){
 		this->disableNaggle = s.disableNaggle;
-		this->Socket::operator=(std::move(s));
+		this->socket::operator=(std::move(s));
 		return *this;
 	}
 

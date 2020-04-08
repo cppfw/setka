@@ -1,7 +1,6 @@
-#include "Socket.hpp"
+#include "socket.hpp"
 
 #include <utki/config.hpp>
-
 
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 #	include <netinet/in.h>
@@ -12,22 +11,15 @@
 #	include <ws2tcpip.h>
 #endif
 
-
-
 using namespace setka;
 
-
-
-
-Socket::~Socket()noexcept{
+socket::~socket()noexcept{
 	this->close();
 }
 
-
-
-void Socket::close()noexcept{
-//		TRACE(<< "Socket::Close(): invoked " << this << std::endl)
-	ASSERT_INFO(!this->is_added(), "Socket::Close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
+void socket::close()noexcept{
+//		TRACE(<< "socket::Close(): invoked " << this << std::endl)
+	ASSERT_INFO(!this->is_added(), "socket::close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
 	
 	if(*this){
 		ASSERT(!this->is_added())
@@ -35,22 +27,22 @@ void Socket::close()noexcept{
 #if M_OS == M_OS_WINDOWS
 		// Closing socket in Win32.
 		// refer to http://tangentsoft.net/wskfaq/newbie.html#howclose for details
-		shutdown(this->socket, SD_BOTH);
-		closesocket(this->socket);
+		shutdown(this->sock, SD_BOTH);
+		closesocket(this->sock);
 
 		this->closeEventForWaitable();
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-		::close(this->socket);
+		::close(this->sock);
 #else
 #	error "Unsupported OS"
 #endif
 	}
 	this->readiness_flags.clear();
-	this->socket = DInvalidSocket();
+	this->sock = invalid_socket;
 }
 
-Socket& Socket::operator=(Socket&& s){
-//	TRACE(<< "Socket::operator=(): invoked " << this << std::endl)
+setka::socket& socket::operator=(socket&& s){
+//	TRACE(<< "socket::operator=(): invoked " << this << std::endl)
 	if(this == &s){//detect self-assignment
 		return *this;
 	}
@@ -60,26 +52,26 @@ Socket& Socket::operator=(Socket&& s){
 	this->waitable::operator=(std::move(s));
 
 	this->close();
-	this->socket = s.socket;
+	this->sock = s.sock;
 
 #if M_OS == M_OS_WINDOWS
 	this->eventForWaitable = s.eventForWaitable;
 	const_cast<Socket&>(s).eventForWaitable = WSA_INVALID_EVENT;
 #endif
 
-	const_cast<Socket&>(s).socket = DInvalidSocket();
+	const_cast<socket&>(s).sock = invalid_socket;
 	return *this;
 }
 
-void Socket::disableNaggle(){
+void socket::disable_naggle(){
 	if(!*this){
-		throw setka::Exc("Socket::DisableNaggle(): socket is not valid");
+		throw setka::Exc("socket::DisableNaggle(): socket is not valid");
 	}
 
 #if M_OS == M_OS_WINDOWS || M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 	{
 		int yes = 1;
-		setsockopt(this->socket, IPPROTO_TCP, TCP_NODELAY, (char*)&yes, sizeof(yes));
+		setsockopt(this->sock, IPPROTO_TCP, TCP_NODELAY, (char*)&yes, sizeof(yes));
 	}
 #else
 #	error "Unsupported OS"
@@ -88,27 +80,27 @@ void Socket::disableNaggle(){
 
 
 
-void Socket::setNonBlockingMode(){
+void socket::set_nonblocking_mode(){
 	if(!*this){
-		throw setka::Exc("Socket::SetNonBlockingMode(): socket is not valid");
+		throw setka::Exc("socket::SetNonBlockingMode(): socket is not valid");
 	}
 
 #if M_OS == M_OS_WINDOWS
 	{
 		u_long mode = 1;
-		if(ioctlsocket(this->socket, FIONBIO, &mode) != 0){
-			throw setka::Exc("Socket::SetNonBlockingMode(): ioctlsocket(FIONBIO) failed");
+		if(ioctlsocket(this->sock, FIONBIO, &mode) != 0){
+			throw setka::Exc("socket::SetNonBlockingMode(): ioctlsocket(FIONBIO) failed");
 		}
 	}
 	
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 	{
-		int flags = fcntl(this->socket, F_GETFL, 0);
+		int flags = fcntl(this->sock, F_GETFL, 0);
 		if(flags == -1){
-			throw setka::Exc("Socket::SetNonBlockingMode(): fcntl(F_GETFL) failed");
+			throw setka::Exc("socket::SetNonBlockingMode(): fcntl(F_GETFL) failed");
 		}
-		if(fcntl(this->socket, F_SETFL, flags | O_NONBLOCK) != 0){
-			throw setka::Exc("Socket::SetNonBlockingMode(): fcntl(F_SETFL) failed");
+		if(fcntl(this->sock, F_SETFL, flags | O_NONBLOCK) != 0){
+			throw setka::Exc("socket::SetNonBlockingMode(): fcntl(F_SETFL) failed");
 		}
 	}
 #else
@@ -118,9 +110,9 @@ void Socket::setNonBlockingMode(){
 
 
 
-std::uint16_t Socket::getLocalPort(){
+std::uint16_t socket::get_local_port(){
 	if(!*this){
-		throw setka::Exc("Socket::GetLocalPort(): socket is not valid");
+		throw setka::Exc("socket::GetLocalPort(): socket is not valid");
 	}
 
 	sockaddr_storage addr;
@@ -134,12 +126,12 @@ std::uint16_t Socket::getLocalPort(){
 #endif
 
 	if(getsockname(
-			this->socket,
+			this->sock,
 			reinterpret_cast<sockaddr*>(&addr),
 			&len
 		) < 0)
 	{
-		throw setka::Exc("Socket::GetLocalPort(): getsockname() failed");
+		throw setka::Exc("socket::GetLocalPort(): getsockname() failed");
 	}
 	
 	if(addr.ss_family == AF_INET){
@@ -155,19 +147,19 @@ std::uint16_t Socket::getLocalPort(){
 
 
 #if M_OS == M_OS_WINDOWS
-HANDLE Socket::getHandle(){
+HANDLE socket::getHandle(){
 	//return event handle
 	return this->eventForWaitable;
 }
 
 
 
-bool Socket::checkSignaled(){
+bool socket::checkSignaled(){
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
 	ASSERT(*this)
-	if(WSAEnumNetworkEvents(this->socket, this->eventForWaitable, &events) != 0){
-		throw setka::Exc("Socket::CheckSignaled(): WSAEnumNetworkEvents() failed");
+	if(WSAEnumNetworkEvents(this->sock, this->eventForWaitable, &events) != 0){
+		throw setka::Exc("socket::CheckSignaled(): WSAEnumNetworkEvents() failed");
 	}
 
 	//NOTE: sometimes no events are reported, don't know why.
@@ -217,17 +209,17 @@ bool Socket::checkSignaled(){
 
 
 
-void Socket::createEventForWaitable(){
+void socket::createEventForWaitable(){
 	ASSERT(this->eventForWaitable == WSA_INVALID_EVENT)
 	this->eventForWaitable = WSACreateEvent();
 	if(this->eventForWaitable == WSA_INVALID_EVENT){
-		throw setka::Exc("Socket::CreateEventForWaitable(): could not create event (Win32) for implementing Waitable");
+		throw setka::Exc("socket::CreateEventForWaitable(): could not create event (Win32) for implementing Waitable");
 	}
 }
 
 
 
-void Socket::closeEventForWaitable(){
+void socket::closeEventForWaitable(){
 	ASSERT(this->eventForWaitable != WSA_INVALID_EVENT)
 	WSACloseEvent(this->eventForWaitable);
 	this->eventForWaitable = WSA_INVALID_EVENT;
@@ -235,16 +227,16 @@ void Socket::closeEventForWaitable(){
 
 
 
-void Socket::setWaitingEventsForWindows(long flags){
+void socket::setWaitingEventsForWindows(long flags){
 	ASSERT_INFO(*this && (this->eventForWaitable != WSA_INVALID_EVENT), "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.")
 
 	if(WSAEventSelect(
-			this->socket,
+			this->sock,
 			this->eventForWaitable,
 			flags
 		) != 0)
 	{
-		throw setka::Exc("Socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
+		throw setka::Exc("socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
 	}
 }
 
@@ -252,8 +244,8 @@ void Socket::setWaitingEventsForWindows(long flags){
 
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 
-int Socket::get_handle(){
-	return this->socket;
+int socket::get_handle(){
+	return this->sock;
 }
 
 #else

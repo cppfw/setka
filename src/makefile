@@ -8,14 +8,7 @@ this_out_dir := build
 
 this_soname := $(shell cat $(prorab_this_dir)soname.txt)
 
-this_srcs :=
-this_srcs += setka/HostNameResolver.cpp
-this_srcs += setka/IPAddress.cpp
-this_srcs += setka/Setka.cpp
-this_srcs += setka/Socket.cpp
-this_srcs += setka/TCPServerSocket.cpp
-this_srcs += setka/TCPSocket.cpp
-this_srcs += setka/UDPSocket.cpp
+this_srcs := $(call prorab-src-dir, .)
 
 this_cxxflags := 
 

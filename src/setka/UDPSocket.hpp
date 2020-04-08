@@ -1,23 +1,14 @@
-/**
- * @author Ivan Gagis <igagis@gmail.com>
- */
-
 #pragma once
-
 
 #include <string>
 
 #include <utki/config.hpp>
 #include <utki/Buf.hpp>
 
-#include "Socket.hpp"
+#include "socket.hpp"
 #include "IPAddress.hpp"
 
-
-
 namespace setka{
-
-
 
 /**
  * @brief UDP socket class.
@@ -25,7 +16,7 @@ namespace setka{
  * NOTE: Win32 specific: when using UDP socket with WaitSet be aware that waiting on UDP socket for writing does not work on Win32 OS.
  *       On other operating systems it works OK.
  */
-class UDPSocket : public Socket{
+class UDPSocket : public socket{
 	bool ipv4;
 public:
 	UDPSocket(){}
@@ -33,17 +24,14 @@ public:
 	UDPSocket(const UDPSocket&) = delete;
 
 	UDPSocket(UDPSocket&& s) :
-			Socket(std::move(s))
+			socket(std::move(s))
 	{}
 
-
 	UDPSocket& operator=(UDPSocket&& s){
-		this->Socket::operator=(std::move(s));
+		this->socket::operator=(std::move(s));
 		this->ipv4 = s.ipv4;
 		return *this;
 	}
-
-
 	
 	/**
 	 * @brief Open the socket.
@@ -57,9 +45,7 @@ public:
 	 *               are no free ports, then it is an error and an exception will be thrown.
 	 *               This is useful for server-side sockets, for client-side sockets use UDPSocket::Open().
 	 */
-	void open(std::uint16_t port = 0);
-
-
+	void open(uint16_t port = 0);
 
 	/**
 	 * @brief Send datagram over UDP socket.
