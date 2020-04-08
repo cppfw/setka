@@ -1,10 +1,10 @@
 ifeq ($(os),windows)
     # to avoid /C converted to C:\ need to escape it as //C
-    this_test_cmd := (cd $(d) && cmd //C 'set PATH=../../src/build;%PATH% && $$(notdir $$^)')
+    this_test_cmd := (cd $(d) && cmd //C 'set PATH=../../src/build;%PATH% && build/$$(notdir $$^)')
 else ifeq ($(os),macosx)
-    this_test_cmd := (cd $(d) && DYLD_LIBRARY_PATH=../../src/build ./$$(notdir $$^))
+    this_test_cmd := (cd $(d) && DYLD_LIBRARY_PATH=../../src/build ./build/$$(notdir $$^))
 else ifeq ($(os),linux)
-    this_test_cmd := (cd $(d) && LD_LIBRARY_PATH=../../src/build ./$$(notdir $$^))
+    this_test_cmd := (cd $(d) && LD_LIBRARY_PATH=../../src/build ./build/$$(notdir $$^))
 else
     $(error "Unknown OS")
 endif
@@ -15,25 +15,22 @@ this_test := $(word $(words $(this_dirs)), $(this_dirs))
 define this_rule
 test:: $(prorab_this_name)
 	@myci-running-test.sh $(this_test)
-	$(prorab_echo)$(this_test_cmd) || myci-error.sh "test failed"
+	$(a)$(this_test_cmd) || myci-error.sh "test failed"
 	@myci-passed.sh
 endef
 $(eval $(this_rule))
 
-
-
 ifeq ($(os),windows)
     # to avoid /C converted to C:\ need to escape it as //C
-    this_gdb_cmd := (cd $(d) && cmd //C 'set PATH=../../src/build;%PATH% && gdb $$(notdir $$^)')
+    this_gdb_cmd := (cd $(d) && cmd //C 'set PATH=../../src/build;%PATH% && gdb build/$$(notdir $$^)')
 else ifeq ($(os),macosx)
-    this_gdb_cmd := (cd $(d) && DYLD_LIBRARY_PATH=../../src/build gdb ./$$(notdir $$^))
+    this_gdb_cmd := (cd $(d) && DYLD_LIBRARY_PATH=../../src/build gdb ./build/$$(notdir $$^))
 else ifeq ($(os),linux)
-    this_gdb_cmd := (cd $(d) && LD_LIBRARY_PATH=../../src/build gdb ./$$(notdir $$^))
+    this_gdb_cmd := (cd $(d) && LD_LIBRARY_PATH=../../src/build gdb ./build/$$(notdir $$^))
 endif
-
 
 define this_rule
 gdb:: $(prorab_this_name)
-	$(prorab_echo)$(this_gdb_cmd)
+	$(a)$(this_gdb_cmd)
 endef
 $(eval $(this_rule))

@@ -33,6 +33,7 @@ depends=(
 		"${pkgPrefix}utki"
 		"${pkgPrefix}opros"
 		"${pkgPrefix}nitki"
+		"${pkgPrefix}papki"
 	)
 
 makedepends=(

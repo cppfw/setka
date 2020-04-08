@@ -2,6 +2,10 @@ include prorab.mk
 
 this_name := tests
 
+this_out_dir := build
+
+this_no_install := true
+
 this_cxxflags += -std=c++11
 this_cxxflags += -Wall
 this_cxxflags += -DDEBUG
