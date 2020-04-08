@@ -148,7 +148,7 @@ void UDPSocket::open(std::uint16_t port){
 #	error "Unsupported OS"
 #endif
 
-	this->clearAllReadinessFlags();
+	this->readiness_flags.clear();
 }
 
 
@@ -158,7 +158,7 @@ size_t UDPSocket::send(const utki::Buf<std::uint8_t> buf, const IPAddress& desti
 		throw setka::Exc("UDPSocket::Send(): socket is not opened");
 	}
 
-	this->clearCanWriteFlag();
+	this->readiness_flags.clear(opros::ready::write);
 
 	sockaddr_storage sockAddr;
 	socklen_t sockAddrLen;
@@ -274,11 +274,11 @@ size_t UDPSocket::recieve(utki::Buf<std::uint8_t> buf, IPAddress &out_SenderIP){
 		throw setka::Exc("UDPSocket::Recv(): socket is not opened");
 	}
 
-	//The "can read" flag shall be cleared even if this function fails.
-	//This is to avoid subsequent calls to Recv() because of it indicating
-	//that there's an activity.
-	//So, do it at the beginning of the function.
-	this->clearCanReadFlag();
+	// The "can read" flag shall be cleared even if this function fails.
+	// This is to avoid subsequent calls to Recv() because of it indicating
+	// that there's an activity.
+	// So, do it at the beginning of the function.
+	this->readiness_flags.clear(opros::ready::read);
 
 	sockaddr_storage sockAddr;
 

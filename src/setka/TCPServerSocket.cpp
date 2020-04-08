@@ -146,7 +146,7 @@ TCPSocket TCPServerSocket::accept(){
 		throw setka::Exc("TCPServerSocket::Accept(): the socket is not opened");
 	}
 
-	this->clearCanReadFlag();
+	this->readiness_flags.clear(opros::ready::read);
 
 	sockaddr_storage sockAddr;
 

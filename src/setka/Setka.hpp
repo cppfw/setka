@@ -2,7 +2,7 @@
 
 
 
-#include <utki/Singleton.hpp>
+#include <utki/singleton.hpp>
 #include <utki/config.hpp>
 
 
@@ -18,9 +18,9 @@ namespace setka{
  * destructor will be called and the library will be de-initialized automatically.
  * This is what C++ RAII is all about.
  */
-class Setka : public utki::IntrusiveSingleton<Setka>{
-	friend class utki::IntrusiveSingleton<Setka>;
-	static utki::IntrusiveSingleton<Setka>::T_Instance instance;
+class Setka : public utki::intrusive_singleton<Setka>{
+	friend class utki::intrusive_singleton<Setka>;
+	static utki::intrusive_singleton<Setka>::T_Instance instance;
 	
 public:
 	Setka();

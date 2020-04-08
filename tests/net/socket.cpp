@@ -1,20 +1,17 @@
-#include <aika/timer.hpp>
 #include <nitki/MsgThread.hpp>
 
 #include "../../src/setka/TCPSocket.hpp"
 #include "../../src/setka/TCPServerSocket.hpp"
 #include "../../src/setka/UDPSocket.hpp"
 
-#include <pogodi/WaitSet.hpp>
-#include <utki/Buf.hpp>
+#include <opros/wait_set.hpp>
+
 #include <utki/config.hpp>
+#include <utki/time.hpp>
 
 #include "socket.hpp"
 
-
-
 namespace{
-
 bool IsIPv6SupportedByOS(){
 #if M_OS == M_OS_WINDOWS
 	{
@@ -34,12 +31,10 @@ bool IsIPv6SupportedByOS(){
 	return true;
 #endif
 }
-
 }
 
 
 namespace BasicClientServerTest{
-
 void SendAll(setka::TCPSocket& s, utki::Buf<std::uint8_t> buf){
 	if(!s){
 		throw setka::Exc("TCPSocket::Send(): socket is not opened");
@@ -190,9 +185,9 @@ void Run(){
 		ASSERT_ALWAYS(addrR.host.getIPv4Host() == 0x7f000001) //check that IP is 127.0.0.1
 	}
 
-	pogodi::WaitSet ws(2);
-	ws.add(sockR, pogodi::Waitable::READ);
-	ws.add(sockS, pogodi::Waitable::WRITE);
+	opros::wait_set ws(2);
+	ws.add(sockR, utki::make_flags({opros::ready::read}));
+	ws.add(sockS, utki::make_flags({opros::ready::write}));
 
 
 	std::uint32_t scnt = 0;
@@ -204,13 +199,12 @@ void Run(){
 	unsigned recvBufBytes = 0;
 
 
-	std::uint32_t startTime = aika::getTicks();
+	std::uint32_t startTime = utki::get_ticks_ms();
 	
-	while(aika::getTicks() - startTime < 5000){ //5 seconds
-		std::array<pogodi::Waitable*, 2> triggered;
+	while(utki::get_ticks_ms() - startTime < 5000){ // 5 seconds
+		std::array<opros::waitable*, 2> triggered;
 
-		unsigned numTriggered = ws.waitWithTimeout(1000, utki::wrapBuf(triggered));
-//		unsigned numTriggered = ws.wait(triggered);
+		unsigned numTriggered = ws.wait(1000, utki::make_span(triggered));
 
 		ASSERT_ALWAYS(numTriggered <= 2)
 
@@ -233,9 +227,9 @@ void Run(){
 				ASSERT_ALWAYS(triggered[i] != &sockR)
 
 //				TRACE(<< "SendDataContinuously::Run(): sockS triggered" << std::endl)
-				ASSERT_ALWAYS(!sockS.canRead())
-				ASSERT_ALWAYS(!sockS.errorCondition())
-				ASSERT_ALWAYS(sockS.canWrite())
+				ASSERT_ALWAYS(!sockS.flags().get(opros::ready::read))
+				ASSERT_ALWAYS(!sockS.flags().get(opros::ready::error))
+				ASSERT_ALWAYS(sockS.flags().get(opros::ready::write))
 
 				ASSERT_ALWAYS(bytesSent <= sendBuffer.size())
 
@@ -252,7 +246,7 @@ void Run(){
 					std::uint8_t* p = &sendBuffer[0];
 					for(; p != (&sendBuffer[0]) + sendBuffer.size(); p += sizeof(std::uint32_t)){
 						ASSERT_INFO_ALWAYS(p < (((&sendBuffer[0]) + sendBuffer.size()) - (sizeof(std::uint32_t) - 1)), "p = " << p << " sendBuffer.End() = " << &*sendBuffer.end())
-						utki::serialize32LE(scnt, p);
+						utki::serialize32le(scnt, p);
 						++scnt;
 					}
 					ASSERT_ALWAYS(p == (&sendBuffer[0]) + sendBuffer.size())
@@ -268,7 +262,7 @@ void Run(){
 					}else{
 //						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
 					}
-					ASSERT_ALWAYS(!sockS.canWrite())
+					ASSERT_ALWAYS(!sockS.flags().get(opros::ready::write))
 				}catch(setka::Exc& e){
 					ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
 				}
@@ -277,9 +271,9 @@ void Run(){
 				ASSERT_ALWAYS(triggered[i] != &sockS)
 
 //				TRACE(<< "SendDataContinuously::Run(): sockR triggered" << std::endl)
-				ASSERT_ALWAYS(sockR.canRead())
-				ASSERT_ALWAYS(!sockR.errorCondition())
-				ASSERT_ALWAYS(!sockR.canWrite())
+				ASSERT_ALWAYS(sockR.flags().get(opros::ready::read))
+				ASSERT_ALWAYS(!sockR.flags().get(opros::ready::error))
+				ASSERT_ALWAYS(!sockR.flags().get(opros::ready::write))
 
 				while(true){
 					std::array<std::uint8_t, 0x2000> buf; //8kb buffer
@@ -305,7 +299,7 @@ void Run(){
 
 						if(recvBufBytes == recvBuffer.size()){
 							recvBufBytes = 0;
-							std::uint32_t num = utki::deserialize32LE(&*recvBuffer.begin());
+							std::uint32_t num = utki::deserialize32le(&*recvBuffer.begin());
 							ASSERT_INFO_ALWAYS(
 									rcnt == num,
 									"num = " << num << " rcnt = " << rcnt
@@ -341,14 +335,13 @@ void Run(){
 
 	serverSock.open(13666);
 
-
 	setka::TCPSocket sockS;
 	{
 		setka::IPAddress ip("127.0.0.1", 13666);
 		sockS.open(ip);
 	}
 
-	//Accept connection
+	// accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	setka::TCPSocket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
@@ -359,18 +352,18 @@ void Run(){
 	ASSERT_ALWAYS(sockS)
 	ASSERT_ALWAYS(sockR)
 
-	//Here we have 2 sockets sockS and sockR
+	// here we have 2 sockets sockS and sockR
 
 	std::uint8_t scnt = 0;
 
 	std::uint8_t rcnt = 0;
 
 
-	std::uint32_t startTime = aika::getTicks();
+	std::uint32_t startTime = utki::get_ticks_ms();
 
-	while(aika::getTicks() - startTime < 5000){ //5 seconds
+	while(utki::get_ticks_ms() - startTime < 5000){ // 5 seconds
 
-		//SEND
+		// send
 
 		try{
 			utki::Buf<std::uint8_t> buf(&scnt, 1);
@@ -386,7 +379,7 @@ void Run(){
 		}
 
 
-		//READ
+		// read
 
 		while(true){
 			std::array<std::uint8_t, 0x2000> buf; //8kb buffer
@@ -548,13 +541,13 @@ void Run(){
 		try{
 			sendSock.open();
 
-			pogodi::WaitSet ws(1);
+			opros::wait_set ws(1);
 
-			ws.add(sendSock, pogodi::Waitable::READ_AND_WRITE);
+			ws.add(sendSock, utki::make_flags({opros::ready::read, opros::ready::write}));
 
-			if(ws.waitWithTimeout(3000) == 0){
-				//if timeout was hit
-//NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
+			if(ws.wait(3000) == 0){
+				// if timeout was hit
+// NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
 #if M_OS == M_OS_WINDOWS
 #	if M_COMPILER == M_COMPILER_MSVC
 #	else
@@ -562,8 +555,8 @@ void Run(){
 #	endif
 #endif
 			}else{
-				ASSERT_ALWAYS(sendSock.canWrite())
-				ASSERT_ALWAYS(!sendSock.canRead())
+				ASSERT_ALWAYS(sendSock.flags().get(opros::ready::write))
+				ASSERT_ALWAYS(!sendSock.flags().get(opros::ready::read))
 			}
 
 			ws.remove(sendSock);

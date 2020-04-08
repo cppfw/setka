@@ -27,14 +27,14 @@ Socket::~Socket()noexcept{
 
 void Socket::close()noexcept{
 //		TRACE(<< "Socket::Close(): invoked " << this << std::endl)
-	ASSERT_INFO(!this->isAdded(), "Socket::Close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
+	ASSERT_INFO(!this->is_added(), "Socket::Close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
 	
 	if(*this){
-		ASSERT(!this->isAdded()) //make sure the socket is not added to WaitSet
+		ASSERT(!this->is_added())
 
 #if M_OS == M_OS_WINDOWS
-		//Closing socket in Win32.
-		//refer to http://tangentsoft.net/wskfaq/newbie.html#howclose for details
+		// Closing socket in Win32.
+		// refer to http://tangentsoft.net/wskfaq/newbie.html#howclose for details
 		shutdown(this->socket, SD_BOTH);
 		closesocket(this->socket);
 
@@ -45,22 +45,19 @@ void Socket::close()noexcept{
 #	error "Unsupported OS"
 #endif
 	}
-	this->clearAllReadinessFlags();
+	this->readiness_flags.clear();
 	this->socket = DInvalidSocket();
 }
 
-
-
-//same as std::auto_ptr
 Socket& Socket::operator=(Socket&& s){
 //	TRACE(<< "Socket::operator=(): invoked " << this << std::endl)
 	if(this == &s){//detect self-assignment
 		return *this;
 	}
 
-	//first, assign as Waitable, it may throw an exception
-	//if the waitable is added to some waitset
-	this->Waitable::operator=(std::move(s));
+	// first, assign as Waitable, it may throw an exception
+	// if the waitable is added to some waitset
+	this->waitable::operator=(std::move(s));
 
 	this->close();
 	this->socket = s.socket;
@@ -73,8 +70,6 @@ Socket& Socket::operator=(Socket&& s){
 	const_cast<Socket&>(s).socket = DInvalidSocket();
 	return *this;
 }
-
-
 
 void Socket::disableNaggle(){
 	if(!*this){
@@ -257,7 +252,7 @@ void Socket::setWaitingEventsForWindows(long flags){
 
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 
-int Socket::getHandle(){
+int Socket::get_handle(){
 	return this->socket;
 }
 

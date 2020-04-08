@@ -34,7 +34,7 @@
 
 #include "Exc.hpp"
 
-#include <pogodi/Waitable.hpp>
+#include <opros/waitable.hpp>
 
 
 
@@ -51,7 +51,7 @@ namespace setka{
  * @brief Basic socket class.
  * This is a base class for all socket types such as TCP sockets or UDP sockets.
  */
-class Socket : public pogodi::Waitable{
+class Socket : public opros::waitable{
 protected:
 #if M_OS == M_OS_WINDOWS
 	typedef SOCKET T_Socket;
@@ -190,7 +190,7 @@ protected:
 
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 private:
-	int getHandle()override;
+	int get_handle()override;
 #else
 #	error "Unsupported OS"
 #endif

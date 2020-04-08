@@ -3,7 +3,7 @@
 #include "../../src/setka/HostNameResolver.hpp"
 
 #include <nitki/Thread.hpp>
-#include <nitki/Semaphore.hpp>
+#include <nitki/semaphore.hpp>
 
 #include <memory>
 #include <vector>
@@ -14,14 +14,14 @@ class Resolver : public setka::HostNameResolver{
 	
 public:
 	
-	Resolver(nitki::Semaphore& sema, const std::string& hostName = std::string()) :
+	Resolver(nitki::semaphore& sema, const std::string& hostName = std::string()) :
 			sema(sema),
 			hostName(hostName)
 	{}
 	
 	setka::IPAddress::Host ip;
 	
-	nitki::Semaphore& sema;
+	nitki::semaphore& sema;
 	
 	E_Result result;
 	
@@ -45,7 +45,7 @@ public:
 
 void Run(){
 	{//test one resolve at a time
-		nitki::Semaphore sema;
+		nitki::semaphore sema;
 
 		Resolver r(sema);
 
@@ -66,7 +66,7 @@ void Run(){
 	}
 	
 	{//test several resolves at a time
-		nitki::Semaphore sema;
+		nitki::semaphore sema;
 
 		typedef std::vector<std::unique_ptr<Resolver> > T_ResolverList;
 		typedef T_ResolverList::iterator T_ResolverIter;
@@ -108,7 +108,7 @@ class Resolver : public setka::HostNameResolver{
 	
 public:
 	
-	Resolver(nitki::Semaphore& sema) :
+	Resolver(nitki::semaphore& sema) :
 			sema(sema)
 	{}
 	
@@ -116,7 +116,7 @@ public:
 	
 	setka::IPAddress::Host ip;
 	
-	nitki::Semaphore& sema;
+	nitki::semaphore& sema;
 	
 	E_Result result;
 	
@@ -140,7 +140,7 @@ public:
 };
 
 void Run(){
-	nitki::Semaphore sema;
+	nitki::semaphore sema;
 	
 	Resolver r(sema);
 	

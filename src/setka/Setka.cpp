@@ -22,7 +22,7 @@ using namespace setka;
 
 
 
-utki::IntrusiveSingleton<Setka>::T_Instance Setka::instance;
+utki::intrusive_singleton<Setka>::T_Instance Setka::instance;
 
 
 

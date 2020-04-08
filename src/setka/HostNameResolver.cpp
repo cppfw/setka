@@ -1,15 +1,13 @@
 #include <map>
 #include <list>
 #include <cstring>
+#include <memory>
 
 #include <utki/config.hpp>
-#include <utki/PoolStored.hpp>
 #include <utki/types.hpp>
-#include <utki/Unique.hpp>
+#include <utki/time.hpp>
 
 #include <nitki/MsgThread.hpp>
-
-#include <aika/timer.hpp>
 
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 #	include <papki/FSFile.hpp>
@@ -19,29 +17,19 @@
 #include "UDPSocket.hpp"
 #include "Setka.hpp"
 
-
-
 using namespace setka;
 
-
-
 namespace{
-
-
 
 const std::uint16_t D_DNSRecordA = 1;
 const std::uint16_t D_DNSRecordAAAA = 28;
 
-
 namespace dns{
 
-//forward declaration
 struct Resolver;
 
-
-
-//After the successful completion the 'p' points to the byte right after the host name.
-//In case of unsuccessful completion 'p' is undefined.
+// After the successful completion the 'p' points to the byte right after the host name.
+// In case of unsuccessful completion 'p' is undefined.
 std::string ParseHostNameFromDNSPacket(const std::uint8_t* & p, const std::uint8_t* end){
 	std::string host;
 			
@@ -93,7 +81,7 @@ typedef T_ResolversMap::iterator T_ResolversIter;
 
 
 
-struct Resolver : public utki::PoolStored<Resolver, 10>{
+struct Resolver{
 	HostNameResolver* hnr;
 	
 	std::string hostName; //host name to resolve
@@ -113,9 +101,9 @@ struct Resolver : public utki::PoolStored<Resolver, 10>{
 
 
 
-class LookupThread : public nitki::MsgThread, public utki::Unique{
+class LookupThread : public nitki::MsgThread{
 	setka::UDPSocket socket;
-	pogodi::WaitSet waitSet;
+	opros::wait_set waitSet;
 	
 	T_ResolversTimeMap resolversByTime1, resolversByTime2;
 	
@@ -149,7 +137,7 @@ public:
 	setka::IPAddress dns;
 	
 	void StartSending(){
-		this->waitSet.change(this->socket, pogodi::Waitable::READ_AND_WRITE);
+		this->waitSet.change(this->socket, utki::make_flags({opros::ready::read, opros::ready::write}));
 	}
 	
 	//NOTE: call to this function should be protected by mutex.
@@ -200,31 +188,31 @@ public:
 		
 		std::uint8_t* p = &*buf.begin();
 		
-		//ID
-		utki::serialize16BE(r->id, p);
+		// ID
+		utki::serialize16be(r->id, p);
 		p += 2;
 		
-		//flags
-		utki::serialize16BE(0x100, p);
+		// flags
+		utki::serialize16be(0x100, p);
 		p += 2;
 		
-		//Number of questions
-		utki::serialize16BE(1, p);
+		// Number of questions
+		utki::serialize16be(1, p);
 		p += 2;
 		
-		//Number of answers
-		utki::serialize16BE(0, p);
+		// Number of answers
+		utki::serialize16be(0, p);
 		p += 2;
 		
-		//Number of authority records
-		utki::serialize16BE(0, p);
+		// Number of authority records
+		utki::serialize16be(0, p);
 		p += 2;
 		
-		//Number of other records
-		utki::serialize16BE(0, p);
+		// Number of other records
+		utki::serialize16be(0, p);
 		p += 2;
 		
-		//domain name
+		// domain name
 		for(size_t dotPos = 0; dotPos < r->hostName.size();){
 			size_t oldDotPos = dotPos;
 			dotPos = r->hostName.find('.', dotPos);
@@ -250,11 +238,11 @@ public:
 		*p = 0; //terminate labels sequence
 		++p;
 		
-		utki::serialize16BE(r->recordType, p);
+		utki::serialize16be(r->recordType, p);
 		p += 2;
 		
 		//Question class (1 means inet)
-		utki::serialize16BE(1, p);
+		utki::serialize16be(1, p);
 		p += 2;
 		
 		ASSERT(&*buf.begin() <= p && p <= &*buf.end());
@@ -321,7 +309,7 @@ public:
 		p += 2;//skip ID
 		
 		{
-			std::uint16_t flags = utki::deserialize16BE(p);
+			std::uint16_t flags = utki::deserialize16be(p);
 			p += 2;
 			
 			if((flags & 0x8000) == 0){//we expect it to be a response, not query.
@@ -341,7 +329,7 @@ public:
 		}
 		
 		{//check number of questions
-			std::uint16_t numQuestions = utki::deserialize16BE(p);
+			std::uint16_t numQuestions = utki::deserialize16be(p);
 			p += 2;
 			
 			if(numQuestions != 1){
@@ -349,7 +337,7 @@ public:
 			}
 		}
 		
-		std::uint16_t numAnswers = utki::deserialize16BE(p);
+		std::uint16_t numAnswers = utki::deserialize16be(p);
 		p += 2;
 		ASSERT(buf.begin() <= p)
 		ASSERT(p <= (buf.end() - 1) || p == buf.end())
@@ -359,12 +347,12 @@ public:
 		}
 		
 		{
-//			std::uint16_t nscount = utki::deserialize16BE(p);
+//			std::uint16_t nscount = utki::deserialize16be(p);
 			p += 2;
 		}
 		
 		{
-//			std::uint16_t arcount = utki::deserialize16BE(p);
+//			std::uint16_t arcount = utki::deserialize16be(p);
 			p += 2;
 		}
 		
@@ -381,7 +369,7 @@ public:
 		
 		//check query type, we sent question type 1 (A query).
 		{
-			std::uint16_t type = utki::deserialize16BE(p);
+			std::uint16_t type = utki::deserialize16be(p);
 			p += 2;
 			
 			if(type != r->recordType){
@@ -391,7 +379,7 @@ public:
 		
 		//check query class, we sent question class 1 (inet).
 		{
-			std::uint16_t cls = utki::deserialize16BE(p);
+			std::uint16_t cls = utki::deserialize16be(p);
 			p += 2;
 			
 			if(cls != 1){
@@ -426,7 +414,7 @@ public:
 			if(buf.end() - p < 2){
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
-			std::uint16_t type = utki::deserialize16BE(p);
+			std::uint16_t type = utki::deserialize16be(p);
 			p += 2;
 			
 			if(buf.end() - p < 2){
@@ -444,7 +432,7 @@ public:
 			if(buf.end() - p < 2){
 				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 			}
-			std::uint16_t dataLen = utki::deserialize16BE(p);
+			std::uint16_t dataLen = utki::deserialize16be(p);
 			p += 2;
 			
 			if(buf.end() - p < dataLen){
@@ -459,7 +447,7 @@ public:
 							return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
 						}
 
-						h = IPAddress::Host(utki::deserialize32BE(p));
+						h = IPAddress::Host(utki::deserialize32be(p));
 						break;
 					case D_DNSRecordAAAA: //'AAAA' type answer
 						if(dataLen < 2 * 8){
@@ -467,10 +455,10 @@ public:
 						}
 
 						h = IPAddress::Host(
-								utki::deserialize32BE(p),
-								utki::deserialize32BE(p + 4),
-								utki::deserialize32BE(p + 8),
-								utki::deserialize32BE(p + 12)
+								utki::deserialize32be(p),
+								utki::deserialize32be(p + 4),
+								utki::deserialize32be(p + 8),
+								utki::deserialize32be(p + 12)
 							);
 						break;
 					default:
@@ -691,7 +679,7 @@ private:
 		TRACE(<< "this->dns.host = " << this->dns.host.toString() << std::endl)
 		
 		{
-			std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);//mutex is needed because socket opening may fail and we will have to set isExiting flag which should be protected by mutex
+			std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex); // mutex is needed because socket opening may fail and we will have to set isExiting flag which should be protected by mutex
 			
 			try{
 				this->socket.open();
@@ -702,21 +690,21 @@ private:
 			}
 		}
 		
-		this->waitSet.add(this->queue, pogodi::Waitable::READ);
-		this->waitSet.add(this->socket, pogodi::Waitable::READ);
+		this->waitSet.add(this->queue, utki::make_flags({opros::ready::read}));
+		this->waitSet.add(this->socket, utki::make_flags({opros::ready::read}));
 		
 		while(!this->quitFlag){
 			std::uint32_t timeout;
 			{
 				std::lock_guard<decltype(this->mutex)> mutexGuard(this->mutex);
 				
-				if(this->socket.errorCondition()){
+				if(this->socket.flags().get(opros::ready::error)){
 					this->isExiting = true;
 					this->RemoveAllResolvers();
 					break;//exit thread
 				}
 
-				if(this->socket.canRead()){
+				if(this->socket.flags().get(opros::ready::read)){
 					TRACE(<< "can read" << std::endl)
 					try{
 						std::array<std::uint8_t, 512> buf;//RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
@@ -726,7 +714,7 @@ private:
 						ASSERT(ret != 0)
 						ASSERT(ret <= buf.size())
 						if(ret >= 13){//at least there should be standard header and host name, otherwise ignore received UDP packet
-							std::uint16_t id = utki::deserialize16BE(&*buf.begin());
+							std::uint16_t id = utki::deserialize16be(&*buf.begin());
 							
 							T_IdIter i = this->idMap.find(id);
 							if(i != this->idMap.end()){
@@ -774,17 +762,17 @@ private:
 				}
 
 //				TRACE(<< "this->sendList.size() = " << (this->sendList.size()) << std::endl)
-//Workaround for strange bug on Win32 (reproduced on WinXP at least).
-//For some reason waiting for WRITE on UDP socket does not work. It hangs in the
-//Wait() method until timeout is hit. So, just try to send data to the socket without waiting for WRITE.
+// Workaround for strange bug on Win32 (reproduced on WinXP at least).
+// For some reason waiting for WRITE on UDP socket does not work. It hangs in the
+// wait() method until timeout is hit. So, just try to send data to the socket without waiting for WRITE.
 #if M_OS == M_OS_WINDOWS
 				if(this->sendList.size() != 0)
 #else
-				if(this->socket.canWrite())
+				if(this->socket.flags().get(opros::ready::write))
 #endif
 				{
 					TRACE(<< "can write" << std::endl)
-					//send request
+					// send request
 					ASSERT(this->sendList.size() > 0)
 					
 					try{
@@ -819,12 +807,12 @@ private:
 					
 					if(this->sendList.size() == 0){
 						//move socket to waiting for READ condition only
-						this->waitSet.change(this->socket, pogodi::Waitable::READ);
+						this->waitSet.change(this->socket, utki::make_flags({opros::ready::read}));
 						TRACE(<< "socket wait mode changed to read only" << std::endl)
 					}
 				}
 				
-				std::uint32_t curTime = aika::getTicks();
+				std::uint32_t curTime = utki::get_ticks_ms();
 				{//check if time has warped around and it is necessary to swap time maps
 					bool isFirstHalf = curTime < (std::uint32_t(-1) / 2);
 					if(isFirstHalf && !this->lastTicksInFirstHalf){
@@ -884,13 +872,13 @@ private:
 #endif
 			
 			TRACE(<< "DNS thread: waiting with timeout = " << timeout << std::endl)
-			if(this->waitSet.waitWithTimeout(timeout) == 0){
+			if(this->waitSet.wait(timeout) == 0){
 				//no Waitables triggered
 //				TRACE(<< "timeout hit" << std::endl)
 				continue;
 			}
 			
-			if(this->queue.canRead()){
+			if(this->queue.flags().get(opros::ready::read)){
 				while(auto m = this->queue.peekMsg()){
 					m();
 				}
@@ -944,22 +932,22 @@ void HostNameResolver::resolve_ts(const std::string& hostName, std::uint32_t tim
 	
 	bool needStartTheThread = false;
 	
-	//check if thread is created
+	// check if thread is created
 	if(!dns::thread){
-		dns::thread = utki::makeUnique<dns::LookupThread>();
+		dns::thread = std::make_unique<dns::LookupThread>();
 		needStartTheThread = true;
 	}else{
 		std::lock_guard<decltype(dns::thread->mutex)> mutexGuard(dns::thread->mutex);
 		
-		//check if already in progress
+		// check if already in progress
 		if(dns::thread->resolversMap.find(this) != dns::thread->resolversMap.end()){
 			throw AlreadyInProgressExc();
 		}
 
-		//Thread is created, check if it is running.
-		//If there are active requests then the thread must be running.
+		// Thread is created, check if it is running.
+		// If there are active requests then the thread must be running.
 		if(dns::thread->isExiting == true){
-			auto t = utki::makeUnique<dns::LookupThread>();
+			auto t = std::make_unique<dns::LookupThread>();
 			t->prevThread = std::move(dns::thread);
 			dns::thread = std::move(t);
 			needStartTheThread = true;
@@ -1004,7 +992,7 @@ void HostNameResolver::resolve_ts(const std::string& hostName, std::uint32_t tim
 	}
 	
 	//calculate time
-	std::uint32_t curTime = aika::getTicks();
+	std::uint32_t curTime = utki::get_ticks_ms();
 	{
 		std::uint32_t endTime = curTime + timeoutMillis;
 //		TRACE(<< "HostNameResolver::Resolve_ts(): curTime = " << curTime << std::endl)
@@ -1091,9 +1079,6 @@ bool HostNameResolver::cancel_ts()noexcept{
 	return ret;
 }
 
-
-
-//static
 void HostNameResolver::cleanUp(){
 	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
 

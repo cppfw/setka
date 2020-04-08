@@ -41,7 +41,7 @@ void TCPSocket::open(const IPAddress& ip, bool disableNaggle){
 
 	this->setNonBlockingMode();
 
-	this->clearAllReadinessFlags();
+	this->readiness_flags.clear();
 
 	//Connecting to remote host
 	sockaddr_storage sockAddr;
@@ -128,7 +128,7 @@ size_t TCPSocket::send(const utki::Buf<std::uint8_t> buf){
 		throw setka::Exc("TCPSocket::Send(): socket is not opened");
 	}
 
-	this->clearCanWriteFlag();
+	this->readiness_flags.clear(opros::ready::write);
 
 #if M_OS == M_OS_WINDOWS
 	int len;
@@ -181,10 +181,10 @@ size_t TCPSocket::send(const utki::Buf<std::uint8_t> buf){
 
 
 size_t TCPSocket::recieve(utki::Buf<std::uint8_t> buf){
-	//the 'can read' flag shall be cleared even if this function fails to avoid subsequent
-	//calls to Recv() because it indicates that there's activity.
-	//So, do it at the beginning of the function.
-	this->clearCanReadFlag();
+	// the 'ready to read' flag shall be cleared even if this function fails to avoid subsequent
+	// calls to recv() because it indicates that there's activity.
+	// So, do it at the beginning of the function.
+	this->readiness_flags.clear(opros::ready::read);
 
 	if(!*this){
 		throw setka::Exc("TCPSocket::Recv(): socket is not opened");
