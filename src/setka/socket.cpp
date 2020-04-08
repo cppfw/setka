@@ -142,8 +142,7 @@ std::uint16_t socket::get_local_port(){
 
 #if M_OS == M_OS_WINDOWS
 HANDLE socket::get_handle(){
-	//return event handle
-	return this->eventForWaitable;
+	return this->event_for_waitable;
 }
 
 bool socket::check_signaled(){
@@ -154,11 +153,11 @@ bool socket::check_signaled(){
 		throw setka::Exc("socket::CheckSignaled(): WSAEnumNetworkEvents() failed");
 	}
 
-	//NOTE: sometimes no events are reported, don't know why.
+	// NOTE: sometimes no events are reported, don't know why.
 //		ASSERT(events.lNetworkEvents != 0)
 
 	if((events.lNetworkEvents & FD_CLOSE) != 0){
-		this->setErrorFlag();
+		this->readiness_flags.set(opros::ready::error);
 	}
 
 	if((events.lNetworkEvents & FD_READ) != 0){
