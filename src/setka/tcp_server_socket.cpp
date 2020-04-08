@@ -140,7 +140,7 @@ void tcp_server_socket::open(uint16_t port, bool disable_naggle, uint16_t queueL
 	this->set_nonblocking_mode();
 }
 
-TCPSocket tcp_server_socket::accept(){
+tcp_socket tcp_server_socket::accept(){
 	if(!*this){
 		throw std::logic_error("tcp_server_socket::Accept(): the socket is not opened");
 	}
@@ -157,7 +157,7 @@ TCPSocket tcp_server_socket::accept(){
 #	error "Unsupported OS"
 #endif
 
-	TCPSocket s;
+	tcp_socket s;
 
 	s.sock = ::accept(
 			this->sock,

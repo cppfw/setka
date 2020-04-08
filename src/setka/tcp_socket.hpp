@@ -13,46 +13,36 @@ class tcp_server_socket;
 /**
  * @brief a class which represents a TCP socket.
  */
-class TCPSocket : public socket{
+class tcp_socket : public socket{
 	friend class setka::tcp_server_socket;
 public:
 	
 	/**
 	 * @brief Constructs an invalid TCP socket object.
 	 */
-	TCPSocket(){
-//		TRACE(<< "TCPSocket::TCPSocket(): invoked " << this << std::endl)
+	tcp_socket(){
+//		TRACE(<< "tcp_socket::tcp_socket(): invoked " << this << std::endl)
 	}
-
 	
+	tcp_socket(const tcp_socket&) = delete;
+	tcp_socket& operator=(const tcp_socket&) = delete;
 	
-	TCPSocket(const TCPSocket&) = delete;
-	
-	TCPSocket(TCPSocket&& s) :
+	tcp_socket(tcp_socket&& s) :
 			socket(std::move(s))
 	{}
 
-	
-	
-	TCPSocket& operator=(const TCPSocket&) = delete;
-	
-	
-	TCPSocket& operator=(TCPSocket&& s){
+	tcp_socket& operator=(tcp_socket&& s){
 		this->socket::operator=(std::move(s));
 		return *this;
 	}
-
-	
 	
 	/**
 	 * @brief Connects the socket.
 	 * This method connects the socket to remote TCP server socket.
-	 * @param ip - IP address.
-	 * @param disableNaggle - enable/disable Naggle algorithm.
+	 * @param address - IP address.
+	 * @param disable_naggle - enable/disable Naggle algorithm.
 	 */
-	void open(const ip_address& ip, bool disableNaggle = false);
-
-
+	void open(const ip_address& address, bool disable_naggle = false);
 
 	/**
 	 * @brief Send data to connected socket.
@@ -61,9 +51,7 @@ public:
 	 * @param buf - pointer to the buffer with data to send.
 	 * @return the number of bytes actually sent.
 	 */
-	size_t send(const utki::Buf<uint8_t> buf);
-
-
+	size_t send(const utki::span<uint8_t> buf);
 
 	/**
 	 * @brief Receive data from connected socket.
@@ -71,37 +59,27 @@ public:
 	 * If there is no data available this function does not block, instead it returns 0,
 	 * indicating that 0 bytes were received.
 	 * If previous WaitSet::Wait() indicated that socket is ready for reading
-	 * and TCPSocket::Recv() returns 0, then connection was closed by peer.
+	 * and tcp_socket::Recv() returns 0, then connection was closed by peer.
 	 * @param buf - pointer to the buffer where to put received data.
 	 * @return the number of bytes written to the buffer.
 	 */
-	size_t recieve(utki::Buf<uint8_t> buf);
+	size_t recieve(utki::span<uint8_t> buf);
 
-	
-	
 	/**
 	 * @brief Get local IP address and port.
 	 * @return IP address and port of the local socket.
 	 */
-	ip_address getLocalAddress();
-	
-	
-	
+	ip_address get_local_address();
+
 	/**
 	 * @brief Get remote IP address and port.
 	 * @return IP address and port of the peer socket.
 	 */
-	ip_address getRemoteAddress();
-
-
+	ip_address get_remote_address();
 
 #if M_OS == M_OS_WINDOWS
 private:
-	void setWaitingEvents(uint32_t flagsToWaitFor)override;
+	void set_waiting_events(uint32_t flagsToWaitFor)override;
 #endif
-
-};//~class TCPSocket
-
-
-
-}//~namespace
+};
+}

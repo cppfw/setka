@@ -3,7 +3,7 @@
 #include <utki/config.hpp>
 
 #include "socket.hpp"
-#include "TCPSocket.hpp"
+#include "tcp_socket.hpp"
 
 /**
  * @brief the main namespace of ting library.
@@ -53,12 +53,12 @@ public:
 	 * either a valid connected socket or an invalid socket object.
 	 * This function does not block if there is no any pending connections, it just returns invalid
 	 * socket object in this case. One can periodically check for incoming connections by calling this method.
-	 * @return TCPSocket object. One can later check if the returned socket object
+	 * @return tcp_socket object. One can later check if the returned socket object
 	 *         is valid or not by calling socket::is_valid() method on that object.
 	 *         - if the socket is valid then it is a newly connected socket, further it can be used to send or receive data.
 	 *         - if the socket is invalid then there was no any connections pending, so no connection was accepted.
 	 */
-	TCPSocket accept();
+	tcp_socket accept();
 
 #if M_OS == M_OS_WINDOWS
 private:

@@ -1,4 +1,4 @@
-#include "TCPSocket.hpp"
+#include "tcp_socket.hpp"
 
 #include <cstring>
 
@@ -12,9 +12,9 @@ using namespace setka;
 
 
 
-void TCPSocket::open(const ip_address& ip, bool disableNaggle){
+void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 	if(*this){
-		throw setka::Exc("TCPSocket::Open(): socket already opened");
+		throw setka::Exc("tcp_socket::Open(): socket already opened");
 	}
 
 	// create event for implementing waitable
@@ -31,7 +31,7 @@ void TCPSocket::open(const ip_address& ip, bool disableNaggle){
 #if M_OS == M_OS_WINDOWS
 		this->close_event_for_waitable();
 #endif
-		throw setka::Exc("TCPSocket::Open(): Couldn't create socket");
+		throw setka::Exc("tcp_socket::Open(): Couldn't create socket");
 	}
 
 	// disable Naggle algorithm if required
@@ -103,7 +103,7 @@ void TCPSocket::open(const ip_address& ip, bool disableNaggle){
 			//do nothing, this is not an error, we have non-blocking socket
 		}else{
 			std::stringstream ss;
-			ss << "TCPSocket::Open(): connect() failed, error code = " << errorCode << ": ";
+			ss << "tcp_socket::Open(): connect() failed, error code = " << errorCode << ": ";
 #if M_COMPILER == M_COMPILER_MSVC
 			{
 				const size_t msgbufSize = 0xff;
@@ -123,9 +123,9 @@ void TCPSocket::open(const ip_address& ip, bool disableNaggle){
 
 
 
-size_t TCPSocket::send(const utki::Buf<uint8_t> buf){
+size_t tcp_socket::send(const utki::Buf<uint8_t> buf){
 	if(!*this){
-		throw setka::Exc("TCPSocket::Send(): socket is not opened");
+		throw setka::Exc("tcp_socket::Send(): socket is not opened");
 	}
 
 	this->readiness_flags.clear(opros::ready::write);
@@ -156,7 +156,7 @@ size_t TCPSocket::send(const utki::Buf<uint8_t> buf){
 				len = 0;
 			}else{
 				std::stringstream ss;
-				ss << "TCPSocket::Send(): send() failed, error code = " << errorCode << ": ";
+				ss << "tcp_socket::Send(): send() failed, error code = " << errorCode << ": ";
 #if M_COMPILER == M_COMPILER_MSVC
 				{
 					const size_t msgbufSize = 0xff;
@@ -180,14 +180,14 @@ size_t TCPSocket::send(const utki::Buf<uint8_t> buf){
 
 
 
-size_t TCPSocket::recieve(utki::Buf<uint8_t> buf){
+size_t tcp_socket::recieve(utki::Buf<uint8_t> buf){
 	// the 'ready to read' flag shall be cleared even if this function fails to avoid subsequent
 	// calls to recv() because it indicates that there's activity.
 	// So, do it at the beginning of the function.
 	this->readiness_flags.clear(opros::ready::read);
 
 	if(!*this){
-		throw setka::Exc("TCPSocket::Recv(): socket is not opened");
+		throw setka::Exc("tcp_socket::Recv(): socket is not opened");
 	}
 
 #if M_OS == M_OS_WINDOWS
@@ -217,7 +217,7 @@ size_t TCPSocket::recieve(utki::Buf<uint8_t> buf){
 				len = 0;
 			}else{
 				std::stringstream ss;
-				ss << "TCPSocket::Recv(): recv() failed, error code = " << errorCode << ": ";
+				ss << "tcp_socket::Recv(): recv() failed, error code = " << errorCode << ": ";
 #if M_COMPILER == M_COMPILER_MSVC
 				{
 					const size_t msgbufSize = 0xff;
@@ -243,7 +243,7 @@ size_t TCPSocket::recieve(utki::Buf<uint8_t> buf){
 
 namespace{
 
-ip_address Createip_addressFromSockaddrStorage(const sockaddr_storage& addr){
+ip_address make_ip_address(const sockaddr_storage& addr){
 	if(addr.ss_family == AF_INET){
 		const sockaddr_in &a = reinterpret_cast<const sockaddr_in&>(addr);
 		return ip_address(
@@ -278,9 +278,9 @@ ip_address Createip_addressFromSockaddrStorage(const sockaddr_storage& addr){
 
 
 
-ip_address TCPSocket::getLocalAddress(){
+ip_address tcp_socket::get_local_address(){
 	if(!*this){
-		throw setka::Exc("Socket::GetLocalAddress(): socket is not valid");
+		throw std::logic_error("Socket::GetLocalAddress(): socket is not valid");
 	}
 
 	sockaddr_storage addr;
@@ -292,17 +292,16 @@ ip_address TCPSocket::getLocalAddress(){
 #endif
 
 	if(getsockname(this->sock, reinterpret_cast<sockaddr*>(&addr), &len)  == socket_error){
-		throw setka::Exc("Socket::GetLocalAddress(): getsockname() failed");
+		// TODO: use std::system_error?
+		throw std::runtime_error("Socket::GetLocalAddress(): getsockname() failed");
 	}	
 
-	return Createip_addressFromSockaddrStorage(addr);
+	return make_ip_address(addr);
 }
 
-
-
-ip_address TCPSocket::getRemoteAddress(){
+ip_address tcp_socket::get_remote_address(){
 	if(!*this){
-		throw setka::Exc("TCPSocket::GetRemoteAddress(): socket is not valid");
+		throw std::logic_error("tcp_socket::GetRemoteAddress(): socket is not valid");
 	}
 
 	sockaddr_storage addr;
@@ -315,7 +314,7 @@ ip_address TCPSocket::getRemoteAddress(){
 
 	if(getpeername(this->sock, reinterpret_cast<sockaddr*>(&addr), &len) == socket_error){
 		std::stringstream ss;
-		ss << "TCPSocket::GetRemoteAddress(): getpeername() failed: ";
+		ss << "tcp_socket::GetRemoteAddress(): getpeername() failed: ";
 #if M_COMPILER == M_COMPILER_MSVC
 		{
 			const size_t msgbufSize = 0xff;
@@ -327,24 +326,23 @@ ip_address TCPSocket::getRemoteAddress(){
 #else
 		ss << strerror(errno);
 #endif
-		throw setka::Exc(ss.str());
+		// TODO: use std::system_error?
+		throw std::runtime_error(ss.str());
 	}
 
-	return Createip_addressFromSockaddrStorage(addr);
+	return make_ip_address(addr);
 }
 
-
-
 #if M_OS == M_OS_WINDOWS
-void TCPSocket::setWaitingEvents(uint32_t flagsToWaitFor){
+void tcp_socket::set_waiting_events(uint32_t flagsToWaitFor){
 	long flags = FD_CLOSE;
 	if((flagsToWaitFor & pogodi::Waitable::READ) != 0){
 		flags |= FD_READ;
-		//NOTE: since it is not a tcp_server_socket, FD_ACCEPT is not needed here.
+		// NOTE: since it is not a tcp_server_socket, FD_ACCEPT is not needed here.
 	}
 	if((flagsToWaitFor & Waitable::WRITE) != 0){
 		flags |= FD_WRITE | FD_CONNECT;
 	}
-	this->setWaitingEventsForWindows(flags);
+	this->set_waiting_events_for_windows(flags);
 }
 #endif

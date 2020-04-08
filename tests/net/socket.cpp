@@ -1,6 +1,6 @@
 #include <nitki/MsgThread.hpp>
 
-#include "../../src/setka/TCPSocket.hpp"
+#include "../../src/setka/tcp_socket.hpp"
 #include "../../src/setka/tcp_server_socket.hpp"
 #include "../../src/setka/UDPSocket.hpp"
 
@@ -35,9 +35,9 @@ bool IsIPv6SupportedByOS(){
 
 
 namespace BasicClientServerTest{
-void SendAll(setka::TCPSocket& s, utki::Buf<uint8_t> buf){
+void SendAll(setka::tcp_socket& s, utki::Buf<uint8_t> buf){
 	if(!s){
-		throw setka::Exc("TCPSocket::Send(): socket is not opened");
+		throw setka::Exc("tcp_socket::Send(): socket is not opened");
 	}
 
 	size_t left = buf.size();
@@ -72,7 +72,7 @@ public:
 			ASSERT_ALWAYS(listenSock.get_local_port() == 13666)
 
 			//Accept some connection
-			setka::TCPSocket sock;
+			setka::tcp_socket sock;
 			while(!sock && !this->quitFlag){
 				sock = listenSock.accept();
 				nitki::Thread::sleep(100);
@@ -83,8 +83,8 @@ public:
 
 			ASSERT_ALWAYS(sock)
 
-			ASSERT_ALWAYS(sock.getLocalAddress().host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(sock.getRemoteAddress().host.get_v4() == 0x7f000001)
+			ASSERT_ALWAYS(sock.get_local_address().host.get_v4() == 0x7f000001)
+			ASSERT_ALWAYS(sock.get_remote_address().host.get_v4() == 0x7f000001)
 
 			std::array<uint8_t, 4> data;
 			data[0] = '0';
@@ -110,7 +110,7 @@ void Run(){
 	try{
 		setka::ip_address ip("127.0.0.1", 13666);
 
-		setka::TCPSocket sock;
+		setka::tcp_socket sock;
 
 		sock.open(ip);
 
@@ -118,7 +118,7 @@ void Run(){
 
 		nitki::Thread::sleep(1000);//give some time for socket to connect
 		
-		ASSERT_ALWAYS(sock.getRemoteAddress().host.get_v4() == 0x7f000001)
+		ASSERT_ALWAYS(sock.get_remote_address().host.get_v4() == 0x7f000001)
 
 		std::array<uint8_t, 4> data;
 		size_t bytesReceived = 0;
@@ -157,7 +157,7 @@ void Run(){
 	serverSock.open(13666);
 
 
-	setka::TCPSocket sockS;
+	setka::tcp_socket sockS;
 	{
 		setka::ip_address ip("127.0.0.1", 13666);
 		sockS.open(ip);
@@ -165,7 +165,7 @@ void Run(){
 
 	//Accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
-	setka::TCPSocket sockR;
+	setka::tcp_socket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
 		nitki::Thread::sleep(100);
 		sockR = serverSock.accept();
@@ -177,8 +177,8 @@ void Run(){
 	//Here we have 2 sockets sockS and sockR
 
 	{
-		setka::ip_address addrS = sockS.getRemoteAddress();
-		setka::ip_address addrR = sockR.getRemoteAddress();
+		setka::ip_address addrS = sockS.get_remote_address();
+		setka::ip_address addrR = sockR.get_remote_address();
 //		TRACE(<< "SendDataContinuously::Run(): addrS = " << std::hex << addrS.host << ":" << addrS.port << std::dec << std::endl)
 //		TRACE(<< "SendDataContinuously::Run(): addrR = " << std::hex << addrR.host << ":" << addrR.port << std::dec << std::endl)
 		ASSERT_ALWAYS(addrS.host.get_v4() == 0x7f000001) //check that IP is 127.0.0.1
@@ -335,7 +335,7 @@ void Run(){
 
 	serverSock.open(13666);
 
-	setka::TCPSocket sockS;
+	setka::tcp_socket sockS;
 	{
 		setka::ip_address ip("127.0.0.1", 13666);
 		sockS.open(ip);
@@ -343,7 +343,7 @@ void Run(){
 
 	// accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
-	setka::TCPSocket sockR;
+	setka::tcp_socket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
 		nitki::Thread::sleep(100);
 		sockR = serverSock.accept();
