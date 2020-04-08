@@ -2,7 +2,7 @@
 
 #include "../../src/setka/tcp_socket.hpp"
 #include "../../src/setka/tcp_server_socket.hpp"
-#include "../../src/setka/UDPSocket.hpp"
+#include "../../src/setka/udp_socket.hpp"
 
 #include <opros/wait_set.hpp>
 
@@ -33,7 +33,6 @@ bool IsIPv6SupportedByOS(){
 }
 }
 
-
 namespace BasicClientServerTest{
 void SendAll(setka::tcp_socket& s, utki::Buf<uint8_t> buf){
 	if(!s){
@@ -59,7 +58,6 @@ void SendAll(setka::tcp_socket& s, utki::Buf<uint8_t> buf){
 
 	ASSERT_ALWAYS(left == 0)
 }
-
 
 class ServerThread : public nitki::MsgThread{
 public:
@@ -457,7 +455,7 @@ namespace BasicUDPSocketsTest{
 
 void Run(){
 
-	setka::UDPSocket recvSock;
+	setka::udp_socket recvSock;
 
 	try{
 		recvSock.open(13666);
@@ -467,7 +465,7 @@ void Run(){
 
 	ASSERT_ALWAYS(recvSock.get_local_port() == 13666)
 
-	setka::UDPSocket sendSock;
+	setka::udp_socket sendSock;
 
 	try{
 		sendSock.open();
@@ -531,7 +529,7 @@ void Run(){
 namespace TestUDPSocketWaitForWriting{
 void Run(){
 	try{
-		setka::UDPSocket sendSock;
+		setka::udp_socket sendSock;
 
 		try{
 			sendSock.open();

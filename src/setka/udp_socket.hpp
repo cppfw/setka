@@ -13,21 +13,21 @@ namespace setka{
 /**
  * @brief UDP socket class.
  * Socket for User Datagram Protocol.
- * NOTE: Win32 specific: when using UDP socket with WaitSet be aware that waiting on UDP socket for writing does not work on Win32 OS.
+ * NOTE: Win32 specific: when using UDP socket with wait_set be aware that waiting on UDP socket for writing does not work on Win32 OS.
  *       On other operating systems it works OK.
  */
-class UDPSocket : public socket{
+class udp_socket : public socket{
 	bool ipv4;
 public:
-	UDPSocket(){}
+	udp_socket(){}
 
-	UDPSocket(const UDPSocket&) = delete;
+	udp_socket(const udp_socket&) = delete;
 
-	UDPSocket(UDPSocket&& s) :
+	udp_socket(udp_socket&& s) :
 			socket(std::move(s))
 	{}
 
-	UDPSocket& operator=(UDPSocket&& s){
+	udp_socket& operator=(udp_socket&& s){
 		this->socket::operator=(std::move(s));
 		this->ipv4 = s.ipv4;
 		return *this;
@@ -43,7 +43,7 @@ public:
 	 * @param port - IP port number on which the socket will listen for incoming datagrams.
 	 *               If 0 is passed then system will assign some free port if any. If there
 	 *               are no free ports, then it is an error and an exception will be thrown.
-	 *               This is useful for server-side sockets, for client-side sockets use UDPSocket::Open().
+	 *               This is useful for server-side sockets, for client-side sockets use udp_socket::Open().
 	 */
 	void open(uint16_t port = 0);
 
@@ -54,13 +54,11 @@ public:
 	 * Note, that underlying protocol limits the maximum size of the datagram,
 	 * trying to send the bigger datagram will result in an exception to be thrown.
 	 * @param buf - buffer containing the datagram to send.
-	 * @param destinationIP - the destination IP address to send the datagram to.
+	 * @param destination_address - the destination IP address to send the datagram to.
 	 * @return number of bytes actually sent. Actually it is either 0 or the size of the
 	 *         datagram passed in as argument.
 	 */
-	size_t send(const utki::Buf<uint8_t> buf, const ip_address& destinationIP);
-
-
+	size_t send(const utki::span<uint8_t> buf, const ip_address& destination_address);
 
 	/**
 	 * @brief Receive datagram.
@@ -73,20 +71,15 @@ public:
 	 *              should be large enough to store the whole datagram. If datagram
 	 *              does not fit the passed buffer, then the datagram tail will be truncated
 	 *              and this tail data will be lost.
-	 * @param out_SenderIP - reference to the IP-address structure where the IP-address
-	 *                       of the sender will be stored.
+	 * @param out_sender_address - reference to the IP-address structure where the IP-address
+	 *                             of the sender will be stored.
 	 * @return number of bytes stored in the output buffer.
 	 */
-	size_t recieve(utki::Buf<uint8_t> buf, ip_address &out_SenderIP);
-
-
+	size_t recieve(utki::span<uint8_t> buf, ip_address &out_sender_address);
 
 #if M_OS == M_OS_WINDOWS
 private:
-	void setWaitingEvents(uint32_t flagsToWaitFor)override;
+	void set_waiting_events(uint32_t flagsToWaitFor)override;
 #endif
 };
-
-
-
-}//~namespace
+}

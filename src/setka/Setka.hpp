@@ -1,14 +1,9 @@
 #pragma once
 
-
-
 #include <utki/singleton.hpp>
 #include <utki/config.hpp>
 
-
 namespace setka{
-
-
 
 /**
  * @brief Socket library singleton class.
@@ -28,23 +23,4 @@ public:
 	~Setka()noexcept;
 };
 
-
-
-}//~namespace
-
-
-/*
- * @mainpage ting::net library
- *
- * @section sec_about About
- * <b>ting::net</b> is a simple cross platform C++ wrapper above sockets networking API.
- *
- * @section sec_getting_started Getting started
- * @ref page_usage_tutorial "library usage tutorial" - quick start tutorial
- */
-
-/*
- * @page page_usage_tutorial ting::net::Socket usage tutorial
- *
- * TODO: write usage tutorial
- */
+}

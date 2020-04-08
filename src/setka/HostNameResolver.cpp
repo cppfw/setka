@@ -14,7 +14,7 @@
 #endif
 
 #include "HostNameResolver.hpp"
-#include "UDPSocket.hpp"
+#include "udp_socket.hpp"
 #include "Setka.hpp"
 
 using namespace setka;
@@ -102,7 +102,7 @@ struct Resolver{
 
 
 class LookupThread : public nitki::MsgThread{
-	setka::UDPSocket socket;
+	setka::udp_socket socket;
 	opros::wait_set waitSet;
 	
 	T_ResolversTimeMap resolversByTime1, resolversByTime2;
