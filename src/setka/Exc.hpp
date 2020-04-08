@@ -2,7 +2,7 @@
 
 #include <utki/Exc.hpp>
 
-
+// TODO: remove whole file
 
 namespace setka{
 

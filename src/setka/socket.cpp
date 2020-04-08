@@ -78,8 +78,6 @@ void socket::disable_naggle(){
 #endif
 }
 
-
-
 void socket::set_nonblocking_mode(){
 	if(!*this){
 		throw setka::Exc("socket::SetNonBlockingMode(): socket is not valid");
@@ -107,8 +105,6 @@ void socket::set_nonblocking_mode(){
 #	error "Unsupported OS"
 #endif
 }
-
-
 
 std::uint16_t socket::get_local_port(){
 	if(!*this){
@@ -144,17 +140,13 @@ std::uint16_t socket::get_local_port(){
 	}
 }
 
-
-
 #if M_OS == M_OS_WINDOWS
-HANDLE socket::getHandle(){
+HANDLE socket::get_handle(){
 	//return event handle
 	return this->eventForWaitable;
 }
 
-
-
-bool socket::checkSignaled(){
+bool socket::check_signaled(){
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
 	ASSERT(*this)
@@ -198,18 +190,16 @@ bool socket::checkSignaled(){
 	}
 
 #ifdef DEBUG
-	//if some event occurred then some of readiness flags should be set
+	// if some event occurred then some of readiness flags should be set
 	if(events.lNetworkEvents != 0){
 		ASSERT_ALWAYS(this->readinessFlags != 0)
 	}
 #endif
 
-	return this->Waitable::checkSignaled();
+	return this->Waitable::check_signaled();
 }
 
-
-
-void socket::createEventForWaitable(){
+void socket::create_event_for_waitable(){
 	ASSERT(this->eventForWaitable == WSA_INVALID_EVENT)
 	this->eventForWaitable = WSACreateEvent();
 	if(this->eventForWaitable == WSA_INVALID_EVENT){
@@ -217,17 +207,13 @@ void socket::createEventForWaitable(){
 	}
 }
 
-
-
-void socket::closeEventForWaitable(){
+void socket::close_event_for_waitable(){
 	ASSERT(this->eventForWaitable != WSA_INVALID_EVENT)
 	WSACloseEvent(this->eventForWaitable);
 	this->eventForWaitable = WSA_INVALID_EVENT;
 }
 
-
-
-void socket::setWaitingEventsForWindows(long flags){
+void socket::set_waiting_events_for_windows(long flags){
 	ASSERT_INFO(*this && (this->eventForWaitable != WSA_INVALID_EVENT), "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.")
 
 	if(WSAEventSelect(
@@ -239,8 +225,6 @@ void socket::setWaitingEventsForWindows(long flags){
 		throw setka::Exc("socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
 	}
 }
-
-
 
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 
