@@ -15,7 +15,7 @@
 
 #include "dns_resolver.hpp"
 #include "udp_socket.hpp"
-#include "Setka.hpp"
+#include "init_guard.hpp"
 
 using namespace setka;
 
@@ -489,7 +489,7 @@ public:
 			timeMap1(&resolversByTime1),
 			timeMap2(&resolversByTime2)
 	{
-		ASSERT_INFO(setka::Setka::isCreated(), "ting::net::Lib is not initialized before doing the DNS request")
+		ASSERT_INFO(setka::init_guard::isCreated(), "ting::net::Lib is not initialized before doing the DNS request")
 	}
 public:
 	~LookupThread()noexcept{
@@ -926,7 +926,7 @@ dns_resolver::~dns_resolver(){
 void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, const setka::ip_address& dnsIP){
 //	TRACE(<< "dns_resolver::Resolve_ts(): enter" << std::endl)
 	
-	ASSERT(setka::Setka::is_created())
+	ASSERT(setka::init_guard::is_created())
 	
 	if(hostName.size() > 253){
 		throw std::logic_error("Too long domain name, it should not exceed 253 characters according to RFC 2181");

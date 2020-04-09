@@ -1,8 +1,7 @@
 #include <utki/config.hpp>
 
-#include "Setka.hpp"
+#include "init_guard.hpp"
 #include "dns_resolver.hpp"
-
 
 #if M_OS == M_OS_WINDOWS
 #	include <winsock2.h>
@@ -17,9 +16,9 @@
 
 using namespace setka;
 
-utki::intrusive_singleton<Setka>::T_Instance Setka::instance;
+utki::intrusive_singleton<init_guard>::T_Instance init_guard::instance;
 
-Setka::Setka(){
+init_guard::init_guard(){
 #if M_OS == M_OS_WINDOWS
 	WORD versionWanted = MAKEWORD(2,2);
 	WSADATA wsaData;
@@ -38,7 +37,7 @@ Setka::Setka(){
 #endif
 }
 
-Setka::~Setka()noexcept{
+init_guard::~init_guard()noexcept{
 	// check that there are no active dns lookups and finish the DNS request thread
 	dns_resolver::clean_up();
 	

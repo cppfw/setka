@@ -8,7 +8,7 @@
 
 namespace setka{
 
-class Setka;
+class init_guard;
 
 /**
  * @brief Class for resolving IP-address of the host by its domain name.
@@ -107,7 +107,7 @@ public:
 	virtual void on_completed(result r, ip_address::ip ip)noexcept = 0;
 	
 private:
-	friend class setka::Setka;
+	friend class setka::init_guard;
 	static void clean_up();
 };
 }

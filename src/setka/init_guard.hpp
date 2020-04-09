@@ -13,14 +13,14 @@ namespace setka{
  * destructor will be called and the library will be de-initialized automatically.
  * This is what C++ RAII is all about.
  */
-class Setka : public utki::intrusive_singleton<Setka>{
-	friend class utki::intrusive_singleton<Setka>;
-	static utki::intrusive_singleton<Setka>::T_Instance instance;
+class init_guard : public utki::intrusive_singleton<init_guard>{
+	friend class utki::intrusive_singleton<init_guard>;
+	static utki::intrusive_singleton<init_guard>::T_Instance instance;
 	
 public:
-	Setka();
+	init_guard();
 
-	~Setka()noexcept;
+	~init_guard()noexcept;
 };
 
 }
