@@ -10,7 +10,7 @@
 #include <nitki/MsgThread.hpp>
 
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-#	include <papki/FSFile.hpp>
+#	include <papki/fs_file.hpp>
 #endif
 
 #include "dns_resolver.hpp"
@@ -617,9 +617,9 @@ private:
 			}
 
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-			papki::FSFile f("/etc/resolv.conf");
+			papki::fs_file f("/etc/resolv.conf");
 			
-			std::vector<uint8_t> buf = f.loadWholeFileIntoMemory(0xfff); // 4kb max
+			std::vector<uint8_t> buf = f.load(0xfff); // 4kb max
 			
 			for(uint8_t* p = &*buf.begin(); p != &*buf.end(); ++p){
 				uint8_t* start = p;
