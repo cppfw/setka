@@ -3,7 +3,7 @@
 #include "ip_address.hpp"
 
 #include <utki/config.hpp>
-#include <utki/Buf.hpp>
+#include <utki/span.hpp>
 
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
 #	include <arpa/inet.h>
@@ -164,14 +164,14 @@ ip_address::ip_address(const char* str){
 		
 		char* dst;
 		for(dst = &*buf.begin(); *str != ']'; ++dst, ++str){
-			if(*str == 0 || !utki::wrapBuf(buf).overlaps(dst + 1)){
+			if(*str == 0 || !utki::make_span(buf).overlaps(dst + 1)){
 				throw std::runtime_error("bad IP address format");
 			}
 			
 			*dst = *str;
 		}
 		
-		ASSERT(utki::wrapBuf(buf).overlaps(dst))
+		ASSERT(utki::make_span(buf).overlaps(dst))
 		*dst = 0; // null-terminate
 				
 		this->host = ip::parse_v6(&*buf.begin());
@@ -185,14 +185,14 @@ ip_address::ip_address(const char* str){
 			
 			char* dst;
 			for(dst = &*buf.begin(); *str != ':' && *str != 0; ++dst, ++str){
-				if(!utki::wrapBuf(buf).overlaps(dst + 1)){
+				if(!utki::make_span(buf).overlaps(dst + 1)){
 					throw std::runtime_error("bad IP address format");
 				}
 
 				*dst = *str;
 			}
 
-			ASSERT(utki::wrapBuf(buf).overlaps(dst))
+			ASSERT(utki::make_span(buf).overlaps(dst))
 			*dst = 0; // null-terminate
 
 			this->host = ip::parse_v4(&*buf.begin());

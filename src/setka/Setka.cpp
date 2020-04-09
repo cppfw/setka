@@ -2,7 +2,7 @@
 
 #include "Setka.hpp"
 #include "Exc.hpp"
-#include "HostNameResolver.hpp"
+#include "dns_resolver.hpp"
 
 
 #if M_OS == M_OS_WINDOWS
@@ -48,11 +48,11 @@ Setka::Setka(){
 
 
 Setka::~Setka()noexcept{
-	//check that there are no active dns lookups and finish the DNS request thread
-	HostNameResolver::cleanUp();
+	// check that there are no active dns lookups and finish the DNS request thread
+	dns_resolver::clean_up();
 	
 #if M_OS == M_OS_WINDOWS
-	// Clean up windows networking
+	// clean up windows networking
 	if(WSACleanup() == SOCKET_ERROR){
 		if(WSAGetLastError() == WSAEINPROGRESS){
 			WSACancelBlockingCall();
@@ -60,7 +60,7 @@ Setka::~Setka()noexcept{
 		}
 	}
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_UNIX || M_OS == M_OS_MACOSX
-	// Restore the SIGPIPE handler
+	// restore the SIGPIPE handler
 	void (*handler)(int);
 	handler = signal(SIGPIPE, SIG_DFL);
 	if(handler != SIG_IGN){

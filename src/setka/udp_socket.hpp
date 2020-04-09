@@ -3,7 +3,7 @@
 #include <string>
 
 #include <utki/config.hpp>
-#include <utki/Buf.hpp>
+#include <utki/span.hpp>
 
 #include "socket.hpp"
 #include "ip_address.hpp"

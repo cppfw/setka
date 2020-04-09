@@ -13,7 +13,7 @@
 #	include <papki/FSFile.hpp>
 #endif
 
-#include "HostNameResolver.hpp"
+#include "dns_resolver.hpp"
 #include "udp_socket.hpp"
 #include "Setka.hpp"
 
@@ -64,7 +64,7 @@ std::string ParseHostNameFromDNSPacket(const uint8_t* & p, const uint8_t* end){
 
 
 
-//this mutex is used to protect the dns::thread access.
+// this mutex is used to protect the dns::thread access.
 std::mutex mutex;
 
 typedef std::multimap<uint32_t, Resolver*> T_ResolversTimeMap;
@@ -76,13 +76,13 @@ typedef T_IdMap::iterator T_IdIter;
 typedef std::list<Resolver*> T_RequestsToSendList;
 typedef T_RequestsToSendList::iterator T_RequestsToSendIter;
 
-typedef std::map<HostNameResolver*, std::unique_ptr<Resolver> > T_ResolversMap;
+typedef std::map<dns_resolver*, std::unique_ptr<Resolver> > T_ResolversMap;
 typedef T_ResolversMap::iterator T_ResolversIter;
 
 
 
 struct Resolver{
-	HostNameResolver* hnr;
+	dns_resolver* hnr;
 	
 	std::string hostName; //host name to resolve
 	
@@ -141,7 +141,7 @@ public:
 	}
 	
 	//NOTE: call to this function should be protected by mutex.
-	//throws HostNameResolver::TooMuchRequestsExc if all IDs are occupied.
+	//throws dns_resolver::TooMuchRequestsExc if all IDs are occupied.
 	uint16_t FindFreeId(){
 		if(this->idMap.size() == 0){
 			return 0;
@@ -163,25 +163,25 @@ public:
 			}
 		}
 		
-		throw HostNameResolver::TooMuchRequestsExc();
+		throw dns_resolver::too_many_requests();
 	}
 	
 	
-	//NOTE: call to this function should be protected by mutex, to make sure the request is not canceled while sending.
-	//returns true if request is sent, false otherwise.
+	// NOTE: call to this function should be protected by mutex, to make sure the request is not canceled while sending.
+	// returns true if request is sent, false otherwise.
 	bool SendRequestToDNS(const dns::Resolver* r){
-		std::array<uint8_t, 512> buf; //RFC 1035 limits DNS request UDP packet size to 512 bytes.
+		std::array<uint8_t, 512> buf; // RFC 1035 limits DNS request UDP packet size to 512 bytes.
 		
 		size_t packetSize =
-				2 + //ID
-				2 + //flags
-				2 + //Number of questions
-				2 + //Number of answers
-				2 + //Number of authority records
-				2 + //Number of other records
-				r->hostName.size() + 2 + //domain name
-				2 + //Question type
-				2   //Question class
+				2 + // ID
+				2 + // flags
+				2 + // Number of questions
+				2 + // Number of answers
+				2 + // Number of authority records
+				2 + // Number of other records
+				r->hostName.size() + 2 + // domain name
+				2 + // Question type
+				2   // Question class
 			;
 		
 		ASSERT(packetSize <= buf.size())
@@ -249,7 +249,7 @@ public:
 		ASSERT(size_t(p - &*buf.begin()) == packetSize);
 		
 		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
-		size_t ret = this->socket.send(utki::wrapBuf(&*buf.begin(), packetSize), r->dns);
+		size_t ret = this->socket.send(utki::make_span(&*buf.begin(), packetSize), r->dns);
 		
 		ASSERT(ret == packetSize || ret == 0)
 		
@@ -264,20 +264,20 @@ public:
 	
 	
 	
-	//NOTE: call to this function should be protected by mutex
-	inline void CallCallback(dns::Resolver* r, setka::HostNameResolver::E_Result result, ip_address::ip ip = ip_address::ip(0, 0, 0, 0))noexcept{
+	// NOTE: call to this function should be protected by mutex
+	inline void CallCallback(dns::Resolver* r, setka::dns_resolver::result result, ip_address::ip ip = ip_address::ip(0, 0, 0, 0))noexcept{
 		this->completedMutex.lock();
 		this->mutex.unlock();
-		r->hnr->onCompleted_ts(result, ip);
+		r->hnr->on_completed(result, ip);
 		this->completedMutex.unlock();
 		this->mutex.lock();
 	}
 	
 	struct ParseResult{
-		setka::HostNameResolver::E_Result result;
+		setka::dns_resolver::result result;
 		setka::ip_address::ip host;
 		
-		ParseResult(setka::HostNameResolver::E_Result result, setka::ip_address::ip host = setka::ip_address::ip(0, 0, 0, 0)) :
+		ParseResult(setka::dns_resolver::result result, setka::ip_address::ip host = setka::ip_address::ip(0, 0, 0, 0)) :
 				result(result),
 				host(host)
 		{}
@@ -285,7 +285,7 @@ public:
 	
 	//NOTE: call to this function should be protected by mutex
 	//This function will call the Resolver callback.
-	ParseResult ParseReplyFromDNS(dns::Resolver* r, const utki::Buf<uint8_t> buf){
+	ParseResult ParseReplyFromDNS(dns::Resolver* r, const utki::span<uint8_t> buf){
 		TRACE(<< "dns::Resolver::ParseReplyFromDNS(): enter" << std::endl)
 #ifdef DEBUG
 		for(unsigned i = 0; i < buf.size(); ++i){
@@ -302,7 +302,7 @@ public:
 				2   //Number of other records
 			)
 		{
-			return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);
+			return ParseResult(setka::dns_resolver::result::dns_error);
 		}
 		
 		const uint8_t* p = buf.begin();
@@ -314,16 +314,16 @@ public:
 			
 			if((flags & 0x8000) == 0){//we expect it to be a response, not query.
 				TRACE(<< "ParseReplyFromDNS(): (flags & 0x8000) = " << (flags & 0x8000) << std::endl)
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);
+				return ParseResult(setka::dns_resolver::result::dns_error);
 			}
 			
 			//Check response code
 			if((flags & 0xf) != 0){//0 means no error condition
 				if((flags & 0xf) == 3){//name does not exist
-					return ParseResult(setka::HostNameResolver::E_Result::NO_SUCH_HOST);
+					return ParseResult(setka::dns_resolver::result::not_found);
 				}else{
 					TRACE(<< "ParseReplyFromDNS(): (flags & 0xf) = " << (flags & 0xf) << std::endl)
-					return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);
+					return ParseResult(setka::dns_resolver::result::dns_error);
 				}
 			}
 		}
@@ -333,7 +333,7 @@ public:
 			p += 2;
 			
 			if(numQuestions != 1){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);
+				return ParseResult(setka::dns_resolver::result::dns_error);
 			}
 		}
 		
@@ -343,7 +343,7 @@ public:
 		ASSERT(p <= (buf.end() - 1) || p == buf.end())
 		
 		if(numAnswers == 0){
-			return ParseResult(setka::HostNameResolver::E_Result::NO_SUCH_HOST);
+			return ParseResult(setka::dns_resolver::result::not_found);
 		}
 		
 		{
@@ -363,7 +363,7 @@ public:
 			
 			if(r->hostName != host){
 //				TRACE(<< "this->hostName = " << this->hostName << std::endl)
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//wrong host name for ID.
+				return ParseResult(setka::dns_resolver::result::dns_error);//wrong host name for ID.
 			}
 		}
 		
@@ -373,7 +373,7 @@ public:
 			p += 2;
 			
 			if(type != r->recordType){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//wrong question type
+				return ParseResult(setka::dns_resolver::result::dns_error);//wrong question type
 			}
 		}
 		
@@ -383,7 +383,7 @@ public:
 			p += 2;
 			
 			if(cls != 1){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//wrong question class
+				return ParseResult(setka::dns_resolver::result::dns_error);//wrong question class
 			}
 		}
 		
@@ -392,7 +392,7 @@ public:
 		//loop through the answers
 		for(uint16_t n = 0; n != numAnswers; ++n){
 			if(p == buf.end()){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 			}
 			
 			//check if there is a domain name or a reference to the domain name
@@ -402,7 +402,7 @@ public:
 					ASSERT(buf.overlaps(p))
 				}
 				if(p == buf.end()){
-					return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+					return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 				}
 				++p;
 			}else{
@@ -412,31 +412,31 @@ public:
 			}
 			
 			if(buf.end() - p < 2){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 			}
 			uint16_t type = utki::deserialize16be(p);
 			p += 2;
 			
 			if(buf.end() - p < 2){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 			}
 //			uint16_t cls = ting::util::Deserialize16(p);
 			p += 2;
 			
 			if(buf.end() - p < 4){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 			}
 //			uint32_t ttl = ting::util::Deserialize32(p);//time till the returned value can be cached.
 			p += 4;
 			
 			if(buf.end() - p < 2){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 			}
 			uint16_t dataLen = utki::deserialize16be(p);
 			p += 2;
 			
 			if(buf.end() - p < dataLen){
-				return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+				return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 			}
 			if(type == r->recordType){
 				ip_address::ip h;
@@ -444,14 +444,14 @@ public:
 				switch(type){
 					case D_DNSRecordA: //'A' type answer
 						if(dataLen < 4){
-							return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+							return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 						}
 
 						h = ip_address::ip(utki::deserialize32be(p));
 						break;
 					case D_DNSRecordAAAA: //'AAAA' type answer
 						if(dataLen < 2 * 8){
-							return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//unexpected end of packet
+							return ParseResult(setka::dns_resolver::result::dns_error);//unexpected end of packet
 						}
 
 						h = ip_address::ip(
@@ -469,12 +469,12 @@ public:
 				}
 				
 				TRACE(<< "host resolved: " << r->hostName << " = " << h.to_string() << std::endl)
-				return ParseResult(setka::HostNameResolver::E_Result::OK, h);
+				return ParseResult(setka::dns_resolver::result::ok, h);
 			}
 			p += dataLen;
 		}
 		
-		return ParseResult(setka::HostNameResolver::E_Result::DNS_ERROR);//no answer found
+		return ParseResult(setka::dns_resolver::result::dns_error);//no answer found
 	}
 	
 	
@@ -499,7 +499,7 @@ public:
 	//returns Ptr owning the removed resolver, returns invalid Ptr if there was
 	//no such resolver object found.
 	//NOTE: call to this function should be protected by mutex.
-	std::unique_ptr<dns::Resolver> RemoveResolver(HostNameResolver* resolver)noexcept{
+	std::unique_ptr<dns::Resolver> RemoveResolver(dns_resolver* resolver)noexcept{
 		std::unique_ptr<dns::Resolver> r;
 		{
 			dns::T_ResolversIter i = this->resolversMap.find(resolver);
@@ -536,7 +536,7 @@ private:
 #endif
 
 			//OnCompleted_ts() does not throw any exceptions, so no worries about that.
-			this->CallCallback(r.operator->(), HostNameResolver::E_Result::ERROR);
+			this->CallCallback(r.operator->(), dns_resolver::result::error);
 		}
 	}
 	
@@ -709,7 +709,7 @@ private:
 					try{
 						std::array<uint8_t, 512> buf;//RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
 						setka::ip_address address;
-						size_t ret = this->socket.recieve(utki::wrapBuf(buf), address);
+						size_t ret = this->socket.recieve(utki::make_span(buf), address);
 						
 						ASSERT(ret != 0)
 						ASSERT(ret <= buf.size())
@@ -725,9 +725,9 @@ private:
 								std::string host = dns::ParseHostNameFromDNSPacket(p, &*buf.end());
 								
 								if(host == i->second->hostName){
-									ParseResult res = this->ParseReplyFromDNS(i->second, utki::Buf<uint8_t>(&*buf.begin(), ret));
+									ParseResult res = this->ParseReplyFromDNS(i->second, utki::span<uint8_t>(&*buf.begin(), ret));
 									
-									if(res.result == setka::HostNameResolver::E_Result::NO_SUCH_HOST && i->second->recordType == D_DNSRecordAAAA){
+									if(res.result == setka::dns_resolver::result::not_found && i->second->recordType == D_DNSRecordAAAA){
 										//try getting record type A
 										TRACE(<< "no record AAAA found, trying to get record type A" << std::endl)
 										
@@ -744,7 +744,7 @@ private:
 										}catch(...){
 											//failed adding to sending list, report error
 											std::unique_ptr<dns::Resolver> r = this->RemoveResolver(i->second->hnr);
-											this->CallCallback(r.operator->(), setka::HostNameResolver::E_Result::ERROR);
+											this->CallCallback(r.operator->(), setka::dns_resolver::result::error);
 										}										
 									}else{
 										std::unique_ptr<dns::Resolver> r = this->RemoveResolver(i->second->hnr);
@@ -795,7 +795,7 @@ private:
 								ASSERT(removedResolver)
 
 								//Notify about error. OnCompleted_ts() does not throw any exceptions, so no worries about that.
-								this->CallCallback(removedResolver.operator->(), HostNameResolver::E_Result::ERROR, 0);
+								this->CallCallback(removedResolver.operator->(), dns_resolver::result::error, 0);
 							}
 						}
 					}catch(setka::Exc& e){
@@ -823,7 +823,7 @@ private:
 							ASSERT(r)
 
 							//Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
-							this->CallCallback(r.operator->(), HostNameResolver::E_Result::TIMEOUT, 0);
+							this->CallCallback(r.operator->(), dns_resolver::result::timeout, 0);
 						}
 						
 						ASSERT(this->timeMap1->size() == 0)
@@ -842,7 +842,7 @@ private:
 					ASSERT(r)
 					
 					//Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
-					this->CallCallback(r.operator->(), HostNameResolver::E_Result::TIMEOUT, 0);
+					this->CallCallback(r.operator->(), dns_resolver::result::timeout, 0);
 				}
 				
 				if(this->resolversMap.size() == 0){
@@ -901,7 +901,7 @@ std::unique_ptr<LookupThread> thread;
 
 
 
-HostNameResolver::~HostNameResolver(){
+dns_resolver::~dns_resolver(){
 #ifdef DEBUG
 	//check that there is no ongoing DNS lookup operation.
 	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
@@ -911,7 +911,7 @@ HostNameResolver::~HostNameResolver(){
 		
 		dns::T_ResolversIter i = dns::thread->resolversMap.find(this);
 		if(i != dns::thread->resolversMap.end()){
-			ASSERT_INFO_ALWAYS(false, "trying to destroy the HostNameResolver object while DNS lookup request is in progress, call HostNameResolver::Cancel_ts() first.")
+			ASSERT_INFO_ALWAYS(false, "trying to destroy the dns_resolver object while DNS lookup request is in progress, call dns_resolver::Cancel_ts() first.")
 		}
 	}
 #endif
@@ -919,13 +919,13 @@ HostNameResolver::~HostNameResolver(){
 
 
 
-void HostNameResolver::resolve_ts(const std::string& hostName, uint32_t timeoutMillis, const setka::ip_address& dnsIP){
-//	TRACE(<< "HostNameResolver::Resolve_ts(): enter" << std::endl)
+void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, const setka::ip_address& dnsIP){
+//	TRACE(<< "dns_resolver::Resolve_ts(): enter" << std::endl)
 	
-	ASSERT(setka::Setka::isCreated())
+	ASSERT(setka::Setka::is_created())
 	
 	if(hostName.size() > 253){
-		throw DomainNameTooLongExc();
+		throw std::logic_error("Too long domain name, it should not exceed 253 characters according to RFC 2181");
 	}
 	
 	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
@@ -941,7 +941,7 @@ void HostNameResolver::resolve_ts(const std::string& hostName, uint32_t timeoutM
 		
 		// check if already in progress
 		if(dns::thread->resolversMap.find(this) != dns::thread->resolversMap.end()){
-			throw AlreadyInProgressExc();
+			throw std::logic_error("DNS lookup operation is already in progress");
 		}
 
 		// Thread is created, check if it is running.
@@ -995,8 +995,8 @@ void HostNameResolver::resolve_ts(const std::string& hostName, uint32_t timeoutM
 	uint32_t curTime = utki::get_ticks_ms();
 	{
 		uint32_t endTime = curTime + timeoutMillis;
-//		TRACE(<< "HostNameResolver::Resolve_ts(): curTime = " << curTime << std::endl)
-//		TRACE(<< "HostNameResolver::Resolve_ts(): endTime = " << endTime << std::endl)
+//		TRACE(<< "dns_resolver::Resolve_ts(): curTime = " << curTime << std::endl)
+//		TRACE(<< "dns_resolver::Resolve_ts(): endTime = " << endTime << std::endl)
 		if(endTime < curTime){//if warped around
 			r->timeMap = dns::thread->timeMap2;
 		}else{
@@ -1040,7 +1040,7 @@ void HostNameResolver::resolve_ts(const std::string& hostName, uint32_t timeoutM
 			dns::thread->lastTicksInFirstHalf = curTime < (uint32_t(-1) / 2);
 			dns::thread->start();
 			dns::thread->isExiting = false;//thread has just started, clear the exiting flag
-			TRACE(<< "HostNameResolver::Resolve_ts(): thread started" << std::endl)
+			TRACE(<< "dns_resolver::Resolve_ts(): thread started" << std::endl)
 		}
 	}catch(...){
 		dns::thread->resolversMap.erase(this);
@@ -1053,7 +1053,7 @@ void HostNameResolver::resolve_ts(const std::string& hostName, uint32_t timeoutM
 
 
 
-bool HostNameResolver::cancel_ts()noexcept{
+bool dns_resolver::cancel()noexcept{
 	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
 	
 	if(!dns::thread){
@@ -1069,17 +1069,17 @@ bool HostNameResolver::cancel_ts()noexcept{
 	}
 	
 	if(!ret){
-		//Make sure the callback has finished if it is in process of calling the callback.
-		//Because upon calling the callback the resolver object is already removed from all the lists and maps
-		//and if 'ret' is false then it is possible that the resolver is in process of calling the callback.
-		//To do that, lock and unlock the mutex.
+		// Make sure the callback has finished if it is in process of calling the callback.
+		// Because upon calling the callback the resolver object is already removed from all the lists and maps
+		// and if 'ret' is false then it is possible that the resolver is in process of calling the callback.
+		// To do that, lock and unlock the mutex.
 		std::lock_guard<decltype(dns::thread->completedMutex)> mutexGuard(dns::thread->completedMutex);
 	}
 	
 	return ret;
 }
 
-void HostNameResolver::cleanUp(){
+void dns_resolver::clean_up(){
 	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
 
 	if(dns::thread){

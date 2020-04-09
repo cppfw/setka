@@ -123,7 +123,7 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 
 
 
-size_t tcp_socket::send(const utki::Buf<uint8_t> buf){
+size_t tcp_socket::send(const utki::span<uint8_t> buf){
 	if(!*this){
 		throw setka::Exc("tcp_socket::Send(): socket is not opened");
 	}
@@ -180,7 +180,7 @@ size_t tcp_socket::send(const utki::Buf<uint8_t> buf){
 
 
 
-size_t tcp_socket::recieve(utki::Buf<uint8_t> buf){
+size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 	// the 'ready to read' flag shall be cleared even if this function fails to avoid subsequent
 	// calls to recv() because it indicates that there's activity.
 	// So, do it at the beginning of the function.

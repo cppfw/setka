@@ -34,7 +34,7 @@ bool IsIPv6SupportedByOS(){
 }
 
 namespace BasicClientServerTest{
-void SendAll(setka::tcp_socket& s, utki::Buf<uint8_t> buf){
+void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
 	if(!s){
 		throw setka::Exc("tcp_socket::Send(): socket is not opened");
 	}
@@ -89,7 +89,7 @@ public:
 			data[1] = '1';
 			data[2] = '2';
 			data[3] = '4';
-			SendAll(sock, utki::wrapBuf(data));
+			SendAll(sock, utki::make_span(data));
 		}catch(setka::Exc &e){
 			ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
 		}
@@ -122,7 +122,7 @@ void Run(){
 		size_t bytesReceived = 0;
 		for(unsigned i = 0; i < 30; ++i){
 			ASSERT_ALWAYS(bytesReceived < 4)
-			bytesReceived += sock.recieve(utki::Buf<uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
+			bytesReceived += sock.recieve(utki::span<uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
 			ASSERT_ALWAYS(bytesReceived <= 4)
 			if(bytesReceived == 4){
 				break;
@@ -253,10 +253,10 @@ void Run(){
 				ASSERT_ALWAYS(sendBuffer.size() > 0)
 
 				try{
-					auto res = sockS.send(utki::Buf<uint8_t>(&*sendBuffer.begin() + bytesSent, sendBuffer.size() - bytesSent));
+					auto res = sockS.send(utki::span<uint8_t>(&*sendBuffer.begin() + bytesSent, sendBuffer.size() - bytesSent));
 					bytesSent += res;
 					if(res == 0){
-						ASSERT_ALWAYS(res > 0) //since it was CanWrite() we should be able to write at least something
+						ASSERT_ALWAYS(res > 0) // since it was CanWrite() we should be able to write at least something
 					}else{
 //						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
 					}
@@ -274,10 +274,10 @@ void Run(){
 				ASSERT_ALWAYS(!sockR.flags().get(opros::ready::write))
 
 				while(true){
-					std::array<uint8_t, 0x2000> buf; //8kb buffer
+					std::array<uint8_t, 0x2000> buf; // 8kb buffer
 					size_t numBytesReceived;
 					try{
-						numBytesReceived = sockR.recieve(utki::wrapBuf(buf));
+						numBytesReceived = sockR.recieve(utki::make_span(buf));
 					}catch(setka::Exc& e){
 						ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 					}
@@ -364,7 +364,7 @@ void Run(){
 		// send
 
 		try{
-			utki::Buf<uint8_t> buf(&scnt, 1);
+			utki::span<uint8_t> buf(&scnt, 1);
 			auto res = sockS.send(buf);
 			ASSERT_ALWAYS(res <= 1)
 			if(res == 1){
@@ -380,10 +380,10 @@ void Run(){
 		// read
 
 		while(true){
-			std::array<uint8_t, 0x2000> buf; //8kb buffer
+			std::array<uint8_t, 0x2000> buf; // 8kb buffer
 			size_t numBytesReceived;
 			try{
-				numBytesReceived = sockR.recieve(utki::wrapBuf(buf));
+				numBytesReceived = sockR.recieve(utki::make_span(buf));
 			}catch(setka::Exc& e){
 				ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 			}
@@ -483,7 +483,7 @@ void Run(){
 			);
 
 		for(unsigned i = 0; i < 10; ++i){
-			bytesSent = sendSock.send(utki::wrapBuf(data), addr);
+			bytesSent = sendSock.send(utki::make_span(data), addr);
 			ASSERT_ALWAYS(bytesSent == 4 || bytesSent == 0)
 			if(bytesSent == 4){
 				break;
@@ -502,7 +502,7 @@ void Run(){
 		size_t bytesReceived = 0;
 		for(unsigned i = 0; i < 10; ++i){
 			setka::ip_address ip;
-			bytesReceived = recvSock.recieve(utki::wrapBuf(buf), ip);
+			bytesReceived = recvSock.recieve(utki::make_span(buf), ip);
 			ASSERT_ALWAYS(bytesReceived == 0 || bytesReceived == 4)//all or nothing
 			if(bytesReceived == 4){
 				if(IsIPv6SupportedByOS()){
