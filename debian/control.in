@@ -2,7 +2,7 @@ Source: libsetka
 Section: misc
 Priority: extra
 Maintainer: Ivan Gagis <igagis@gmail.com>
-Build-Depends: debhelper (>= 9), libc6-dev, prorab,
+Build-Depends: debhelper (>= 9), libc6-dev, prorab, prorab-extra, myci,
 		libutki-dev, libopros-dev, libnitki-dev, libpapki-dev
 Build-Depends-Indep: doxygen
 Standards-Version: 3.9.2
