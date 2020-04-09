@@ -23,8 +23,6 @@
 #	error "Unsupported OS"
 #endif
 
-#include "Exc.hpp"
-
 #include <opros/waitable.hpp>
 
 namespace setka{

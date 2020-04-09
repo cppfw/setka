@@ -1,7 +1,6 @@
 #include <utki/config.hpp>
 
 #include "Setka.hpp"
-#include "Exc.hpp"
 #include "dns_resolver.hpp"
 
 
@@ -16,22 +15,16 @@
 #	error "Unsupported OS"
 #endif
 
-
-
 using namespace setka;
 
-
-
 utki::intrusive_singleton<Setka>::T_Instance Setka::instance;
-
-
 
 Setka::Setka(){
 #if M_OS == M_OS_WINDOWS
 	WORD versionWanted = MAKEWORD(2,2);
 	WSADATA wsaData;
 	if(WSAStartup(versionWanted, &wsaData) != 0 ){
-		throw setka::Exc("SocketLib::SocketLib(): Winsock 2.2 initialization failed");
+		throw std::exception("SocketLib::SocketLib(): Winsock 2.2 initialization failed");
 	}
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_UNIX || M_OS == M_OS_MACOSX
 	// SIGPIPE is generated when a remote socket is closed
@@ -44,8 +37,6 @@ Setka::Setka(){
 	#error "Unknown OS"
 #endif
 }
-
-
 
 Setka::~Setka()noexcept{
 	// check that there are no active dns lookups and finish the DNS request thread

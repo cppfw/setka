@@ -268,7 +268,11 @@ public:
 	inline void CallCallback(dns::Resolver* r, setka::dns_resolver::result result, ip_address::ip ip = ip_address::ip(0, 0, 0, 0))noexcept{
 		this->completedMutex.lock();
 		this->mutex.unlock();
-		r->hnr->on_completed(result, ip);
+		try{
+			r->hnr->on_completed(result, ip);
+		}catch(...){
+			// ignore
+		}
 		this->completedMutex.unlock();
 		this->mutex.lock();
 	}
@@ -283,8 +287,8 @@ public:
 		{}
 	};
 	
-	//NOTE: call to this function should be protected by mutex
-	//This function will call the Resolver callback.
+	// NOTE: call to this function should be protected by mutex
+	// This function will call the Resolver callback.
 	ParseResult ParseReplyFromDNS(dns::Resolver* r, const utki::span<uint8_t> buf){
 		TRACE(<< "dns::Resolver::ParseReplyFromDNS(): enter" << std::endl)
 #ifdef DEBUG
@@ -554,7 +558,7 @@ private:
 							&this->key
 						) != ERROR_SUCCESS)
 					{
-						throw setka::Exc("InitDNS(): RegOpenKey() failed");
+						throw std::exception("InitDNS(): RegOpenKey() failed");
 					}
 				}
 				
@@ -615,7 +619,7 @@ private:
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 			papki::FSFile f("/etc/resolv.conf");
 			
-			std::vector<uint8_t> buf = f.loadWholeFileIntoMemory(0xfff);//4kb max
+			std::vector<uint8_t> buf = f.loadWholeFileIntoMemory(0xfff); // 4kb max
 			
 			for(uint8_t* p = &*buf.begin(); p != &*buf.end(); ++p){
 				uint8_t* start = p;
@@ -639,7 +643,7 @@ private:
 				
 				size_t ipStart = nsStart + ns.size();
 				
-				size_t ipEnd = line.find_first_not_of(":.0123456789", ipStart);//IPv6 address may contain ':'
+				size_t ipEnd = line.find_first_not_of(":.0123456789", ipStart); // IPv6 address may contain ':'
 				
 				std::string ipstr = line.substr(ipStart, ipEnd - ipStart);
 				
@@ -662,11 +666,11 @@ private:
 	void run()override{
 		TRACE(<< "DNS lookup thread started" << std::endl)
 		
-		//destroy previous thread if necessary
+		// destroy previous thread if necessary
 		if(this->prevThread){
-			//NOTE: if the thread was not started due to some error during adding its
-			//first DNS lookup request it is OK to call Join() on such not
-			//started thread.
+			// NOTE: if the thread was not started due to some error during adding its
+			// first DNS lookup request it is OK to call Join() on such not
+			// started thread.
 			this->prevThread->join();
 			this->prevThread.reset();
 			TRACE(<< "Previous thread destroyed" << std::endl)
@@ -754,10 +758,10 @@ private:
 								}
 							}
 						}
-					}catch(setka::Exc&){
+					}catch(std::exception&){
 						this->isExiting = true;
 						this->RemoveAllResolvers();
-						break;//exit thread
+						break; // exit thread
 					}
 				}
 
@@ -785,44 +789,44 @@ private:
 							if(r->dns.host.is_valid()){
 								if(!this->SendRequestToDNS(r)){
 									TRACE(<< "request not sent" << std::endl)
-									break;//socket is not ready for sending, go out of requests sending loop.
+									break; // socket is not ready for sending, go out of requests sending loop.
 								}
 								TRACE(<< "request sent" << std::endl)
-								r->sendIter = this->sendList.end();//end() value will indicate that the request has already been sent
+								r->sendIter = this->sendList.end(); // end() value will indicate that the request has already been sent
 								this->sendList.pop_front();
 							}else{
 								std::unique_ptr<dns::Resolver> removedResolver = this->RemoveResolver(r->hnr);
 								ASSERT(removedResolver)
 
-								//Notify about error. OnCompleted_ts() does not throw any exceptions, so no worries about that.
+								// Notify about error. OnCompleted_ts() does not throw any exceptions, so no worries about that.
 								this->CallCallback(removedResolver.operator->(), dns_resolver::result::error, 0);
 							}
 						}
-					}catch(setka::Exc& e){
+					}catch(std::exception& e){
 						TRACE(<< "writing to a socket failed: " << e.what() << std::endl)
 						this->isExiting = true;
 						this->RemoveAllResolvers();
-						break;//exit thread
+						break; // exit thread
 					}
 					
 					if(this->sendList.size() == 0){
-						//move socket to waiting for READ condition only
+						// move socket to waiting for READ condition only
 						this->waitSet.change(this->socket, utki::make_flags({opros::ready::read}));
 						TRACE(<< "socket wait mode changed to read only" << std::endl)
 					}
 				}
 				
 				uint32_t curTime = utki::get_ticks_ms();
-				{//check if time has warped around and it is necessary to swap time maps
+				{ // check if time has wrapped around and it is necessary to swap time maps
 					bool isFirstHalf = curTime < (uint32_t(-1) / 2);
 					if(isFirstHalf && !this->lastTicksInFirstHalf){
-						//Time warped.
-						//Timeout all requests from first time map
+						// Time wrapped.
+						// Timeout all requests from first time map
 						while(this->timeMap1->size() != 0){
 							std::unique_ptr<dns::Resolver> r = this->RemoveResolver(this->timeMap1->begin()->second->hnr);
 							ASSERT(r)
 
-							//Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
+							// Notify about timeout.
 							this->CallCallback(r.operator->(), dns_resolver::result::timeout, 0);
 						}
 						
@@ -837,11 +841,11 @@ private:
 						break;
 					}
 					
-					//timeout
+					// timeout
 					std::unique_ptr<dns::Resolver> r = this->RemoveResolver(this->timeMap1->begin()->second->hnr);
 					ASSERT(r)
 					
-					//Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
+					// Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
 					this->CallCallback(r.operator->(), dns_resolver::result::timeout, 0);
 				}
 				

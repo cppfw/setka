@@ -14,7 +14,7 @@ using namespace setka;
 
 void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 	if(*this){
-		throw setka::Exc("tcp_socket::Open(): socket already opened");
+		throw std::logic_error("tcp_socket::Open(): socket already opened");
 	}
 
 	// create event for implementing waitable
@@ -31,7 +31,8 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 #if M_OS == M_OS_WINDOWS
 		this->close_event_for_waitable();
 #endif
-		throw setka::Exc("tcp_socket::Open(): Couldn't create socket");
+		// TODO: use std::system_error?
+		throw std::runtime_error("tcp_socket::Open(): Couldn't create socket");
 	}
 
 	// disable Naggle algorithm if required
@@ -116,7 +117,8 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 			ss << strerror(errorCode);
 #endif
 			this->close();
-			throw setka::Exc(ss.str());
+			// TODO: use std::system_error?
+			throw std::runtime_error(ss.str());
 		}
 	}
 }
@@ -125,7 +127,7 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 
 size_t tcp_socket::send(const utki::span<uint8_t> buf){
 	if(!*this){
-		throw setka::Exc("tcp_socket::Send(): socket is not opened");
+		throw std::logic_error("tcp_socket::Send(): socket is not opened");
 	}
 
 	this->readiness_flags.clear(opros::ready::write);
@@ -152,7 +154,7 @@ size_t tcp_socket::send(const utki::span<uint8_t> buf){
 			if(errorCode == error_interrupted){
 				continue;
 			}else if(errorCode == error_again){
-				//can't send more bytes, return 0 bytes sent
+				// can't send more bytes, return 0 bytes sent
 				len = 0;
 			}else{
 				std::stringstream ss;
@@ -168,17 +170,16 @@ size_t tcp_socket::send(const utki::span<uint8_t> buf){
 #else
 				ss << strerror(errorCode);
 #endif
-				throw setka::Exc(ss.str());
+				// TODO: use std::system_error?
+				throw std::runtime_error(ss.str());
 			}
 		}
 		break;
-	}//~while
+	}
 
 	ASSERT(len >= 0)
 	return size_t(len);
 }
-
-
 
 size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 	// the 'ready to read' flag shall be cleared even if this function fails to avoid subsequent
@@ -187,7 +188,7 @@ size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 	this->readiness_flags.clear(opros::ready::read);
 
 	if(!*this){
-		throw setka::Exc("tcp_socket::Recv(): socket is not opened");
+		throw std::logic_error("tcp_socket::Recv(): socket is not opened");
 	}
 
 #if M_OS == M_OS_WINDOWS
@@ -213,7 +214,7 @@ size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 			if(errorCode == error_interrupted){
 				continue;
 			}else if(errorCode == error_again){
-				//no data available, return 0 bytes received
+				// no data available, return 0 bytes received
 				len = 0;
 			}else{
 				std::stringstream ss;
@@ -223,17 +224,18 @@ size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 					const size_t msgbufSize = 0xff;
 					char msgbuf[msgbufSize];
 					strerror_s(msgbuf, msgbufSize, errorCode);
-					msgbuf[msgbufSize - 1] = 0;//make sure the string is null-terminated
+					msgbuf[msgbufSize - 1] = 0; // make sure the string is null-terminated
 					ss << msgbuf;
 				}
 #else
 				ss << strerror(errorCode);
 #endif
-				throw setka::Exc(ss.str());
+				// TODO: use std::system_error?
+				throw std::runtime_error(ss.str());
 			}
 		}
 		break;
-	}//~while
+	}
 
 	ASSERT(len >= 0)
 	return size_t(len);

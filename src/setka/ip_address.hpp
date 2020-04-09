@@ -5,8 +5,6 @@
 
 #include <utki/config.hpp>
 
-#include "Exc.hpp"
-
 namespace setka{
 
 /**

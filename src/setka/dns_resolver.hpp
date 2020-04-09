@@ -4,7 +4,6 @@
 
 #include <utki/config.hpp>
 
-#include "Exc.hpp"
 #include "ip_address.hpp"
 
 namespace setka{

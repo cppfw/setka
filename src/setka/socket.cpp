@@ -65,7 +65,7 @@ setka::socket& socket::operator=(socket&& s){
 
 void socket::disable_naggle(){
 	if(!*this){
-		throw setka::Exc("socket::DisableNaggle(): socket is not valid");
+		throw std::logic_error("socket::disable_naggle(): socket is not valid");
 	}
 
 #if M_OS == M_OS_WINDOWS || M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
@@ -80,14 +80,14 @@ void socket::disable_naggle(){
 
 void socket::set_nonblocking_mode(){
 	if(!*this){
-		throw setka::Exc("socket::SetNonBlockingMode(): socket is not valid");
+		throw std::logic_error("socket::set_nonblocking_mode(): socket is not valid");
 	}
 
 #if M_OS == M_OS_WINDOWS
 	{
 		u_long mode = 1;
 		if(ioctlsocket(this->sock, FIONBIO, &mode) != 0){
-			throw setka::Exc("socket::SetNonBlockingMode(): ioctlsocket(FIONBIO) failed");
+			throw std::exception("socket::SetNonBlockingMode(): ioctlsocket(FIONBIO) failed");
 		}
 	}
 	
@@ -95,10 +95,12 @@ void socket::set_nonblocking_mode(){
 	{
 		int flags = fcntl(this->sock, F_GETFL, 0);
 		if(flags == -1){
-			throw setka::Exc("socket::SetNonBlockingMode(): fcntl(F_GETFL) failed");
+			// TODO: use std::system_error?
+			throw std::runtime_error("socket::SetNonBlockingMode(): fcntl(F_GETFL) failed");
 		}
 		if(fcntl(this->sock, F_SETFL, flags | O_NONBLOCK) != 0){
-			throw setka::Exc("socket::SetNonBlockingMode(): fcntl(F_SETFL) failed");
+			// TODO: use std::system_error?
+			throw std::runtime_error("socket::SetNonBlockingMode(): fcntl(F_SETFL) failed");
 		}
 	}
 #else
@@ -108,7 +110,7 @@ void socket::set_nonblocking_mode(){
 
 uint16_t socket::get_local_port(){
 	if(!*this){
-		throw setka::Exc("socket::GetLocalPort(): socket is not valid");
+		throw std::logic_error("socket::GetLocalPort(): socket is not valid");
 	}
 
 	sockaddr_storage addr;
@@ -127,7 +129,8 @@ uint16_t socket::get_local_port(){
 			&len
 		) < 0)
 	{
-		throw setka::Exc("socket::GetLocalPort(): getsockname() failed");
+		// TODO: use std::system_error?
+		throw std::runtime_error("socket::GetLocalPort(): getsockname() failed");
 	}
 	
 	if(addr.ss_family == AF_INET){
@@ -150,7 +153,7 @@ bool socket::check_signaled(){
 	memset(&events, 0, sizeof(events));
 	ASSERT(*this)
 	if(WSAEnumNetworkEvents(this->sock, this->eventForWaitable, &events) != 0){
-		throw setka::Exc("socket::CheckSignaled(): WSAEnumNetworkEvents() failed");
+		throw std::exception("socket::CheckSignaled(): WSAEnumNetworkEvents() failed");
 	}
 
 	// NOTE: sometimes no events are reported, don't know why.
@@ -202,7 +205,7 @@ void socket::create_event_for_waitable(){
 	ASSERT(this->eventForWaitable == WSA_INVALID_EVENT)
 	this->eventForWaitable = WSACreateEvent();
 	if(this->eventForWaitable == WSA_INVALID_EVENT){
-		throw setka::Exc("socket::CreateEventForWaitable(): could not create event (Win32) for implementing Waitable");
+		throw std::exception("socket::CreateEventForWaitable(): could not create event (Win32) for implementing Waitable");
 	}
 }
 
@@ -221,7 +224,7 @@ void socket::set_waiting_events_for_windows(long flags){
 			flags
 		) != 0)
 	{
-		throw setka::Exc("socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
+		throw std::exception("socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
 	}
 }
 

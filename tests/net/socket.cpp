@@ -36,7 +36,7 @@ bool IsIPv6SupportedByOS(){
 namespace BasicClientServerTest{
 void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
 	if(!s){
-		throw setka::Exc("tcp_socket::Send(): socket is not opened");
+		throw std::logic_error("tcp_socket::Send(): socket is not opened");
 	}
 
 	size_t left = buf.size();
@@ -90,7 +90,7 @@ public:
 			data[2] = '2';
 			data[3] = '4';
 			SendAll(sock, utki::make_span(data));
-		}catch(setka::Exc &e){
+		}catch(std::exception &e){
 			ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
 		}
 	}
@@ -136,14 +136,14 @@ void Run(){
 		ASSERT_ALWAYS(data[1] == '1')
 		ASSERT_ALWAYS(data[2] == '2')
 		ASSERT_ALWAYS(data[3] == '4')
-	}catch(setka::Exc &e){
+	}catch(std::exception &e){
 		ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
 	}
 	
 	serverThread.join();
 }
 
-}//~namespace
+}
 
 
 
@@ -261,7 +261,7 @@ void Run(){
 //						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
 					}
 					ASSERT_ALWAYS(!sockS.flags().get(opros::ready::write))
-				}catch(setka::Exc& e){
+				}catch(std::exception& e){
 					ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
 				}
 				ASSERT_ALWAYS(bytesSent <= sendBuffer.size())
@@ -278,7 +278,7 @@ void Run(){
 					size_t numBytesReceived;
 					try{
 						numBytesReceived = sockR.recieve(utki::make_span(buf));
-					}catch(setka::Exc& e){
+					}catch(std::exception& e){
 						ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 					}
 					ASSERT_ALWAYS(numBytesReceived <= buf.size())
@@ -372,7 +372,7 @@ void Run(){
 			}else{
 				ASSERT_ALWAYS(false)
 			}
-		}catch(setka::Exc& e){
+		}catch(std::exception& e){
 			ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
 		}
 
@@ -384,7 +384,7 @@ void Run(){
 			size_t numBytesReceived;
 			try{
 				numBytesReceived = sockR.recieve(utki::make_span(buf));
-			}catch(setka::Exc& e){
+			}catch(std::exception& e){
 				ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
 			}
 			ASSERT_ALWAYS(numBytesReceived <= buf.size())
@@ -459,7 +459,7 @@ void Run(){
 
 	try{
 		recvSock.open(13666);
-	}catch(setka::Exc &e){
+	}catch(std::exception &e){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 
@@ -492,7 +492,7 @@ void Run(){
 			nitki::Thread::sleep(100);
 		}
 		ASSERT_ALWAYS(bytesSent == 4)
-	}catch(setka::Exc &e){
+	}catch(std::exception &e){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 
@@ -520,7 +520,7 @@ void Run(){
 		ASSERT_ALWAYS(buf[1] == '1')
 		ASSERT_ALWAYS(buf[2] == '2')
 		ASSERT_ALWAYS(buf[3] == '4')
-	}catch(setka::Exc& e){
+	}catch(std::exception& e){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
 }
@@ -531,15 +531,14 @@ void Run(){
 	try{
 		setka::udp_socket sendSock;
 
-		try{
-			sendSock.open();
+		sendSock.open();
 
-			opros::wait_set ws(1);
+		opros::wait_set ws(1);
 
-			ws.add(sendSock, utki::make_flags({opros::ready::read, opros::ready::write}));
+		ws.add(sendSock, utki::make_flags({opros::ready::read, opros::ready::write}));
 
-			if(ws.wait(3000) == 0){
-				// if timeout was hit
+		if(ws.wait(3000) == 0){
+			// if timeout was hit
 // NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
 #if M_OS == M_OS_WINDOWS
 #	if M_COMPILER == M_COMPILER_MSVC
@@ -547,19 +546,15 @@ void Run(){
 #		warning "Waiting for writing to UDP socket does not work on Win32"
 #	endif
 #endif
-			}else{
-				ASSERT_ALWAYS(sendSock.flags().get(opros::ready::write))
-				ASSERT_ALWAYS(!sendSock.flags().get(opros::ready::read))
-			}
-
-			ws.remove(sendSock);
-		}catch(setka::Exc &e){
-			ASSERT_INFO_ALWAYS(false, e.what())
+		}else{
+			ASSERT_ALWAYS(sendSock.flags().get(opros::ready::write))
+			ASSERT_ALWAYS(!sendSock.flags().get(opros::ready::read))
 		}
+
+		ws.remove(sendSock);
 	}catch(std::exception& e){
 		ASSERT_INFO_ALWAYS(false, e.what())
 	}
-
 }
 }
 
