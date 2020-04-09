@@ -895,7 +895,7 @@ private:
 	}
 };
 
-//accessing this variable must be protected by dnsMutex
+// accessing this variable must be protected by dnsMutex
 std::unique_ptr<LookupThread> thread;
 
 
@@ -1014,7 +1014,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 		}
 	}
 	
-	//add resolver to send queue
+	// add resolver to send queue
 	try{
 		dns::thread->sendList.push_back(r.operator->());
 	}catch(...){
@@ -1024,26 +1024,25 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 	}
 	r->sendIter = --dns::thread->sendList.end();
 	
-	//insert the resolver to main resolvers map
+	// insert the resolver to main resolvers map
 	try{
 		dns::thread->resolversMap[this] = std::move(r);
 	
-		//If there was no send requests in the list, send the message to the thread to switch
-		//socket to wait for sending mode.
+		// If there was no send requests in the list, send the message to the thread to switch
+		// socket to wait for sending mode.
 		if(dns::thread->sendList.size() == 1){
-			std::unique_ptr<dns::LookupThread>& t = dns::thread;
 			dns::thread->pushMessage(
-					[&t](){
-						t->StartSending();
+					[](){
+						dns::thread->StartSending();
 					}
 				);
 		}
 
-		//Start the thread if we created the new one.
+		// Start the thread if we created the new one.
 		if(needStartTheThread){
 			dns::thread->lastTicksInFirstHalf = curTime < (uint32_t(-1) / 2);
 			dns::thread->start();
-			dns::thread->isExiting = false;//thread has just started, clear the exiting flag
+			dns::thread->isExiting = false; // thread has just started, clear the exiting flag
 			TRACE(<< "dns_resolver::Resolve_ts(): thread started" << std::endl)
 		}
 	}catch(...){
