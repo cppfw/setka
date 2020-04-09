@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 
 #include <utki/config.hpp>
 
@@ -98,13 +99,20 @@ public:
 	};
 	
 	/**
+	 * @brief handler for resolve result.
+	 * Called by default implementation of virtual on_completed() function.
+	 */
+	std::function<void(result, ip_address::ip)noexcept> completed_handler;
+
+	/**
 	 * @brief callback method called upon DNS lookup operation has finished.
 	 * Note, that the method has to be thread-safe.
+	 * Default implementation just calls the completed_handler if it is set.
 	 * @param r - the result of DNS lookup operation.
 	 * @param ip - resolved IP-address. This value can later be used to create the
 	 *             ip_address object.
 	 */
-	virtual void on_completed(result r, ip_address::ip ip)noexcept = 0;
+	virtual void on_completed(result r, ip_address::ip ip)noexcept;
 	
 private:
 	friend class setka::init_guard;

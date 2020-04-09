@@ -1095,3 +1095,9 @@ void dns_resolver::clean_up(){
 		dns::thread.reset();
 	}
 }
+
+void dns_resolver::on_completed(result res, ip_address::ip address)noexcept{
+	if(this->completed_handler){
+		this->completed_handler(res, address);
+	}
+}
