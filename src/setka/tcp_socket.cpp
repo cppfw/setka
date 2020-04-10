@@ -58,22 +58,22 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 		memset(&sa, 0, sizeof(sa));
 		sa.sin6_family = AF_INET6;
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
-		sa.sin6_addr.s6_addr[0] = ip.host.quad0() >> 24;
-		sa.sin6_addr.s6_addr[1] = (ip.host.quad0() >> 16) & 0xff;
-		sa.sin6_addr.s6_addr[2] = (ip.host.quad0() >> 8) & 0xff;
-		sa.sin6_addr.s6_addr[3] = ip.host.quad0() & 0xff;
-		sa.sin6_addr.s6_addr[4] = ip.host.quad1() >> 24;
-		sa.sin6_addr.s6_addr[5] = (ip.host.quad1() >> 16) & 0xff;
-		sa.sin6_addr.s6_addr[6] = (ip.host.quad1() >> 8) & 0xff;
-		sa.sin6_addr.s6_addr[7] = ip.host.quad1() & 0xff;
-		sa.sin6_addr.s6_addr[8] = ip.host.quad2() >> 24;
-		sa.sin6_addr.s6_addr[9] = (ip.host.quad2() >> 16) & 0xff;
-		sa.sin6_addr.s6_addr[10] = (ip.host.quad2() >> 8) & 0xff;
-		sa.sin6_addr.s6_addr[11] = ip.host.quad2() & 0xff;
-		sa.sin6_addr.s6_addr[12] = ip.host.quad3() >> 24;
-		sa.sin6_addr.s6_addr[13] = (ip.host.quad3() >> 16) & 0xff;
-		sa.sin6_addr.s6_addr[14] = (ip.host.quad3() >> 8) & 0xff;
-		sa.sin6_addr.s6_addr[15] = ip.host.quad3() & 0xff;
+		sa.sin6_addr.s6_addr[0] = ip.host.quad[0] >> 24;
+		sa.sin6_addr.s6_addr[1] = (ip.host.quad[0] >> 16) & 0xff;
+		sa.sin6_addr.s6_addr[2] = (ip.host.quad[0] >> 8) & 0xff;
+		sa.sin6_addr.s6_addr[3] = ip.host.quad[0] & 0xff;
+		sa.sin6_addr.s6_addr[4] = ip.host.quad[1] >> 24;
+		sa.sin6_addr.s6_addr[5] = (ip.host.quad[1] >> 16) & 0xff;
+		sa.sin6_addr.s6_addr[6] = (ip.host.quad[1] >> 8) & 0xff;
+		sa.sin6_addr.s6_addr[7] = ip.host.quad[1] & 0xff;
+		sa.sin6_addr.s6_addr[8] = ip.host.quad[2] >> 24;
+		sa.sin6_addr.s6_addr[9] = (ip.host.quad[2] >> 16) & 0xff;
+		sa.sin6_addr.s6_addr[10] = (ip.host.quad[2] >> 8) & 0xff;
+		sa.sin6_addr.s6_addr[11] = ip.host.quad[2] & 0xff;
+		sa.sin6_addr.s6_addr[12] = ip.host.quad[3] >> 24;
+		sa.sin6_addr.s6_addr[13] = (ip.host.quad[3] >> 16) & 0xff;
+		sa.sin6_addr.s6_addr[14] = (ip.host.quad[3] >> 8) & 0xff;
+		sa.sin6_addr.s6_addr[15] = ip.host.quad[3] & 0xff;
 
 #else
 		sa.sin6_addr.__in6_u.__u6_addr32[0] = htonl(ip.host.quad[0]);
