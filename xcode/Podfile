@@ -4,7 +4,7 @@ project 'setka/setka.xcodeproj'
 
 platform :ios, '8.0'
 
-target "%name%" do
+target "setka" do
 	pod 'utki', '>= 1.1.30'
 	pod 'opros', '>= 1.0.28'
 	pod 'nitki', '>= 1.0.14'
