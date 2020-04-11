@@ -241,9 +241,13 @@ ip_address tcp_socket::get_local_address(){
 	socklen_t len = sizeof(addr);
 #endif
 
-	if(getsockname(this->sock, reinterpret_cast<sockaddr*>(&addr), &len)  == socket_error){
-		// TODO: use std::system_error?
-		throw std::runtime_error("Socket::GetLocalAddress(): getsockname() failed");
+	if(getsockname(this->sock, reinterpret_cast<sockaddr*>(&addr), &len) == socket_error){
+#if M_OS == M_OS_WINDOWS
+		int error_code = WSAGetLastError();
+#else
+		int error_code = errno;
+#endif
+		throw std::system_error(error_code, std::generic_category(), "could not get local address, getsockname() failed");
 	}	
 
 	return make_ip_address(addr);
