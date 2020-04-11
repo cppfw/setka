@@ -22,9 +22,10 @@ init_guard::init_guard(){
 #if M_OS == M_OS_WINDOWS
 	WORD versionWanted = MAKEWORD(2,2);
 	WSADATA wsaData;
-	if(WSAStartup(versionWanted, &wsaData) != 0 ){
-		// TODO: use std::system_error?
-		throw std::runtime_error("SocketLib::SocketLib(): Winsock 2.2 initialization failed");
+	if(int error = WSAStartup(versionWanted, &wsaData)){
+		std::stringstream ss;
+		ss << "WSAStartup(): Winsock 2.2 initialization failed, error code = " << error;
+		throw std::runtime_error(ss.str());
 	}
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_UNIX || M_OS == M_OS_MACOSX
 	// SIGPIPE is generated when a remote socket is closed

@@ -87,8 +87,7 @@ void socket::set_nonblocking_mode(){
 	{
 		u_long mode = 1;
 		if(ioctlsocket(this->sock, FIONBIO, &mode) != 0){
-			// TODO: use std::system_error?
-			throw std::runtime_error("socket::SetNonBlockingMode(): ioctlsocket(FIONBIO) failed");
+			throw std::system_error(WSAGetLastError(), std::generic_category(), "could not set socket non-blocking mode, ioctlsocket(FIONBIO) failed");
 		}
 	}
 	
@@ -96,12 +95,10 @@ void socket::set_nonblocking_mode(){
 	{
 		int flags = fcntl(this->sock, F_GETFL, 0);
 		if(flags == -1){
-			// TODO: use std::system_error?
-			throw std::runtime_error("socket::SetNonBlockingMode(): fcntl(F_GETFL) failed");
+			throw std::system_error(errno, std::generic_category(), "could not set socket non-blocking mode, fcntl(F_GETFL) failed");
 		}
 		if(fcntl(this->sock, F_SETFL, flags | O_NONBLOCK) != 0){
-			// TODO: use std::system_error?
-			throw std::runtime_error("socket::SetNonBlockingMode(): fcntl(F_SETFL) failed");
+			throw std::system_error(errno, std::generic_category(), "could not set socket non-blocking mode, fcntl(F_SETFL) failed");
 		}
 	}
 #else
@@ -130,8 +127,7 @@ uint16_t socket::get_local_port(){
 			&len
 		) < 0)
 	{
-		// TODO: use std::system_error?
-		throw std::runtime_error("socket::GetLocalPort(): getsockname() failed");
+		throw std::system_error(errno, std::generic_category(), "could not get local port, getsockname() failed");
 	}
 	
 	if(addr.ss_family == AF_INET){
@@ -154,12 +150,11 @@ bool socket::check_signaled(){
 	memset(&events, 0, sizeof(events));
 	ASSERT(*this)
 	if(WSAEnumNetworkEvents(this->sock, this->event_for_waitable, &events) != 0){
-		// TODO: use std::system_error?
-		throw std::runtime_error("socket::CheckSignaled(): WSAEnumNetworkEvents() failed");
+		throw std::system_error(WSAGetLastError(), std::generic_category(), "could not check for network events, WSAEnumNetworkEvents() failed");
 	}
 
 	// NOTE: sometimes no events are reported, don't know why.
-//		ASSERT(events.lNetworkEvents != 0)
+//	ASSERT(events.lNetworkEvents != 0)
 
 	if((events.lNetworkEvents & FD_CLOSE) != 0){
 		this->readiness_flags.set(opros::ready::error);
@@ -211,8 +206,7 @@ void socket::create_event_for_waitable(){
 	ASSERT(this->event_for_waitable== WSA_INVALID_EVENT)
 	this->event_for_waitable= WSACreateEvent();
 	if(this->event_for_waitable== WSA_INVALID_EVENT){
-		// TODO: use std::system_error?
-		throw std::runtime_error("socket::CreateEventForWaitable(): could not create event (Win32) for implementing Waitable");
+		throw std::system_error(WSAGetLastError(), std::generic_category(), "could not create event, WSACreateEvent() failed");
 	}
 }
 
@@ -231,8 +225,7 @@ void socket::set_waiting_events_for_windows(long flags){
 			flags
 		) != 0)
 	{
-		// TODO: use std::system_error?
-		throw std::runtime_error("socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
+		throw std::system_error(WSAGetLAstError(), std::generic_category(), "could not associate event with socket, WSAEventSelect() failed");
 	}
 }
 

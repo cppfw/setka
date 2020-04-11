@@ -28,10 +28,12 @@ void udp_socket::open(uint16_t port){
 
 		if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
+			int error_code = WSAGetLastError();
 			this->close_event_for_waitable();
+#else
+			int error_code = errno;
 #endif
-			// TODO: use std::system_error?
-			throw std::runtime_error("tcp_server_socket::Open(): Couldn't create socket");
+			throw std::system_error(error_code, std::generic_category(), "couldn't create socket, socket() failed");
 		}
 
 		this->ipv4 = true;
@@ -47,7 +49,7 @@ void udp_socket::open(uint16_t port){
 		void* noPtr = &no;
 #endif
 		if(setsockopt(this->sock, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
-			// Dual stack is not supported, proceed with IPv4 only.
+			// dual stack is not supported, proceed with IPv4 only
 			
 			this->close(); // close IPv6 socket
 			
@@ -61,10 +63,12 @@ void udp_socket::open(uint16_t port){
 	
 			if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
+				int error_code = WSAGetLastError();
 				this->close_event_for_waitable();
+#else
+				int error_code = errno;
 #endif
-				// TODO: use std::system_error?
-				throw std::runtime_error("tcp_server_socket::Open(): Couldn't create socket");
+				throw std::system_error(error_code, std::generic_category(), "couldn't create socket, socket() failed");
 			}
 			
 			this->ipv4 = true;
@@ -106,21 +110,7 @@ void udp_socket::open(uint16_t port){
 #else
 			int errorCode = errno;
 #endif
-				std::stringstream ss;
-				ss << "udp_socket::Open(): could not bind to local port, error code = " << errorCode << ": ";
-#if M_COMPILER == M_COMPILER_MSVC
-				{
-					const size_t msgbufSize = 0xff;
-					char msgbuf[msgbufSize];
-					strerror_s(msgbuf, msgbufSize, errorCode);
-					msgbuf[msgbufSize - 1] = 0;//make sure the string is null-terminated
-					ss << msgbuf;
-				}
-#else
-				ss << strerror(errorCode);
-#endif
-			// TODO: use std::system_error?
-			throw std::runtime_error(ss.str());
+			throw std::system_error(errorCode, std::generic_category(), "could not bind socket to network address, bind() failed");
 		}
 	}
 
@@ -138,9 +128,15 @@ void udp_socket::open(uint16_t port){
 				sizeof(yes)
 			) == socket_error)
 		{
+#	if M_OS == M_OS_WINDOWS
+			int error_code = WSAGetLastError();
+#	else
+			int error_code = errno;
+#	endif
+
 			this->close();
-			// TODO: use std::system_error?
-			throw std::runtime_error("udp_socket::Open(): failed setting broadcast option");
+
+			throw std::system_error(error_code, std::generic_category(), "could not set broadcast option, setsockopt() failed");
 		}
 	}
 #else
@@ -223,11 +219,6 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const ip_address& destina
 		if(len == socket_error){
 #if M_OS == M_OS_WINDOWS
 			int errorCode = WSAGetLastError();
-			
-			if(errorCode == WSAEAFNOSUPPORT){
-				// TODO: use std::system_error?
-				throw std::runtime_error("Address family is not supported by protocol family. Note, that libting on WinXP does not support IPv6.");
-			}
 #else
 			int errorCode = errno;
 #endif
@@ -237,21 +228,7 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const ip_address& destina
 				// can't send more bytes, return 0 bytes sent
 				len = 0;
 			}else{
-				std::stringstream ss;
-				ss << "udp_socket::Send(): sendto() failed, error code = " << errorCode << ": ";
-#if M_COMPILER == M_COMPILER_MSVC
-				{
-					const size_t msgbufSize = 0xff;
-					char msgbuf[msgbufSize];
-					strerror_s(msgbuf, msgbufSize, errorCode);
-					msgbuf[msgbufSize - 1] = 0; // make sure the string is null-terminated
-					ss << msgbuf;
-				}
-#else
-				ss << strerror(errorCode);
-#endif
-				// TODO: use std::system_error?
-				throw std::runtime_error(ss.str());
+				throw std::system_error(errorCode, std::generic_category(), "could not send data over UDP, sendto() failed");
 			}
 		}
 		break;
@@ -313,21 +290,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, ip_address &out_sender_addre
 			}else if(errorCode == error_again){
 				return 0; // no data available, return 0 bytes received
 			}else{
-				std::stringstream ss;
-				ss << "udp_socket::Recv(): recvfrom() failed, error code = " << errorCode << ": ";
-#if M_COMPILER == M_COMPILER_MSVC
-				{
-					const size_t msgbufSize = 0xff;
-					char msgbuf[msgbufSize];
-					strerror_s(msgbuf, msgbufSize, errorCode);
-					msgbuf[msgbufSize - 1] = 0;//make sure the string is null-terminated
-					ss << msgbuf;
-				}
-#else
-				ss << strerror(errorCode);
-#endif
-				// TODO: use std::system_error?
-				throw std::runtime_error(ss.str());
+				throw std::system_error(errorCode, std::generic_category(), "could not receive data over UDP, recvfrom() failed");
 			}
 		}
 		break;

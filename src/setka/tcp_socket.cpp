@@ -6,11 +6,7 @@
 #	include <netinet/in.h>
 #endif
 
-
-
 using namespace setka;
-
-
 
 void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 	if(*this){
@@ -28,10 +24,12 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 		);
 	if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
+		int error_code = WSAGetLastError();
 		this->close_event_for_waitable();
+#else
+		int error_code = errno;
 #endif
-		// TODO: use std::system_error?
-		throw std::runtime_error("tcp_socket::Open(): Couldn't create socket");
+		throw std::system_error(error_code, std::generic_category(), "couldn't create socket, socket() failed");
 	}
 
 	// disable Naggle algorithm if required
@@ -83,7 +81,7 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 		sa.sin6_port = htons(ip.port);
 	}
 
-	// Connect to the remote host
+	// connect to the remote host
 	if(connect(
 			this->sock,
 			reinterpret_cast<sockaddr *>(&sockAddr),
@@ -98,31 +96,16 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 #	error "Unsupported OS"
 #endif
 		if(errorCode == error_interrupted){
-			//do nothing, for non-blocking socket the connection request still should remain active
+			// do nothing, for non-blocking socket the connection request still should remain active
 		}else if(errorCode == error_in_progress){
-			//do nothing, this is not an error, we have non-blocking socket
+			// do nothing, this is not an error, we have non-blocking socket
 		}else{
-			std::stringstream ss;
-			ss << "tcp_socket::Open(): connect() failed, error code = " << errorCode << ": ";
-#if M_COMPILER == M_COMPILER_MSVC
-			{
-				const size_t msgbufSize = 0xff;
-				char msgbuf[msgbufSize];
-				strerror_s(msgbuf, msgbufSize, errorCode);
-				msgbuf[msgbufSize - 1] = 0;//make sure the string is null-terminated
-				ss << msgbuf;
-			}
-#else
-			ss << strerror(errorCode);
-#endif
 			this->close();
-			// TODO: use std::system_error?
-			throw std::runtime_error(ss.str());
+
+			throw std::system_error(errorCode, std::generic_category(), "could not connect to remote host, connect() failed");
 		}
 	}
 }
-
-
 
 size_t tcp_socket::send(const utki::span<uint8_t> buf){
 	if(!*this){
@@ -156,21 +139,7 @@ size_t tcp_socket::send(const utki::span<uint8_t> buf){
 				// can't send more bytes, return 0 bytes sent
 				len = 0;
 			}else{
-				std::stringstream ss;
-				ss << "tcp_socket::Send(): send() failed, error code = " << errorCode << ": ";
-#if M_COMPILER == M_COMPILER_MSVC
-				{
-					const size_t msgbufSize = 0xff;
-					char msgbuf[msgbufSize];
-					strerror_s(msgbuf, msgbufSize, errorCode);
-					msgbuf[msgbufSize - 1] = 0;//make sure the string is null-terminated
-					ss << msgbuf;
-				}
-#else
-				ss << strerror(errorCode);
-#endif
-				// TODO: use std::system_error?
-				throw std::runtime_error(ss.str());
+				throw std::system_error(errorCode, std::generic_category(), "could not send data over network, send() failed");
 			}
 		}
 		break;
@@ -216,21 +185,7 @@ size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 				// no data available, return 0 bytes received
 				len = 0;
 			}else{
-				std::stringstream ss;
-				ss << "tcp_socket::Recv(): recv() failed, error code = " << errorCode << ": ";
-#if M_COMPILER == M_COMPILER_MSVC
-				{
-					const size_t msgbufSize = 0xff;
-					char msgbuf[msgbufSize];
-					strerror_s(msgbuf, msgbufSize, errorCode);
-					msgbuf[msgbufSize - 1] = 0; // make sure the string is null-terminated
-					ss << msgbuf;
-				}
-#else
-				ss << strerror(errorCode);
-#endif
-				// TODO: use std::system_error?
-				throw std::runtime_error(ss.str());
+				throw std::system_error(errorCode, std::generic_category(), "could not receive data form network, recv() failed");
 			}
 		}
 		break;
@@ -240,10 +195,7 @@ size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 	return size_t(len);
 }
 
-
-
 namespace{
-
 ip_address make_ip_address(const sockaddr_storage& addr){
 	if(addr.ss_family == AF_INET){
 		const sockaddr_in &a = reinterpret_cast<const sockaddr_in&>(addr);
@@ -274,10 +226,7 @@ ip_address make_ip_address(const sockaddr_storage& addr){
 			);
 	}
 }
-
-}//~namespace
-
-
+}
 
 ip_address tcp_socket::get_local_address(){
 	if(!*this){
@@ -314,21 +263,12 @@ ip_address tcp_socket::get_remote_address(){
 #endif
 
 	if(getpeername(this->sock, reinterpret_cast<sockaddr*>(&addr), &len) == socket_error){
-		std::stringstream ss;
-		ss << "tcp_socket::GetRemoteAddress(): getpeername() failed: ";
-#if M_COMPILER == M_COMPILER_MSVC
-		{
-			const size_t msgbufSize = 0xff;
-			char msgbuf[msgbufSize];
-			strerror_s(msgbuf, msgbufSize, WSAGetLastError());
-			msgbuf[msgbufSize - 1] = 0;//make sure the string is null-terminated
-			ss << msgbuf;
-		}
+#if M_OS == M_WINDOWS
+		int error_code = WSAGetLastError();
 #else
-		ss << strerror(errno);
+		int error_code = errno;
 #endif
-		// TODO: use std::system_error?
-		throw std::runtime_error(ss.str());
+		throw std::system_error(error_code, std::generic_category(), "could not get remote address, getpeername() failed");
 	}
 
 	return make_ip_address(addr);

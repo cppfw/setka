@@ -32,8 +32,7 @@ void tcp_server_socket::open(uint16_t port, bool disable_naggle, uint16_t queueL
 #if M_OS == M_OS_WINDOWS
 			this->close_event_for_waitable();
 #endif
-			// TODO: use std::system_error?
-			throw std::runtime_error("tcp_server_socket::Open(): Couldn't create IPv4 socket");
+			throw std::system_error(errno, std::generic_category(), "couldn't create IPv4 TCP server socket, socket() failed");
 		}
 		
 		ipv4 = true;
@@ -65,8 +64,7 @@ void tcp_server_socket::open(uint16_t port, bool disable_naggle, uint16_t queueL
 #if M_OS == M_OS_WINDOWS
 				this->close_event_for_waitable();
 #endif
-				// TODO: use std::system_error?
-				throw std::runtime_error("tcp_server_socket::Open(): Couldn't create IPv4 socket");
+				throw std::system_error(errno, std::generic_category(), "couldn't create IPv4 server socket, socket() failed");
 			}
 			
 			ipv4 = true;
@@ -113,28 +111,23 @@ void tcp_server_socket::open(uint16_t port, bool disable_naggle, uint16_t queueL
 #	error "Unsupported OS"
 #endif
 		
-		std::stringstream ss;
-		ss << "tcp_server_socket::Open(): bind() failed, error code = " << errorCode << ": ";
-#if M_COMPILER == M_COMPILER_MSVC
-		{
-			const size_t msgbufSize = 0xff;
-			char msgbuf[msgbufSize];
-			strerror_s(msgbuf, msgbufSize, errorCode);
-			msgbuf[msgbufSize - 1] = 0; // make sure the string is null-terminated
-			ss << msgbuf;
-		}
-#else
-		ss << strerror(errorCode);
-#endif
 		this->close();
-		// TODO: use std::system_error?
-		throw std::runtime_error(ss.str());
+
+		throw std::system_error(errorCode, std::generic_category(), "could not bind socket, bind() failed");
 	}
 
 	if(listen(this->sock, int(queueLength)) == socket_error){
+#if M_OS == M_OS_WINDOWS
+		int errorCode = WSAGetLastError();
+#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+		int errorCode = errno;
+#else
+#	error "Unsupported OS"
+#endif
+
 		this->close();
-		// TODO: use std::system_error?
-		throw std::runtime_error("tcp_server_socket::Open(): Couldn't listen to local port");
+		
+		throw std::system_error(errorCode, std::generic_category(), "couldn't listen on the local port, listen() failed");
 	}
 
 	this->set_nonblocking_mode();
