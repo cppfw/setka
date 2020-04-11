@@ -802,7 +802,12 @@ private:
 								this->CallCallback(removedResolver.operator->(), dns_resolver::result::error, 0);
 							}
 						}
-					}catch(std::exception& e){
+					}catch(std::exception&
+#ifdef DEBUG
+					e
+#endif
+						)
+					{
 						TRACE(<< "writing to a socket failed: " << e.what() << std::endl)
 						this->isExiting = true;
 						this->RemoveAllResolvers();

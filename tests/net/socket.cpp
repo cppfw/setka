@@ -15,16 +15,28 @@ namespace{
 bool IsIPv6SupportedByOS(){
 #if M_OS == M_OS_WINDOWS
 	{
-		OSVERSIONINFO osvi;
+		OSVERSIONINFOEX osvi;
 		memset(&osvi, 0, sizeof(osvi));
 		osvi.dwOSVersionInfoSize = sizeof(osvi);
 
-		GetVersionEx(&osvi);
+		osvi.dwMajorVersion = 5; // version 5 is WinXP
+		osvi.dwMinorVersion = 0;
+		osvi.wServicePackMajor = 0;
+		osvi.wServicePackMinor = 0;
 
-		if(osvi.dwMajorVersion > 5){
-			return true;
-		}else{
+		DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR;
+
+		if(VerifyVersionInfo(
+				&osvi,
+				mask,
+				VerSetConditionMask(0, mask, VER_GREATER) // we check if current Windows version is greater than WinXP
+			) == 0)
+		{
+			// Windows version is WinXP or before
+
 			return false;
+		}else{
+			return true;
 		}
 	}
 #else
