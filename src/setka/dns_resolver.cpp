@@ -969,20 +969,37 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 #if M_OS == M_OS_WINDOWS
 	// check OS version, if WinXP then start from record A, since setka does not support IPv6 on WinXP
 	{
-		OSVERSIONINFO osvi;
+		OSVERSIONINFOEX osvi;
 		memset(&osvi, 0, sizeof(osvi));
 		osvi.dwOSVersionInfoSize = sizeof(osvi);
 
-		GetVersionEx(&osvi); //TODO: GetVersionEx() is deprecated, replace with VerifyVersionInfo()
+		osvi.dwMajorVersion = 5; // version 5 is WinXP
+		osvi.dwMinorVersion = 0;
+		osvi.wServicePackMajor = 0;
+		osvi.wServicePackMinor = 0;
 
-		if(osvi.dwMajorVersion > 5){
-			r->recordType = D_DNSRecordAAAA; // start with IPv6 first
-		}else{
+		DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR;
+
+		if(VerifyVersionInfo(
+				&osvi,
+				mask,
+				VerSetConditionMask(0, mask, VER_GREATER) // we check if current Windows version is greater than WinXP
+			) == 0)
+		{
+			DWORD last_error = GetLastError();
+			if (last_error != ERROR_OLD_WIN_VERSION) {
+				throw std::system_error(last_error, std::generic_category(), "Win32: VerifyVersionInfo() failed");
+			}
+
+			// Windows version is WinXP or before
+
 			r->recordType = D_DNSRecordA;
+		}else{
+			r->recordType = D_DNSRecordAAAA; // start with IPv6 first
 		}
 	}
 #else
-	r->recordType = D_DNSRecordAAAA;//start with IPv6 first
+	r->recordType = D_DNSRecordAAAA; // start with IPv6 first
 #endif
 	
 	std::lock_guard<decltype(dns::thread->mutex)> mutexGuard2(dns::thread->mutex);
