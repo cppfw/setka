@@ -225,7 +225,7 @@ void socket::set_waiting_events_for_windows(long flags){
 			flags
 		) != 0)
 	{
-		throw std::system_error(WSAGetLAstError(), std::generic_category(), "could not associate event with socket, WSAEventSelect() failed");
+		throw std::system_error(WSAGetLastError(), std::generic_category(), "could not associate event with socket, WSAEventSelect() failed");
 	}
 }
 
