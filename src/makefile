@@ -27,15 +27,14 @@ this_cxxflags += -fstrict-aliasing # strict aliasing (in order to comply with th
 this_cxxflags += -std=c++14
 this_cxxflags += -g
 
-this_ldlibs += -lopros -lnitki -lpapki -lutki
+this_ldlibs += -lopros -lnitki -lpapki -lutki -lstdc++
 
 ifeq ($(os),linux)
-    this_cxxflags += -fPIC # Since we are building shared library, we need Position-Independend Code
-#    this_ldlibs += -lpthread -lrt
+    this_cxxflags += -fPIC # since we are building shared library, we need Position-Independend Code
 else ifeq ($(os),windows)
- #   this_ldlibs += -lws2_32
+    this_ldlibs += -lws2_32
 else ifeq ($(os),macosx)
-    this_cxxflags += -stdlib=libc++ #this is needed to be able to use c++11 std lib
+    this_cxxflags += -stdlib=libc++ # this is needed to be able to use c++11 std lib
 endif
 
 $(eval $(prorab-build-lib))

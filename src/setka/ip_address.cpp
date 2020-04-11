@@ -54,14 +54,14 @@ ip_address::ip ip_address::ip::parse_v4(const char* str){
 #elif M_OS == M_OS_WINDOWS
 	INT len = sizeof(a);
 	INT res = WSAStringToAddress(
-			const_cast<char*>(str), //NOTE: when compiling in MS Visual Studio, set "Use multi-byte character set" in project properties to avoid usage of wchar_t
+			const_cast<char*>(str), // NOTE: when compiling in MS Visual Studio, set "Use multi-byte character set" in project properties to avoid usage of wchar_t
 			AF_INET,
 			NULL,
 			reinterpret_cast<sockaddr*>(&a),
 			&len
 		);
 	if(res != 0){
-		throw BadIPHostFormatExc();
+		throw std::runtime_error("bad IP address format");
 	}
 #else
 #	error "Unknown OS"

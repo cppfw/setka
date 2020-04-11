@@ -28,7 +28,7 @@ void udp_socket::open(uint16_t port){
 
 		if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
-			this->closeEventForWaitable();
+			this->close_event_for_waitable();
 #endif
 			// TODO: use std::system_error?
 			throw std::runtime_error("tcp_server_socket::Open(): Couldn't create socket");
@@ -368,12 +368,12 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, ip_address &out_sender_addre
 }
 
 #if M_OS == M_OS_WINDOWS
-void udp_socket::set_waiting_events(uint32_t flagsToWaitFor){
+void udp_socket::set_waiting_flags(utki::flags<opros::ready> waiting_flags){
 	long flags = FD_CLOSE;
-	if((flagsToWaitFor & Waitable::READ) != 0){
+	if(waiting_flags.get(opros::ready::read)){
 		flags |= FD_READ;
 	}
-	if((flagsToWaitFor & Waitable::WRITE) != 0){
+	if(waiting_flags.get(opros::ready::write)){
 		flags |= FD_WRITE;
 	}
 	this->set_waiting_events_for_windows(flags);

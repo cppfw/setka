@@ -30,7 +30,7 @@ void socket::close()noexcept{
 		shutdown(this->sock, SD_BOTH);
 		closesocket(this->sock);
 
-		this->closeEventForWaitable();
+		this->close_event_for_waitable();
 #elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
 		::close(this->sock);
 #else
@@ -55,8 +55,8 @@ setka::socket& socket::operator=(socket&& s){
 	this->sock = s.sock;
 
 #if M_OS == M_OS_WINDOWS
-	this->eventForWaitable = s.eventForWaitable;
-	const_cast<Socket&>(s).eventForWaitable = WSA_INVALID_EVENT;
+	this->event_for_waitable = s.event_for_waitable;
+	const_cast<socket&>(s).event_for_waitable= WSA_INVALID_EVENT;
 #endif
 
 	const_cast<socket&>(s).sock = invalid_socket;
@@ -87,7 +87,8 @@ void socket::set_nonblocking_mode(){
 	{
 		u_long mode = 1;
 		if(ioctlsocket(this->sock, FIONBIO, &mode) != 0){
-			throw std::exception("socket::SetNonBlockingMode(): ioctlsocket(FIONBIO) failed");
+			// TODO: use std::system_error?
+			throw std::runtime_error("socket::SetNonBlockingMode(): ioctlsocket(FIONBIO) failed");
 		}
 	}
 	
@@ -152,8 +153,9 @@ bool socket::check_signaled(){
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
 	ASSERT(*this)
-	if(WSAEnumNetworkEvents(this->sock, this->eventForWaitable, &events) != 0){
-		throw std::exception("socket::CheckSignaled(): WSAEnumNetworkEvents() failed");
+	if(WSAEnumNetworkEvents(this->sock, this->event_for_waitable, &events) != 0){
+		// TODO: use std::system_error?
+		throw std::runtime_error("socket::CheckSignaled(): WSAEnumNetworkEvents() failed");
 	}
 
 	// NOTE: sometimes no events are reported, don't know why.
@@ -164,67 +166,73 @@ bool socket::check_signaled(){
 	}
 
 	if((events.lNetworkEvents & FD_READ) != 0){
-		this->setCanReadFlag();
-		if(events.iErrorCode[ASSCOND(FD_READ_BIT, < FD_MAX_EVENTS)] != 0){
-			this->setErrorFlag();
+		this->readiness_flags.set(opros::ready::read);
+		ASSERT(FD_READ_BIT < FD_MAX_EVENTS)
+		if(events.iErrorCode[FD_READ_BIT] != 0){
+			this->readiness_flags.set(opros::ready::error);
 		}
 	}
 
 	if((events.lNetworkEvents & FD_ACCEPT) != 0){
-		this->setCanReadFlag();
-		if(events.iErrorCode[ASSCOND(FD_ACCEPT_BIT, < FD_MAX_EVENTS)] != 0){
-			this->setErrorFlag();
+		this->readiness_flags.set(opros::ready::read);
+		ASSERT(FD_ACCEPT_BIT < FD_MAX_EVENTS)
+		if(events.iErrorCode[FD_ACCEPT_BIT] != 0){
+			this->readiness_flags.set(opros::ready::error);
 		}
 	}
 
 	if((events.lNetworkEvents & FD_WRITE) != 0){
-		this->setCanWriteFlag();
-		if(events.iErrorCode[ASSCOND(FD_WRITE_BIT, < FD_MAX_EVENTS)] != 0){
-			this->setErrorFlag();
+		this->readiness_flags.set(opros::ready::write);
+		ASSERT(FD_WRITE_BIT < FD_MAX_EVENTS)
+		if(events.iErrorCode[FD_WRITE_BIT] != 0){
+			this->readiness_flags.set(opros::ready::error);
 		}
 	}
 
 	if((events.lNetworkEvents & FD_CONNECT) != 0){
-		this->setCanWriteFlag();
-		if(events.iErrorCode[ASSCOND(FD_CONNECT_BIT, < FD_MAX_EVENTS)] != 0){
-			this->setErrorFlag();
+		this->readiness_flags.set(opros::ready::write);
+		ASSERT(FD_CONNECT_BIT < FD_MAX_EVENTS)
+		if(events.iErrorCode[FD_CONNECT_BIT] != 0){
+			this->readiness_flags.set(opros::ready::error);
 		}
 	}
 
 #ifdef DEBUG
 	// if some event occurred then some of readiness flags should be set
 	if(events.lNetworkEvents != 0){
-		ASSERT_ALWAYS(this->readinessFlags != 0)
+		ASSERT_ALWAYS(!this->readiness_flags.is_clear())
 	}
 #endif
 
-	return this->Waitable::check_signaled();
+	return this->waitable::check_signaled();
 }
 
 void socket::create_event_for_waitable(){
-	ASSERT(this->eventForWaitable == WSA_INVALID_EVENT)
-	this->eventForWaitable = WSACreateEvent();
-	if(this->eventForWaitable == WSA_INVALID_EVENT){
-		throw std::exception("socket::CreateEventForWaitable(): could not create event (Win32) for implementing Waitable");
+	ASSERT(this->event_for_waitable== WSA_INVALID_EVENT)
+	this->event_for_waitable= WSACreateEvent();
+	if(this->event_for_waitable== WSA_INVALID_EVENT){
+		// TODO: use std::system_error?
+		throw std::runtime_error("socket::CreateEventForWaitable(): could not create event (Win32) for implementing Waitable");
 	}
 }
 
 void socket::close_event_for_waitable(){
-	ASSERT(this->eventForWaitable != WSA_INVALID_EVENT)
-	WSACloseEvent(this->eventForWaitable);
-	this->eventForWaitable = WSA_INVALID_EVENT;
+	ASSERT(this->event_for_waitable != WSA_INVALID_EVENT)
+	WSACloseEvent(this->event_for_waitable);
+	this->event_for_waitable= WSA_INVALID_EVENT;
 }
 
 void socket::set_waiting_events_for_windows(long flags){
-	ASSERT_INFO(*this && (this->eventForWaitable != WSA_INVALID_EVENT), "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.")
+	ASSERT_INFO(*this && (this->event_for_waitable != WSA_INVALID_EVENT), "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.")
 
 	if(WSAEventSelect(
 			this->sock,
-			this->eventForWaitable,
+			this->event_for_waitable,
 			flags
 		) != 0)
 	{
-		throw std::exception("socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
+		// TODO: use std::system_error?
+		throw std::runtime_error("socket::setWaitingEventsForWindows(): could not associate event (Win32) with socket");
 	}
 }
 

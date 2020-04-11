@@ -558,7 +558,8 @@ private:
 							&this->key
 						) != ERROR_SUCCESS)
 					{
-						throw std::exception("InitDNS(): RegOpenKey() failed");
+						// TODO: use std::system_error?
+						throw std::runtime_error("InitDNS(): RegOpenKey() failed");
 					}
 				}
 				

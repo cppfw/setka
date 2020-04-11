@@ -62,7 +62,7 @@ public:
 
 #if M_OS == M_OS_WINDOWS
 private:
-	void set_waiting_events(uint32_t flagsToWaitFor)override;
+	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
 #endif
 };
 }

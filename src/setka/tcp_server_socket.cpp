@@ -30,7 +30,7 @@ void tcp_server_socket::open(uint16_t port, bool disable_naggle, uint16_t queueL
 
 		if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
-			this->closeEventForWaitable();
+			this->close_event_for_waitable();
 #endif
 			// TODO: use std::system_error?
 			throw std::runtime_error("tcp_server_socket::Open(): Couldn't create IPv4 socket");
@@ -56,14 +56,14 @@ void tcp_server_socket::open(uint16_t port, bool disable_naggle, uint16_t queueL
 			// create IPv4 socket
 			
 #if M_OS == M_OS_WINDOWS
-			this->createEventForWaitable();
+			this->create_event_for_waitable();
 #endif			
 			
 			this->sock = ::socket(PF_INET, SOCK_STREAM, 0);
 	
 			if(this->sock == invalid_socket){
 #if M_OS == M_OS_WINDOWS
-				this->closeEventForWaitable();
+				this->close_event_for_waitable();
 #endif
 				// TODO: use std::system_error?
 				throw std::runtime_error("tcp_server_socket::Open(): Couldn't create IPv4 socket");
@@ -170,11 +170,11 @@ tcp_socket tcp_server_socket::accept(){
 	}
 
 #if M_OS == M_OS_WINDOWS
-	sock.createEventForWaitable();
+	s.create_event_for_waitable();
 
 	// NOTE: accepted socket is associated with the same event object as the listening socket which accepted it.
 	// Re-associate the socket with its own event object.
-	sock.setWaitingEvents(0);
+	s.set_waiting_flags(utki::make_flags<opros::ready>({}));
 #endif
 
 	s.set_nonblocking_mode();
@@ -186,18 +186,16 @@ tcp_socket tcp_server_socket::accept(){
 	return s; // return a newly created socket
 }
 
-
-
 #if M_OS == M_OS_WINDOWS
-void tcp_server_socket::setWaitingEvents(uint32_t flagsToWaitFor){
-	if(flagsToWaitFor != 0 && flagsToWaitFor != Waitable::READ){
-		throw std::logic_error("tcp_server_socket::SetWaitingEvents(): only Waitable::READ flag allowed");
+void tcp_server_socket::set_waiting_flags(utki::flags<opros::ready> waiting_flags){
+	if(!waiting_flags.is_clear() && !waiting_flags.get(opros::ready::read)){
+		throw std::logic_error("tcp_server_socket::SetWaitingEvents(): only READ flag allowed");
 	}
 
 	long flags = FD_CLOSE;
-	if((flagsToWaitFor & Waitable::READ) != 0){
+	if(waiting_flags.get(opros::ready::read)){
 		flags |= FD_ACCEPT;
 	}
-	this->setWaitingEventsForWindows(flags);
+	this->set_waiting_events_for_windows(flags);
 }
 #endif

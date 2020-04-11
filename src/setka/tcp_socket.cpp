@@ -17,9 +17,8 @@ void tcp_socket::open(const ip_address& ip, bool disableNaggle){
 		throw std::logic_error("tcp_socket::Open(): socket already opened");
 	}
 
-	// create event for implementing waitable
 #if M_OS == M_OS_WINDOWS
-	this->createEventForWaitable();
+	this->create_event_for_waitable();
 #endif
 
 	this->sock = ::socket(
@@ -336,13 +335,13 @@ ip_address tcp_socket::get_remote_address(){
 }
 
 #if M_OS == M_OS_WINDOWS
-void tcp_socket::set_waiting_events(uint32_t flagsToWaitFor){
+void tcp_socket::set_waiting_flags(utki::flags<opros::ready> waiting_flags){
 	long flags = FD_CLOSE;
-	if((flagsToWaitFor & pogodi::Waitable::READ) != 0){
+	if(waiting_flags.get(opros::ready::read)){
 		flags |= FD_READ;
 		// NOTE: since it is not a tcp_server_socket, FD_ACCEPT is not needed here.
 	}
-	if((flagsToWaitFor & Waitable::WRITE) != 0){
+	if(waiting_flags.get(opros::ready::write)){
 		flags |= FD_WRITE | FD_CONNECT;
 	}
 	this->set_waiting_events_for_windows(flags);
