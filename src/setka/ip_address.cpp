@@ -40,7 +40,7 @@ ip_address::ip ip_address::ip::parse(const char* str){
 ip_address::ip ip_address::ip::parse_v4(const char* str){
 	sockaddr_in a;
 	
-#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
+#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS
 	int res = inet_pton(
 			AF_INET,
 			str,
@@ -51,18 +51,6 @@ ip_address::ip ip_address::ip::parse_v4(const char* str){
 		throw std::runtime_error("bad IP address format");
 	}
 
-#elif M_OS == M_OS_WINDOWS
-	INT len = sizeof(a);
-	INT res = WSAStringToAddress(
-			const_cast<char*>(str), // NOTE: when compiling in MS Visual Studio, set "Use multi-byte character set" in project properties to avoid usage of wchar_t
-			AF_INET,
-			NULL,
-			reinterpret_cast<sockaddr*>(&a),
-			&len
-		);
-	if(res != 0){
-		throw std::runtime_error("bad IP address format");
-	}
 #else
 #	error "Unknown OS"
 #endif
@@ -78,7 +66,7 @@ ip_address::ip ip_address::ip::parse_v6(const char* str){
 	in6_addr a;
 #endif	
 		
-#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
+#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS
 	int res = inet_pton(
 			AF_INET6,
 			str,
@@ -89,19 +77,6 @@ ip_address::ip ip_address::ip::parse_v6(const char* str){
 		throw std::runtime_error("bad IP address format");
 	}
 
-#elif M_OS == M_OS_WINDOWS
-	INT len = sizeof(aa);
-	INT res = WSAStringToAddress(
-			const_cast<char*>(str),
-			AF_INET6,
-			NULL,
-			reinterpret_cast<sockaddr*>(&aa),
-			&len
-		);
-	if(res != 0){
-		TRACE(<< "ip_address::ip::ParseIPv6(): WSAStringToAddress() failed, error = " <<  WSAGetLastError()<< ". Maybe IPv6 protocol is not installed in the Windows system, WSAStringToAddress() only supports IPv6 if it is installed." << std::endl)
-		throw std::runtime_error("invalid IPv6 address string");
-	}
 #else
 #	error "Unknown OS"
 #endif
