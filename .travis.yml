@@ -1,5 +1,3 @@
-sudo: required
-
 services:
 - docker
 
@@ -27,7 +25,7 @@ addons:
     packages:
     - myci
 
-matrix:
+jobs:
   include:
     - name: macosx
       os: osx
@@ -57,7 +55,7 @@ env:
   - MYCI_GIT_USERNAME=igagis
   - MYCI_GIT_ACCESS_TOKEN=$HOMEBREW_GITHUB_ACCESS_TOKEN
   - PACKAGE_NAME=setka
-  matrix:
+  jobs:
   - OS_REL=xenial OS=ubuntu DOCKER_IMAGE=$OS:$OS_REL PACKAGE_TYPE=deb
   - OS_REL=bionic OS=ubuntu DOCKER_IMAGE=$OS:$OS_REL PACKAGE_TYPE=deb
   - OS_REL=stretch OS=debian DOCKER_IMAGE=$OS:$OS_REL PACKAGE_TYPE=deb
@@ -152,25 +150,21 @@ before_deploy:
 
 deploy:
 - provider: script
-  skip_cleanup: true
   on:
     tags: true
     condition: $PACKAGE_TYPE = deb && -z "$TRAVIS_JOB_NAME"
   script: myci-deploy-debian-bintray.sh -u igagis -r $OS -p $PACKAGE_NAME -c main -d $OS_REL $TRAVIS_BUILD_DIR/../*.deb
 - provider: script
-  skip_cleanup: true
   script: myci-deploy-maven-bintray.sh -u igagis -r android -d io/github/igagis -p $PACKAGE_NAME -v $PACKAGE_VERSION android/$PACKAGE_NAME-$PACKAGE_VERSION.aar
   on:
     tags: true
     condition: $TRAVIS_JOB_NAME = android
 - provider: script
-  skip_cleanup: true
   script: myci-deploy-homebrew.sh -t igagis/tap
   on:
     tags: true
     condition: $TRAVIS_JOB_NAME = macosx
 - provider: script
-  skip_cleanup: true
   script: myci-deploy-cocoapods.sh -r igagis -v $PACKAGE_VERSION -u igagis -b cocoapods -p $PACKAGE_NAME-$PACKAGE_VERSION.zip cocoapods/$PACKAGE_NAME.podspec.in
   on:
     tags: true
