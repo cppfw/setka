@@ -46,7 +46,6 @@ init_guard::~init_guard()noexcept{
 	// clean up windows networking
 	if(WSACleanup() == SOCKET_ERROR){
 		if(WSAGetLastError() == WSAEINPROGRESS){
-			WSACancelBlockingCall();
 			WSACleanup();
 		}
 	}

@@ -967,7 +967,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 	r->dns = dnsIP;
 	
 #if M_OS == M_OS_WINDOWS
-	//check OS version, if WinXP then start from record A, since ting does not support IPv6 on WinXP
+	// check OS version, if WinXP then start from record A, since setka does not support IPv6 on WinXP
 	{
 		OSVERSIONINFO osvi;
 		memset(&osvi, 0, sizeof(osvi));
@@ -976,7 +976,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 		GetVersionEx(&osvi); //TODO: GetVersionEx() is deprecated, replace with VerifyVersionInfo()
 
 		if(osvi.dwMajorVersion > 5){
-			r->recordType = D_DNSRecordAAAA;//start with IPv6 first
+			r->recordType = D_DNSRecordAAAA; // start with IPv6 first
 		}else{
 			r->recordType = D_DNSRecordA;
 		}
@@ -987,7 +987,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 	
 	std::lock_guard<decltype(dns::thread->mutex)> mutexGuard2(dns::thread->mutex);
 	
-	//Find free ID, it will throw TooMuchRequestsExc if there are no free IDs
+	// find free ID, it will throw TooMuchRequestsExc if there are no free IDs
 	{
 		r->id = dns::thread->FindFreeId();
 		std::pair<dns::T_IdIter, bool> res =
