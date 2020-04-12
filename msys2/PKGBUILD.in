@@ -61,6 +61,7 @@ rootDir=$(pwd)/.. # project root directory
 
 prepare() {
 	cd "$rootDir"
+	make clean
 }
 
 build() {
