@@ -14,6 +14,8 @@ this_cxxflags :=
 
 ifeq ($(debug),true)
     this_cxxflags += -DDEBUG
+else
+    this_cxxflags += -O3
 endif
 
 this_cxxflags += -Wall # enable all warnings
