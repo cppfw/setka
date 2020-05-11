@@ -1,3 +1,9 @@
+libsetka (1.0.16) unstable; urgency=medium
+
+  * msys2 build fix
+
+ -- Ivan Gagis <igagis@gmail.com>  Mon, 11 May 2020 05:17:04 +0300
+
 libsetka (1.0.15) unstable; urgency=medium
 
   * update to latest libs
