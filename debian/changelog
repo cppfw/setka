@@ -1,3 +1,9 @@
+libsetka (1.0.15) unstable; urgency=medium
+
+  * update to latest libs
+
+ -- Ivan Gagis <igagis@gmail.com>  Mon, 11 May 2020 04:41:27 +0300
+
 libsetka (1.0.14) unstable; urgency=medium
 
   * O3 optimization
