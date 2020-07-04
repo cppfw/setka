@@ -146,7 +146,7 @@ void udp_socket::open(uint16_t port){
 	this->readiness_flags.clear();
 }
 
-size_t udp_socket::send(const utki::span<uint8_t> buf, const ip_address& destination_address){
+size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destination_address){
 	if(!*this){
 		throw std::logic_error("udp_socket::Send(): socket is not opened");
 	}
@@ -242,7 +242,7 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const ip_address& destina
 	return size_t(len);
 }
 
-size_t udp_socket::recieve(utki::span<uint8_t> buf, ip_address &out_sender_address){
+size_t udp_socket::recieve(utki::span<uint8_t> buf, address &out_sender_address){
 	if(!*this){
 		throw std::logic_error("udp_socket::Recv(): socket is not opened");
 	}
@@ -301,15 +301,15 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, ip_address &out_sender_addre
 
 	if(sockAddr.ss_family == AF_INET){
 		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(sockAddr);
-		out_sender_address = ip_address(
+		out_sender_address = address(
 				ntohl(a.sin_addr.s_addr),
 				uint16_t(ntohs(a.sin_port))
 			);
 	}else{
 		ASSERT_INFO(sockAddr.ss_family == AF_INET6, "sockAddr.ss_family = " << unsigned(sockAddr.ss_family) << " AF_INET = " << AF_INET << " AF_INET6 = " << AF_INET6)
 		sockaddr_in6& a = reinterpret_cast<sockaddr_in6&>(sockAddr);
-		out_sender_address = ip_address(
-				ip_address::ip(
+		out_sender_address = address(
+				address::ip(
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
 						(uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (uint32_t(a.sin6_addr.s6_addr[1]) << 16) | (uint32_t(a.sin6_addr.s6_addr[2]) << 8) | uint32_t(a.sin6_addr.s6_addr[3]),
 						(uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (uint32_t(a.sin6_addr.s6_addr[5]) << 16) | (uint32_t(a.sin6_addr.s6_addr[6]) << 8) | uint32_t(a.sin6_addr.s6_addr[7]),

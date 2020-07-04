@@ -4,7 +4,7 @@
 #include <utki/span.hpp>
 
 #include "socket.hpp"
-#include "ip_address.hpp"
+#include "address.hpp"
 
 namespace setka{
 
@@ -42,7 +42,7 @@ public:
 	 * @param address - IP address.
 	 * @param disable_naggle - enable/disable Naggle algorithm.
 	 */
-	void open(const ip_address& address, bool disable_naggle = false);
+	void open(const address& address, bool disable_naggle = false);
 
 	/**
 	 * @brief Send data to connected socket.
@@ -69,13 +69,13 @@ public:
 	 * @brief Get local IP address and port.
 	 * @return IP address and port of the local socket.
 	 */
-	ip_address get_local_address();
+	address get_local_address();
 
 	/**
 	 * @brief Get remote IP address and port.
 	 * @return IP address and port of the peer socket.
 	 */
-	ip_address get_remote_address();
+	address get_remote_address();
 
 #if M_OS == M_OS_WINDOWS
 private:

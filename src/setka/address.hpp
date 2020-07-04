@@ -12,7 +12,7 @@ namespace setka{
  * IP address consists of IP host address and an IP port.
  */
 // TODO: rename to just 'address'
-class ip_address{
+class address{
 public:
 	/**
 	 * @brief IP host address.
@@ -207,14 +207,14 @@ public:
 	/**
 	 * @brief Construct IP address with undefined host and port.
      */
-	ip_address()noexcept{}
+	address()noexcept{}
 
 	/**
 	 * @brief Create IPv4-address specifying exact IP-address and port number.
 	 * @param h - IPv4 address. For example, 0x7f000001 represents "127.0.0.1" IP address value.
 	 * @param p - IP port number.
 	 */
-	ip_address(uint32_t h, uint16_t p)noexcept :
+	address(uint32_t h, uint16_t p)noexcept :
 			host(h),
 			port(p)
 	{}
@@ -223,7 +223,7 @@ public:
 	 * @brief Create IPv4-address specifying exact IP-address as 4 bytes and port number.
 	 * The IPv4-address can be specified as 4 separate byte values, for example:
 	 * @code
-	 * ting::net::ip_address ip(127, 0, 0, 1, 80); //"127.0.0.1" port 80
+	 * ting::net::address ip(127, 0, 0, 1, 80); //"127.0.0.1" port 80
 	 * @endcode
 	 * @param h1 - 1st triplet of IPv4 address.
 	 * @param h2 - 2nd triplet of IPv4 address.
@@ -231,7 +231,7 @@ public:
 	 * @param h4 - 4th triplet of IPv4 address.
 	 * @param p - IP port number.
 	 */
-	ip_address(uint8_t h1, uint8_t h2, uint8_t h3, uint8_t h4, uint16_t p)noexcept :
+	address(uint8_t h1, uint8_t h2, uint8_t h3, uint8_t h4, uint16_t p)noexcept :
 			host((uint32_t(h1) << 24) | (uint32_t(h2) << 16) | (uint32_t(h3) << 8) | uint32_t(h4)),
 			port(p)
 	{}
@@ -241,7 +241,7 @@ public:
      * @param h - host to use for construction.
      * @param p - port to use for construction.
      */
-	ip_address(ip h, uint16_t p)noexcept :
+	address(ip h, uint16_t p)noexcept :
 			host(h),
 			port(p)
 	{}
@@ -253,7 +253,7 @@ public:
 	 * @param p - IP port number.
 	 * @throw Badip_addressFormatExc - when passed string does not contain properly formatted IP address.
 	 */
-	ip_address(const char* host_str, uint16_t p);
+	address(const char* host_str, uint16_t p);
 	
 	/**
 	 * @brief Create IP address specifying IP host address and IP port as string.
@@ -263,7 +263,7 @@ public:
      * @param str - null-terminated string representing IP address with port number, e.g. "127.0.0.1:80" or "[42f4:234a::23]:432".
 	 * @throw Badip_addressFormatExc - when passed string does not contain properly formatted IP-address.
      */
-	ip_address(const char* str);
+	address(const char* str);
 
 	/**
 	 * @brief compares two IP addresses for equality.
@@ -271,7 +271,7 @@ public:
 	 * @return true if hosts and ports of the two IP addresses are equal accordingly.
 	 * @return false otherwise.
 	 */
-	bool operator==(const ip_address& ip){
+	bool operator==(const address& ip){
 		return this->host == ip.host && this->port == ip.port;
 	}
 };

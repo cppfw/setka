@@ -19,7 +19,7 @@ public:
 			hostName(hostName)
 	{}
 	
-	setka::ip_address::ip ip;
+	setka::address::ip ip;
 	
 	nitki::semaphore& sema;
 	
@@ -31,7 +31,7 @@ public:
 		this->resolve(this->hostName, 10000);
 	}
 	
-	void on_completed(result res, setka::ip_address::ip ip)noexcept override{
+	void on_completed(result res, setka::address::ip ip)noexcept override{
 		TRACE(<< "onCompleted_ts(): result = " << unsigned(res) << " ip = " << ip.to_string() << std::endl)
 		
 //		ASSERT_INFO_ALWAYS(result == ting::net::dns_resolver::OK, "result = " << result)
@@ -114,14 +114,14 @@ public:
 	
 	std::string host;
 	
-	setka::ip_address::ip ip;
+	setka::address::ip ip;
 	
 	nitki::semaphore& sema;
 	
 	result res;
 	
 
-	void on_completed(result res, setka::ip_address::ip ip)noexcept override{
+	void on_completed(result res, setka::address::ip ip)noexcept override{
 //		ASSERT_INFO_ALWAYS(result == ting::net::dns_resolver::OK, "result = " << result)
 		
 		if(this->host.size() == 0){
@@ -168,7 +168,7 @@ public:
 	
 	volatile bool called = false;
 	
-	void on_completed(result res, setka::ip_address::ip ip)noexcept override{
+	void on_completed(result res, setka::address::ip ip)noexcept override{
 		this->called = true;
 	}
 };
@@ -177,7 +177,7 @@ void Run(){
 	TRACE_ALWAYS(<< "\tRunning 'cacnel DNS lookup' test, it will take about 4 seconds" << std::endl)
 	Resolver r;
 	
-	r.resolve("rfesweefdqfdf.ru", 3000, setka::ip_address("1.2.3.4", 53));
+	r.resolve("rfesweefdqfdf.ru", 3000, setka::address("1.2.3.4", 53));
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	

@@ -1,6 +1,6 @@
 #include <sstream>
 
-#include "ip_address.hpp"
+#include "address.hpp"
 
 #include <utki/config.hpp>
 #include <utki/span.hpp>
@@ -29,7 +29,7 @@ bool is_ip_v4_string(const char* str){
 }
 }
 
-ip_address::ip ip_address::ip::parse(const char* str){
+address::ip address::ip::parse(const char* str){
 	if(is_ip_v4_string(str)){
 		return ip::parse_v4(str);
 	}else{
@@ -37,7 +37,7 @@ ip_address::ip ip_address::ip::parse(const char* str){
 	}
 }
 
-ip_address::ip ip_address::ip::parse_v4(const char* str){
+address::ip address::ip::parse_v4(const char* str){
 	sockaddr_in a;
 	
 #if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS
@@ -55,10 +55,10 @@ ip_address::ip ip_address::ip::parse_v4(const char* str){
 #	error "Unknown OS"
 #endif
 	
-	return ip_address::ip(ntohl(a.sin_addr.s_addr));
+	return address::ip(ntohl(a.sin_addr.s_addr));
 }
 
-ip_address::ip ip_address::ip::parse_v6(const char* str){
+address::ip address::ip::parse_v6(const char* str){
 #if M_OS == M_OS_WINDOWS
 	sockaddr_in6 aa;
 	in6_addr& a = aa.sin6_addr;
@@ -82,7 +82,7 @@ ip_address::ip ip_address::ip::parse_v6(const char* str){
 #endif
 
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
-	return ip_address::ip(
+	return address::ip(
 			a.s6_addr[0],
 			a.s6_addr[1],
 			a.s6_addr[2],
@@ -101,7 +101,7 @@ ip_address::ip ip_address::ip::parse_v6(const char* str){
 			a.s6_addr[15]
 		);
 #else
-	return ip_address::ip(
+	return address::ip(
 			a.__in6_u.__u6_addr8[0],
 			a.__in6_u.__u6_addr8[1],
 			a.__in6_u.__u6_addr8[2],
@@ -122,12 +122,12 @@ ip_address::ip ip_address::ip::parse_v6(const char* str){
 #endif
 }
 
-ip_address::ip_address(const char* host_str, uint16_t p) :
-		host(ip_address::ip::parse(host_str)),
+address::address(const char* host_str, uint16_t p) :
+		host(address::ip::parse(host_str)),
 		port(p)
 {}
 
-ip_address::ip_address(const char* str){
+address::address(const char* str){
 	if(*str == 0){ // if zero length string
 		throw std::runtime_error("bad IP address format");
 	}
@@ -224,7 +224,7 @@ ip_address::ip_address(const char* str){
 	this->port = uint16_t(port);
 }
 
-std::string ip_address::ip::to_string()const{
+std::string address::ip::to_string()const{
 	std::stringstream ss;
 	if(this->is_v4()){
 		for(unsigned i = 4;;){

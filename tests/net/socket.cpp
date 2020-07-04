@@ -121,7 +121,7 @@ void Run(){
 	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	
 	try{
-		setka::ip_address ip("127.0.0.1", 13666);
+		setka::address ip("127.0.0.1", 13666);
 
 		setka::tcp_socket sock;
 
@@ -173,7 +173,7 @@ void Run(){
 
 	setka::tcp_socket sockS;
 	{
-		setka::ip_address ip("127.0.0.1", 13666);
+		setka::address ip("127.0.0.1", 13666);
 		sockS.open(ip);
 	}
 
@@ -191,8 +191,8 @@ void Run(){
 	//Here we have 2 sockets sockS and sockR
 
 	{
-		setka::ip_address addrS = sockS.get_remote_address();
-		setka::ip_address addrR = sockR.get_remote_address();
+		setka::address addrS = sockS.get_remote_address();
+		setka::address addrR = sockR.get_remote_address();
 //		TRACE(<< "SendDataContinuously::Run(): addrS = " << std::hex << addrS.host << ":" << addrS.port << std::dec << std::endl)
 //		TRACE(<< "SendDataContinuously::Run(): addrR = " << std::hex << addrR.host << ":" << addrR.port << std::dec << std::endl)
 		ASSERT_ALWAYS(addrS.host.get_v4() == 0x7f000001) //check that IP is 127.0.0.1
@@ -351,7 +351,7 @@ void Run(){
 
 	setka::tcp_socket sockS;
 	{
-		setka::ip_address ip("127.0.0.1", 13666);
+		setka::address ip("127.0.0.1", 13666);
 		sockS.open(ip);
 	}
 
@@ -429,7 +429,7 @@ namespace Basicip_addressTest{
 void Run(){
 	{
 		try{
-			setka::ip_address a("123.124.125.126", 5);
+			setka::address a("123.124.125.126", 5);
 			ASSERT_ALWAYS(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 			ASSERT_ALWAYS(a.port == 5)
 		}catch(std::exception& e){
@@ -438,22 +438,22 @@ void Run(){
 	}
 
 	{
-		setka::ip_address a(123, 124, 125, 126, 5);
+		setka::address a(123, 124, 125, 126, 5);
 		ASSERT_ALWAYS(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 		ASSERT_ALWAYS(a.port == 5)
 	}
 
 	//test copy constructor and operator=()
 	{
-		setka::ip_address a(123, 124, 125, 126, 5);
+		setka::address a(123, 124, 125, 126, 5);
 		ASSERT_ALWAYS(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 		ASSERT_ALWAYS(a.port == 5)
 
-		setka::ip_address a1(a);
+		setka::address a1(a);
 		ASSERT_ALWAYS(a1.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 		ASSERT_ALWAYS(a1.port == 5)
 
-		setka::ip_address a2;
+		setka::address a2;
 		a2 = a1;
 		ASSERT_ALWAYS(a2.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
 		ASSERT_ALWAYS(a2.port == 5)
@@ -493,7 +493,7 @@ void Run(){
 		data[3] = '4';
 		size_t bytesSent = 0;
 
-		setka::ip_address addr(
+		setka::address addr(
 				IsIPv6SupportedByOS() ? "::1" : "127.0.0.1",
 				13666
 			);
@@ -517,7 +517,7 @@ void Run(){
 		
 		size_t bytesReceived = 0;
 		for(unsigned i = 0; i < 10; ++i){
-			setka::ip_address ip;
+			setka::address ip;
 			bytesReceived = recvSock.recieve(utki::make_span(buf), ip);
 			ASSERT_ALWAYS(bytesReceived == 0 || bytesReceived == 4)//all or nothing
 			if(bytesReceived == 4){
@@ -578,7 +578,7 @@ namespace Testip_address{
 void Run(){
 	try{//test IP-address without port string parsing
 		try{//test correct string
-			setka::ip_address ip("127.0.0.1", 80);
+			setka::address ip("127.0.0.1", 80);
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 80)
 		}catch(std::exception&){
@@ -586,14 +586,14 @@ void Run(){
 		}
 		
 		try{//test correct string
-			setka::ip_address ip("127.0.0.1:23ddqwd", 80);
+			setka::address ip("127.0.0.1:23ddqwd", 80);
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 80)
 		}catch(std::exception&){
 			ASSERT_ALWAYS(true)
 		}
 		try{//test correct string
-			setka::ip_address ip("127.0.0.2555:23ddqwd", 80);
+			setka::address ip("127.0.0.2555:23ddqwd", 80);
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f0000ff)
 			ASSERT_ALWAYS(ip.port == 80)
 		}catch(std::exception&){
@@ -601,7 +601,7 @@ void Run(){
 		}
 		
 		try{//test incorrect string
-			setka::ip_address ip("127.0.1803:65536");
+			setka::address ip("127.0.1803:65536");
 			ASSERT_ALWAYS(false)
 		}catch(std::exception&){
 			//should get here
@@ -610,7 +610,7 @@ void Run(){
 		}
 		
 		try{//test incorrect string
-			setka::ip_address ip("127.0.270.1:65536");
+			setka::address ip("127.0.270.1:65536");
 			ASSERT_ALWAYS(false)
 		}catch(std::exception&){
 			//should get here
@@ -623,7 +623,7 @@ void Run(){
 	
 	try{//test IP-address with port string parsing
 		try{//test correct string
-			setka::ip_address ip("127.0.0.1:80");
+			setka::address ip("127.0.0.1:80");
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 80)
 		}catch(std::exception&){
@@ -631,7 +631,7 @@ void Run(){
 		}
 		
 		try{//test incorrect string
-			setka::ip_address ip("127.0.0.1803:43");
+			setka::address ip("127.0.0.1803:43");
 			ASSERT_ALWAYS(false)
 		}catch(std::exception&){
 			//should get here
@@ -640,7 +640,7 @@ void Run(){
 		}
 		
 		try{//test incorrect string
-			setka::ip_address ip("127.0.0.180p43");
+			setka::address ip("127.0.0.180p43");
 			ASSERT_ALWAYS(false)
 		}catch(std::exception&){
 			//should get here
@@ -649,7 +649,7 @@ void Run(){
 		}
 		
 		try{//test incorrect string
-			setka::ip_address ip("127.0.0.180:123456");
+			setka::address ip("127.0.0.180:123456");
 			ASSERT_ALWAYS(false)
 		}catch(std::exception&){
 			//should get here
@@ -658,7 +658,7 @@ void Run(){
 		}
 		
 		try{//test incorrect string
-			setka::ip_address ip("127.0.0.180:72345");
+			setka::address ip("127.0.0.180:72345");
 			ASSERT_ALWAYS(false)
 		}catch(std::exception&){
 			//should get here
@@ -667,7 +667,7 @@ void Run(){
 		}
 		
 		try{//test incorrect string
-			setka::ip_address ip("127.0.0.1803:65536");
+			setka::address ip("127.0.0.1803:65536");
 			ASSERT_ALWAYS(false)
 		}catch(std::exception&){
 			//should get here
@@ -676,7 +676,7 @@ void Run(){
 		}
 		
 		try{//test correct string
-			setka::ip_address ip("127.0.0.1:65535");
+			setka::address ip("127.0.0.1:65535");
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 0xffff)
 		}catch(std::exception&){
@@ -684,7 +684,7 @@ void Run(){
 		}
 		
 		try{//test correct string
-			setka::ip_address ip("127.0.0.1:0");
+			setka::address ip("127.0.0.1:0");
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 0)
 		}catch(std::exception&){
@@ -692,7 +692,7 @@ void Run(){
 		}
 		
 		try{//test correct string
-			setka::ip_address ip("127.0.0.1:6535 ");
+			setka::address ip("127.0.0.1:6535 ");
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 6535)
 		}catch(std::exception&){
@@ -700,7 +700,7 @@ void Run(){
 		}
 		
 		try{//test correct string
-			setka::ip_address ip("127.0.0.1:6535dwqd 345");
+			setka::address ip("127.0.0.1:6535dwqd 345");
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
 			ASSERT_ALWAYS(ip.port == 6535)
 		}catch(std::exception&){
@@ -713,7 +713,7 @@ void Run(){
 	// Test IPv6
 	if(IsIPv6SupportedByOS()){
 		try{
-			setka::ip_address ip("1002:3004:5006::7008:900a");
+			setka::address ip("1002:3004:5006::7008:900a");
 			ASSERT_ALWAYS(ip.port == 0)
 			ASSERT_ALWAYS(ip.host.quad[0] == 0x10023004)
 			ASSERT_ALWAYS(ip.host.quad[1] == 0x50060000)
@@ -726,7 +726,7 @@ void Run(){
 		}
 
 		try{
-			setka::ip_address ip("[1002:3004:5006::7008:900a]:134");
+			setka::address ip("[1002:3004:5006::7008:900a]:134");
 			ASSERT_ALWAYS(ip.port == 134)
 			ASSERT_ALWAYS(ip.host.quad[0] == 0x10023004)
 			ASSERT_ALWAYS(ip.host.quad[1] == 0x50060000)
@@ -737,7 +737,7 @@ void Run(){
 		}
 
 		try{
-			setka::ip_address ip("[::ffff:127.0.0.1]:45");
+			setka::address ip("[::ffff:127.0.0.1]:45");
 			ASSERT_ALWAYS(ip.port == 45)
 			ASSERT_ALWAYS(ip.host.is_v4())
 			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)

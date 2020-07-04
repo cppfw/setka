@@ -8,7 +8,7 @@
 
 using namespace setka;
 
-void tcp_socket::open(const ip_address& ip, bool disableNaggle){
+void tcp_socket::open(const address& ip, bool disableNaggle){
 	if(*this){
 		throw std::logic_error("tcp_socket::Open(): socket already opened");
 	}
@@ -196,10 +196,10 @@ size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 }
 
 namespace{
-ip_address make_ip_address(const sockaddr_storage& addr){
+address make_ip_address(const sockaddr_storage& addr){
 	if(addr.ss_family == AF_INET){
 		const sockaddr_in &a = reinterpret_cast<const sockaddr_in&>(addr);
-		return ip_address(
+		return address(
 			uint32_t(ntohl(a.sin_addr.s_addr)),
 			uint16_t(ntohs(a.sin_port))
 		);
@@ -208,8 +208,8 @@ ip_address make_ip_address(const sockaddr_storage& addr){
 		
 		const sockaddr_in6 &a = reinterpret_cast<const sockaddr_in6&>(addr);
 		
-		return ip_address(
-				ip_address::ip(
+		return address(
+				address::ip(
 #if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
 						(uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (uint32_t(a.sin6_addr.s6_addr[1]) << 16) | (uint32_t(a.sin6_addr.s6_addr[2]) << 8) | uint32_t(a.sin6_addr.s6_addr[3]),
 						(uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (uint32_t(a.sin6_addr.s6_addr[5]) << 16) | (uint32_t(a.sin6_addr.s6_addr[6]) << 8) | uint32_t(a.sin6_addr.s6_addr[7]),
@@ -228,7 +228,7 @@ ip_address make_ip_address(const sockaddr_storage& addr){
 }
 }
 
-ip_address tcp_socket::get_local_address(){
+address tcp_socket::get_local_address(){
 	if(!*this){
 		throw std::logic_error("Socket::GetLocalAddress(): socket is not valid");
 	}
@@ -253,7 +253,7 @@ ip_address tcp_socket::get_local_address(){
 	return make_ip_address(addr);
 }
 
-ip_address tcp_socket::get_remote_address(){
+address tcp_socket::get_remote_address(){
 	if(!*this){
 		throw std::logic_error("tcp_socket::GetRemoteAddress(): socket is not valid");
 	}

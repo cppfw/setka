@@ -95,7 +95,7 @@ struct Resolver{
 	
 	T_RequestsToSendIter sendIter; // TODO: get rid of iter
 	
-	setka::ip_address dns;
+	setka::address dns;
 };
 
 class LookupThread : public nitki::thread{
@@ -134,7 +134,7 @@ public:
 	T_ResolversMap resolversMap;
 	T_IdMap idMap;
 	
-	setka::ip_address dns;
+	setka::address dns;
 	
 	void StartSending(){
 		this->waitSet.change(this->socket, utki::make_flags({opros::ready::read, opros::ready::write}));
@@ -263,7 +263,7 @@ public:
 	}
 	
 	// NOTE: call to this function should be protected by mutex
-	inline void CallCallback(dns::Resolver* r, setka::dns_resolver::result result, ip_address::ip ip = ip_address::ip(0, 0, 0, 0))noexcept{
+	inline void CallCallback(dns::Resolver* r, setka::dns_resolver::result result, address::ip ip = address::ip(0, 0, 0, 0))noexcept{
 		this->completedMutex.lock();
 		this->mutex.unlock();
 		try{
@@ -277,9 +277,9 @@ public:
 
 	struct ParseResult{
 		setka::dns_resolver::result result;
-		setka::ip_address::ip host;
+		setka::address::ip host;
 		
-		ParseResult(setka::dns_resolver::result result, setka::ip_address::ip host = setka::ip_address::ip(0, 0, 0, 0)) :
+		ParseResult(setka::dns_resolver::result result, setka::address::ip host = setka::address::ip(0, 0, 0, 0)) :
 				result(result),
 				host(host)
 		{}
@@ -442,7 +442,7 @@ public:
 				return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
 			}
 			if(type == r->recordType){
-				ip_address::ip h;
+				address::ip h;
 				
 				switch(type){
 					case D_DNSRecordA: // 'A' type answer
@@ -450,14 +450,14 @@ public:
 							return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
 						}
 
-						h = ip_address::ip(utki::deserialize32be(p));
+						h = address::ip(utki::deserialize32be(p));
 						break;
 					case D_DNSRecordAAAA: // 'AAAA' type answer
 						if(dataLen < 2 * 8){
 							return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
 						}
 
-						h = ip_address::ip(
+						h = address::ip(
 								utki::deserialize32be(p),
 								utki::deserialize32be(p + 4),
 								utki::deserialize32be(p + 8),
@@ -467,7 +467,7 @@ public:
 					default:
 						// we should not get here since if type is not the record type which we know then 'if(type == r->recordType)' condition will not trigger.
 						ASSERT(false)
-						h = ip_address::ip(0,0,0,0);
+						h = address::ip(0,0,0,0);
 						break;
 				}
 				
@@ -585,7 +585,7 @@ private:
 						std::string ip = str.substr(0, spaceIndex);
 						TRACE(<< "NameServer ip = " << ip << std::endl)
 				
-						this->dns = setka::ip_address(ip.c_str(), 53);
+						this->dns = setka::address(ip.c_str(), 53);
 						RegCloseKey(hSub);
 						return;
 					}catch(...){}
@@ -605,7 +605,7 @@ private:
 					std::string ip = str.substr(0, spaceIndex);
 					TRACE(<< "DhcpNameServer ip = " << ip << std::endl)
 				
-					this->dns = setka::ip_address(ip.c_str(), 53);
+					this->dns = setka::address(ip.c_str(), 53);
 					RegCloseKey(hSub);
 					return;
 				}catch(...){}
@@ -646,7 +646,7 @@ private:
 				TRACE(<< "dns ipstr = " << ipstr << std::endl)
 				
 				try{
-					this->dns = setka::ip_address(ipstr.c_str(), 53);
+					this->dns = setka::address(ipstr.c_str(), 53);
 					return;
 				}catch(...){}
 			}
@@ -655,7 +655,7 @@ private:
 #endif
 		}catch(...){
 		}
-		this->dns = setka::ip_address(uint32_t(0), 0);
+		this->dns = setka::address(uint32_t(0), 0);
 	}
 	
 	void run()override{
@@ -707,7 +707,7 @@ private:
 					TRACE(<< "can read" << std::endl)
 					try{
 						std::array<uint8_t, 512> buf; // RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
-						setka::ip_address address;
+						setka::address address;
 						size_t ret = this->socket.recieve(utki::make_span(buf), address);
 						
 						ASSERT(ret != 0)
@@ -917,7 +917,7 @@ dns_resolver::~dns_resolver(){
 #endif
 }
 
-void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, const setka::ip_address& dnsIP){
+void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, const setka::address& dnsIP){
 //	TRACE(<< "dns_resolver::Resolve_ts(): enter" << std::endl)
 	
 	ASSERT(setka::init_guard::is_created())
@@ -1106,7 +1106,7 @@ void dns_resolver::clean_up(){
 	}
 }
 
-void dns_resolver::on_completed(result res, ip_address::ip address)noexcept{
+void dns_resolver::on_completed(result res, address::ip address)noexcept{
 	if(this->completed_handler){
 		this->completed_handler(res, address);
 	}

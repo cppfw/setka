@@ -6,7 +6,7 @@
 #include <utki/span.hpp>
 
 #include "socket.hpp"
-#include "ip_address.hpp"
+#include "address.hpp"
 
 namespace setka{
 
@@ -58,7 +58,7 @@ public:
 	 * @return number of bytes actually sent. Actually it is either 0 or the size of the
 	 *         datagram passed in as argument.
 	 */
-	size_t send(const utki::span<uint8_t> buf, const ip_address& destination_address);
+	size_t send(const utki::span<uint8_t> buf, const address& destination_address);
 
 	/**
 	 * @brief Receive datagram.
@@ -75,7 +75,7 @@ public:
 	 *                             of the sender will be stored.
 	 * @return number of bytes stored in the output buffer.
 	 */
-	size_t recieve(utki::span<uint8_t> buf, ip_address &out_sender_address);
+	size_t recieve(utki::span<uint8_t> buf, address &out_sender_address);
 
 #if M_OS == M_OS_WINDOWS
 private:

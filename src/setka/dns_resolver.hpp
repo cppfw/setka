@@ -6,7 +6,7 @@
 
 #include <utki/config.hpp>
 
-#include "ip_address.hpp"
+#include "address.hpp"
 
 namespace setka{
 
@@ -48,7 +48,7 @@ public:
 	void resolve(
 			const std::string& hostName,
 			uint32_t timeoutMillis = 20000,
-			const setka::ip_address& dnsIP = setka::ip_address(setka::ip_address::ip(0), 0)
+			const setka::address& dnsIP = setka::address(setka::address::ip(0), 0)
 		);
 	
 	/**
@@ -103,7 +103,7 @@ public:
 	 * @brief handler for resolve result.
 	 * Called by default implementation of virtual on_completed() function.
 	 */
-	std::function<void(result, ip_address::ip)noexcept> completed_handler;
+	std::function<void(result, address::ip)noexcept> completed_handler;
 
 	/**
 	 * @brief callback method called upon DNS lookup operation has finished.
@@ -111,9 +111,9 @@ public:
 	 * Default implementation just calls the completed_handler if it is set.
 	 * @param r - the result of DNS lookup operation.
 	 * @param ip - resolved IP-address. This value can later be used to create the
-	 *             ip_address object.
+	 *             address object.
 	 */
-	virtual void on_completed(result r, ip_address::ip ip)noexcept;
+	virtual void on_completed(result r, address::ip ip)noexcept;
 	
 private:
 	friend class setka::init_guard;
