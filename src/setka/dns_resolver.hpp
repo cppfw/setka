@@ -16,7 +16,7 @@ class init_guard;
  * @brief Class for resolving IP-address of the host by its domain name.
  * This class allows asynchronous DNS lookup.
  * One has to derive his/her own class from this class to override the
- * OnCompleted_ts() method which will be called upon the DNS lookup operation has finished.
+ * on_completed() method which will be called upon the DNS lookup operation has finished.
  */
 class dns_resolver{
 public:
@@ -54,14 +54,14 @@ public:
 	/**
 	 * @brief Cancel current DNS lookup operation.
 	 * The method is thread-safe.
-	 * After this method has returned it is guaranteed that the OnCompleted_ts()
+	 * After this method has returned it is guaranteed that the on_completed()
 	 * callback will not be called anymore, unless another resolve request has been
-	 * started from within the callback if it was called before the Cancel_ts() method returns.
+	 * started from within the callback if it was called before the cancel() method returns.
 	 * Such case can be caught by checking the return value of the method.
 	 * @return true - if the ongoing DNS lookup operation was canceled.
 	 * @return false - if there was no ongoing DNS lookup operation to cancel.
 	 *                 This means that the DNS lookup operation was not started
-	 *                 or has finished before the Cancel_ts() method was called.
+	 *                 or has finished before the cancel() method was called.
      */
 	bool cancel()noexcept;
 	

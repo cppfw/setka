@@ -2,7 +2,7 @@
 
 #include "../../src/setka/dns_resolver.hpp"
 
-#include <nitki/Thread.hpp>
+#include <nitki/thread.hpp>
 #include <nitki/semaphore.hpp>
 
 #include <memory>
@@ -179,11 +179,11 @@ void Run(){
 	
 	r.resolve("rfesweefdqfdf.ru", 3000, setka::ip_address("1.2.3.4", 53));
 	
-	nitki::Thread::sleep(500);
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	
 	bool res = r.cancel();
 	
-	nitki::Thread::sleep(3000);
+	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 	
 	ASSERT_ALWAYS(res)
 	

@@ -11,6 +11,7 @@ namespace setka{
  * @brief a structure which holds IP address.
  * IP address consists of IP host address and an IP port.
  */
+// TODO: rename to just 'address'
 class ip_address{
 public:
 	/**

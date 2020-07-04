@@ -1,10 +1,10 @@
-#include <nitki/MsgThread.hpp>
-
 #include "../../src/setka/tcp_socket.hpp"
 #include "../../src/setka/tcp_server_socket.hpp"
 #include "../../src/setka/udp_socket.hpp"
 
 #include <opros/wait_set.hpp>
+#include <nitki/thread.hpp>
+#include <nitki/queue.hpp>
 
 #include <utki/config.hpp>
 #include <utki/time.hpp>
@@ -64,29 +64,32 @@ void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
 		if(offset == buf.size()){
 			break;
 		}
-		//give 30ms to allow data from send buffer to be sent
-		nitki::Thread::sleep(30);
+		// give 30ms to allow data from send buffer to be sent
+		std::this_thread::sleep_for(std::chrono::milliseconds(30));
 	}
 
 	ASSERT_ALWAYS(left == 0)
 }
 
-class ServerThread : public nitki::MsgThread{
+class ServerThread : public nitki::thread{
 public:
+	volatile bool quitFlag = false;
+	nitki::queue queue;
+
 	void run()override{
 		try{
 			setka::tcp_server_socket listenSock;
 
-			listenSock.open(13666);//start listening
+			listenSock.open(13666); // start listening
 
 			ASSERT_ALWAYS(listenSock.get_local_port() == 13666)
 
-			//Accept some connection
+			// accept some connection
 			setka::tcp_socket sock;
 			while(!sock && !this->quitFlag){
 				sock = listenSock.accept();
-				nitki::Thread::sleep(100);
-				if(auto m = this->queue.peekMsg()){
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				if(auto m = this->queue.pop_front()){
 					m();
 				}
 			}
@@ -115,7 +118,7 @@ void Run(){
 	
 	serverThread.start();
 	
-	nitki::Thread::sleep(1000);
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	
 	try{
 		setka::ip_address ip("127.0.0.1", 13666);
@@ -126,7 +129,8 @@ void Run(){
 
 		ASSERT_ALWAYS(sock)
 
-		nitki::Thread::sleep(1000);//give some time for socket to connect
+		// give some time for socket to connect
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		
 		ASSERT_ALWAYS(sock.get_remote_address().host.get_v4() == 0x7f000001)
 
@@ -140,7 +144,7 @@ void Run(){
 				break;
 			}
 
-			nitki::Thread::sleep(100);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		ASSERT_ALWAYS(bytesReceived == 4)
 		
@@ -177,7 +181,7 @@ void Run(){
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	setka::tcp_socket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
-		nitki::Thread::sleep(100);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sockR = serverSock.accept();
 	}
 
@@ -355,7 +359,7 @@ void Run(){
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	setka::tcp_socket sockR;
 	for(unsigned i = 0; i < 20 && !sockR; ++i){
-		nitki::Thread::sleep(100);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sockR = serverSock.accept();
 	}
 
@@ -501,7 +505,7 @@ void Run(){
 				break;
 			}
 			
-			nitki::Thread::sleep(100);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		ASSERT_ALWAYS(bytesSent == 4)
 	}catch(std::exception &e){
@@ -525,7 +529,7 @@ void Run(){
 				break;
 			}
 			
-			nitki::Thread::sleep(100);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		ASSERT_ALWAYS(bytesReceived == 4)
 		ASSERT_ALWAYS(buf[0] == '0')
