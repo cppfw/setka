@@ -1,4 +1,4 @@
-package io.github.igagis.setka;
+package io.github.cppfw.setka;
 
 import org.junit.Test;
 

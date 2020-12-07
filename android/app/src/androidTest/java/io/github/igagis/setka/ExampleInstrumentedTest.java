@@ -1,4 +1,4 @@
-package io.github.igagis.setka;
+package io.github.cppfw.setka;
 
 import android.content.Context;
 
@@ -22,6 +22,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-        assertEquals("io.github.igagis.setka", appContext.getPackageName());
+        assertEquals("io.github.cppfw.setka", appContext.getPackageName());
     }
 }

@@ -1,7 +1,7 @@
 Name: setka   # human-readable name
 Description: C++ network library # human-readable description
 Version: $(version)
-URL: https://github.com/igagis/setka
+URL: https://github.com/cppfw/setka
 Requires:
 Conflicts:
 Libs: -lsetka

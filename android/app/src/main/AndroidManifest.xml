@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="io.github.igagis.setka">
+    package="io.github.cppfw.setka">
 
     <application
         android:allowBackup="true"
