@@ -1,3 +1,9 @@
+libsetka (1.0.19) unstable; urgency=medium
+
+  * msvs: build for v142 tools
+
+ -- Ivan Gagis <igagis@gmail.com>  Wed, 09 Dec 2020 00:43:05 +0200
+
 libsetka (1.0.18) unstable; urgency=medium
 
   * refactoring
