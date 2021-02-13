@@ -5,8 +5,8 @@ project 'setka/setka.xcodeproj'
 platform :ios, '8.0'
 
 target "setka" do
-	pod 'utki', '>= 1.1.30'
-	pod 'opros', '>= 1.0.28'
-	pod 'nitki', '>= 1.0.14'
-	pod 'papki', '>= 1.0.58'
+	pod 'utki', '>= 1.1.112'
+	pod 'opros', '>= 1.0.44'
+	pod 'nitki', '>= 1.0.39'
+	pod 'papki', '>= 1.0.91'
 end
