@@ -1,3 +1,9 @@
+libsetka (1.0.20) unstable; urgency=medium
+
+  * msvs: disable whole program optimization
+
+ -- Ivan Gagis <igagis@gmail.com>  Wed, 17 Mar 2021 15:08:40 +0200
+
 libsetka (1.0.19) unstable; urgency=medium
 
   * msvs: build for v142 tools
