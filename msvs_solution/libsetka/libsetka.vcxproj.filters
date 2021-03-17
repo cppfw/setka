@@ -15,6 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\setka\Socket.hpp" />
     <ClInclude Include="..\..\src\setka\Exc.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -55,75 +56,27 @@
     <ClInclude Include="..\..\src\setka\TCPServerSocket.hpp" />
     <ClInclude Include="..\..\src\setka\TCPSocket.hpp" />
     <ClInclude Include="..\..\src\setka\UDPSocket.hpp" />
-    <ClInclude Include="..\..\src\setka\Exc.hpp">
+    <ClInclude Include="..\..\src\setka\address.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\setka\HostNameResolver.hpp" />
-    <ClInclude Include="..\..\src\setka\IPAddress.hpp" />
-    <ClInclude Include="..\..\src\setka\Setka.hpp" />
-    <ClInclude Include="..\..\src\setka\Socket.hpp" />
-    <ClInclude Include="..\..\src\setka\TCPServerSocket.hpp" />
-    <ClInclude Include="..\..\src\setka\TCPSocket.hpp" />
-    <ClInclude Include="..\..\src\setka\UDPSocket.hpp" />
-    <ClInclude Include="..\..\src\**\*.hpp">
+    <ClInclude Include="..\..\src\setka\dns_resolver.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
+    <ClInclude Include="..\..\src\setka\init_guard.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
+    <ClInclude Include="..\..\src\setka\tcp_server_socket.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
+    <ClInclude Include="..\..\src\setka\tcp_socket.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\**\*.hpp">
+    <ClInclude Include="..\..\src\setka\udp_socket.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\setka\Socket.cpp" />
     <ClCompile Include="..\..\src\setka\HostNameResolver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -151,70 +104,22 @@
     <ClCompile Include="..\..\src\setka\TCPServerSocket.cpp" />
     <ClCompile Include="..\..\src\setka\TCPSocket.cpp" />
     <ClCompile Include="..\..\src\setka\UDPSocket.cpp" />
-    <ClCompile Include="..\..\src\setka\HostNameResolver.cpp">
+    <ClCompile Include="..\..\src\setka\address.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\setka\IPAddress.cpp" />
-    <ClCompile Include="..\..\src\setka\Setka.cpp" />
-    <ClCompile Include="..\..\src\setka\Socket.cpp" />
-    <ClCompile Include="..\..\src\setka\TCPServerSocket.cpp" />
-    <ClCompile Include="..\..\src\setka\TCPSocket.cpp" />
-    <ClCompile Include="..\..\src\setka\UDPSocket.cpp" />
-    <ClCompile Include="..\..\src\**\*.cpp">
+    <ClCompile Include="..\..\src\setka\dns_resolver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
+    <ClCompile Include="..\..\src\setka\init_guard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
+    <ClCompile Include="..\..\src\setka\tcp_server_socket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
+    <ClCompile Include="..\..\src\setka\tcp_socket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\**\*.cpp">
+    <ClCompile Include="..\..\src\setka\udp_socket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
