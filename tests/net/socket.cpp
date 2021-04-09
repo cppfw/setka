@@ -558,7 +558,7 @@ void Run(){
 			// if timeout was hit
 			// NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
 #if M_OS == M_OS_WINDOWS
-			utki::log([](auto&o){o << "WARNING: Waiting for writing to UDP socket does not work on Win32"});
+			utki::log([](auto&o){o << "WARNING: Waiting for writing to UDP socket does not work on Win32";});
 #endif
 		}else{
 			ASSERT_ALWAYS(sendSock.flags().get(opros::ready::write))
