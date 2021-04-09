@@ -31,9 +31,9 @@ nuget{
 	}
 	dependencies {
 		packages : {
-			libutki/1.1.112;
-			libopros/1.0.44;
-			libnitki/1.0.39;
+			libutki/1.1.124;
+			libopros/1.0.46;
+			libnitki/1.0.41;
 		};
 	}
 	files {
@@ -59,7 +59,7 @@ nuget{
 		}
 */
 		// ======== v141 ========
-
+/*
 		[x86,v141,release] {
 			lib: ..\msvs_solution\v141_Release\libsetka.lib;
 		}
@@ -72,7 +72,7 @@ nuget{
 		[x64,v141,debug] {
 			lib: ..\msvs_solution\x64\v141_Debug\libsetka.lib;
 		}
-
+*/
 		// ======== v142 ========
 /*
 		[x86,v142,release,MultiThreaded] {

@@ -3,7 +3,10 @@ Section: misc
 Priority: extra
 Maintainer: Ivan Gagis <igagis@gmail.com>
 Build-Depends: debhelper (>= 9), libc6-dev, prorab, prorab-extra, myci,
-		libutki-dev (>= 1.1.112), libopros-dev (>= 1.0.44), libnitki-dev (>= 1.0.39), libpapki-dev (>= 1.0.91)
+		libutki-dev (>= 1.1.124),
+		libopros-dev (>= 1.0.46),
+		libnitki-dev (>= 1.0.41),
+		libpapki-dev (>= 1.0.93)
 Build-Depends-Indep: doxygen
 Standards-Version: 3.9.2
 
