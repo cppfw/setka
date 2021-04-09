@@ -148,7 +148,7 @@ HANDLE socket::get_handle(){
 bool socket::check_signaled(){
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
-	ASSERT(*this)
+	ASSERT(this->is_open())
 	if(WSAEnumNetworkEvents(this->sock, this->event_for_waitable, &events) != 0){
 		throw std::system_error(WSAGetLastError(), std::generic_category(), "could not check for network events, WSAEnumNetworkEvents() failed");
 	}
@@ -217,7 +217,7 @@ void socket::close_event_for_waitable(){
 }
 
 void socket::set_waiting_events_for_windows(long flags){
-	ASSERT_INFO(*this && (this->event_for_waitable != WSA_INVALID_EVENT), "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.")
+	ASSERT_INFO(this->is_open() && (this->event_for_waitable != WSA_INVALID_EVENT), "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.")
 
 	if(WSAEventSelect(
 			this->sock,
