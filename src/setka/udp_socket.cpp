@@ -10,7 +10,7 @@
 using namespace setka;
 
 void udp_socket::open(uint16_t port){
-	if(*this){
+	if(this->is_open()){
 		throw std::logic_error("udp_socket::Open(): the socket is already opened");
 	}
 
@@ -147,8 +147,8 @@ void udp_socket::open(uint16_t port){
 }
 
 size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destination_address){
-	if(!*this){
-		throw std::logic_error("udp_socket::Send(): socket is not opened");
+	if(!this->is_open()){
+		throw std::logic_error("udp_socket::send(): socket is not opened");
 	}
 
 	this->readiness_flags.clear(opros::ready::write);
@@ -243,8 +243,8 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destinatio
 }
 
 size_t udp_socket::recieve(utki::span<uint8_t> buf, address &out_sender_address){
-	if(!*this){
-		throw std::logic_error("udp_socket::Recv(): socket is not opened");
+	if(!this->is_open()){
+		throw std::logic_error("udp_socket::recieve(): socket is not opened");
 	}
 
 	// The "can read" flag shall be cleared even if this function fails.

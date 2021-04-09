@@ -21,7 +21,7 @@ void socket::close()noexcept{
 //		TRACE(<< "socket::Close(): invoked " << this << std::endl)
 	ASSERT_INFO(!this->is_added(), "socket::close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
 	
-	if(*this){
+	if(this->is_open()){
 		ASSERT(!this->is_added())
 
 #if M_OS == M_OS_WINDOWS
@@ -64,7 +64,7 @@ setka::socket& socket::operator=(socket&& s){
 }
 
 void socket::disable_naggle(){
-	if(!*this){
+	if(!this->is_open()){
 		throw std::logic_error("socket::disable_naggle(): socket is not valid");
 	}
 
@@ -79,7 +79,7 @@ void socket::disable_naggle(){
 }
 
 void socket::set_nonblocking_mode(){
-	if(!*this){
+	if(!this->is_open()){
 		throw std::logic_error("socket::set_nonblocking_mode(): socket is not valid");
 	}
 
@@ -107,7 +107,7 @@ void socket::set_nonblocking_mode(){
 }
 
 uint16_t socket::get_local_port(){
-	if(!*this){
+	if(!this->is_open()){
 		throw std::logic_error("socket::GetLocalPort(): socket is not valid");
 	}
 

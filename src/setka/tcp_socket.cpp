@@ -9,8 +9,8 @@
 using namespace setka;
 
 void tcp_socket::open(const address& ip, bool disableNaggle){
-	if(*this){
-		throw std::logic_error("tcp_socket::Open(): socket already opened");
+	if(this->is_open()){
+		throw std::logic_error("tcp_socket::open(): socket is already opened");
 	}
 
 #if M_OS == M_OS_WINDOWS
@@ -108,7 +108,7 @@ void tcp_socket::open(const address& ip, bool disableNaggle){
 }
 
 size_t tcp_socket::send(const utki::span<uint8_t> buf){
-	if(!*this){
+	if(!this->is_open()){
 		throw std::logic_error("tcp_socket::Send(): socket is not opened");
 	}
 
@@ -155,8 +155,8 @@ size_t tcp_socket::recieve(utki::span<uint8_t> buf){
 	// So, do it at the beginning of the function.
 	this->readiness_flags.clear(opros::ready::read);
 
-	if(!*this){
-		throw std::logic_error("tcp_socket::Recv(): socket is not opened");
+	if(!this->is_open()){
+		throw std::logic_error("tcp_socket::recieve(): socket is not opened");
 	}
 
 #if M_OS == M_OS_WINDOWS
@@ -229,8 +229,8 @@ address make_ip_address(const sockaddr_storage& addr){
 }
 
 address tcp_socket::get_local_address(){
-	if(!*this){
-		throw std::logic_error("Socket::GetLocalAddress(): socket is not valid");
+	if(!this->is_open()){
+		throw std::logic_error("Socket::get_local_address(): socket is not valid");
 	}
 
 	sockaddr_storage addr;
@@ -254,8 +254,8 @@ address tcp_socket::get_local_address(){
 }
 
 address tcp_socket::get_remote_address(){
-	if(!*this){
-		throw std::logic_error("tcp_socket::GetRemoteAddress(): socket is not valid");
+	if(!this->is_open()){
+		throw std::logic_error("tcp_socket::get_remote_address(): socket is not valid");
 	}
 
 	sockaddr_storage addr;

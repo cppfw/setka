@@ -9,35 +9,40 @@
 			"command": "make autojobs=true",
 			"problemMatcher": [
 				"$gcc"
-			]
+			],
+			"group": "build"
 		},
 		{
-			"label": "build_debug",
+			"label": "build_dbg",
 			"type": "shell",
-			"command": "make autojobs=true debug=true",
+			"command": "make autojobs=true config=dbg",
 			"problemMatcher": [
 				"$gcc"
-			]
+			],
+			"group": "build"
 		},
 		{
-			"label": "test_debug",
+			"label": "test_dbg",
 			"type": "shell",
-			"command": "make debug=true test",
+			"command": "make config=dbg test autojobs=true",
 			"problemMatcher": [],
-			"dependsOn": "build_debug"
+			"dependsOn": "build_dbg",
+			"group": "build"
 		},
 		{
-			"label": "test",
+			"label": "test_",
 			"type": "shell",
-			"command": "make test",
+			"command": "make test autojobs=true",
 			"problemMatcher": [],
-			"dependsOn": "build"
+			"dependsOn": "build",
+			"group": "build"
 		},
 		{
-			"label": "clean",
+			"label": "clean-all",
 			"type": "shell",
-			"command": "make clean",
-			"problemMatcher": []
+			"command": "make clean-all",
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

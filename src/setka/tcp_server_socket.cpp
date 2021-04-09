@@ -9,7 +9,7 @@
 using namespace setka;
 
 void tcp_server_socket::open(uint16_t port, bool disable_naggle, uint16_t queueLength){
-	if(*this){
+	if(this->is_open()){
 		throw std::logic_error("socket already opened");
 	}
 
@@ -134,8 +134,8 @@ void tcp_server_socket::open(uint16_t port, bool disable_naggle, uint16_t queueL
 }
 
 tcp_socket tcp_server_socket::accept(){
-	if(!*this){
-		throw std::logic_error("tcp_server_socket::Accept(): the socket is not opened");
+	if(!this->is_open()){
+		throw std::logic_error("tcp_server_socket::accept(): the socket is not opened");
 	}
 
 	this->readiness_flags.clear(opros::ready::read);

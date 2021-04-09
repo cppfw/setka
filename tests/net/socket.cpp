@@ -8,6 +8,7 @@
 
 #include <utki/config.hpp>
 #include <utki/time.hpp>
+#include <utki/debug.hpp>
 
 #include "socket.hpp"
 
@@ -47,8 +48,8 @@ bool IsIPv6SupportedByOS(){
 
 namespace BasicClientServerTest{
 void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
-	if(!s){
-		throw std::logic_error("tcp_socket::Send(): socket is not opened");
+	if(!s.is_open()){
+		throw std::logic_error("SendAll(): socket is not opened");
 	}
 
 	size_t left = buf.size();
@@ -86,7 +87,7 @@ public:
 
 			// accept some connection
 			setka::tcp_socket sock;
-			while(!sock && !this->quitFlag){
+			while(!sock.is_open() && !this->quitFlag){
 				sock = listenSock.accept();
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				if(auto m = this->queue.pop_front()){
@@ -94,7 +95,7 @@ public:
 				}
 			}
 
-			ASSERT_ALWAYS(sock)
+			ASSERT_ALWAYS(sock.is_open())
 
 			ASSERT_ALWAYS(sock.get_local_address().host.get_v4() == 0x7f000001)
 			ASSERT_ALWAYS(sock.get_remote_address().host.get_v4() == 0x7f000001)
@@ -127,7 +128,7 @@ void Run(){
 
 		sock.open(ip);
 
-		ASSERT_ALWAYS(sock)
+		ASSERT_ALWAYS(sock.is_open())
 
 		// give some time for socket to connect
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -180,13 +181,13 @@ void Run(){
 	//Accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	setka::tcp_socket sockR;
-	for(unsigned i = 0; i < 20 && !sockR; ++i){
+	for(unsigned i = 0; i < 20 && !sockR.is_open(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sockR = serverSock.accept();
 	}
 
-	ASSERT_ALWAYS(sockS)
-	ASSERT_ALWAYS(sockR)
+	ASSERT_ALWAYS(sockS.is_open())
+	ASSERT_ALWAYS(sockR.is_open())
 
 	//Here we have 2 sockets sockS and sockR
 
@@ -358,13 +359,13 @@ void Run(){
 	// accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	setka::tcp_socket sockR;
-	for(unsigned i = 0; i < 20 && !sockR; ++i){
+	for(unsigned i = 0; i < 20 && !sockR.is_open(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sockR = serverSock.accept();
 	}
 
-	ASSERT_ALWAYS(sockS)
-	ASSERT_ALWAYS(sockR)
+	ASSERT_ALWAYS(sockS.is_open())
+	ASSERT_ALWAYS(sockR.is_open())
 
 	// here we have 2 sockets sockS and sockR
 

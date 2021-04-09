@@ -91,7 +91,8 @@ public:
 	 * @brief Tells whether the socket is opened or not.
 	 * @return Returns true if the socket is opened or false otherwise.
 	 */
-	explicit operator bool()const noexcept{
+
+	bool is_open()const noexcept{
 		return this->sock != invalid_socket;
 	}
 

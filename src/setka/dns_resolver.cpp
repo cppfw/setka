@@ -263,7 +263,7 @@ public:
 	}
 	
 	// NOTE: call to this function should be protected by mutex
-	inline void CallCallback(dns::Resolver* r, setka::dns_resolver::result result, address::ip ip = address::ip(0, 0, 0, 0))noexcept{
+	inline void CallCallback(dns::Resolver* r, setka::dns_result result, address::ip ip = address::ip(0, 0, 0, 0))noexcept{
 		this->completedMutex.lock();
 		this->mutex.unlock();
 		try{
@@ -276,10 +276,10 @@ public:
 	}
 
 	struct ParseResult{
-		setka::dns_resolver::result result;
+		setka::dns_result result;
 		setka::address::ip host;
 		
-		ParseResult(setka::dns_resolver::result result, setka::address::ip host = setka::address::ip(0, 0, 0, 0)) :
+		ParseResult(setka::dns_result result, setka::address::ip host = setka::address::ip(0, 0, 0, 0)) :
 				result(result),
 				host(host)
 		{}
@@ -304,7 +304,7 @@ public:
 				2   // Number of other records
 			)
 		{
-			return ParseResult(setka::dns_resolver::result::dns_error);
+			return ParseResult(setka::dns_result::dns_error);
 		}
 		
 		const uint8_t* p = buf.begin();
@@ -316,16 +316,16 @@ public:
 			
 			if((flags & 0x8000) == 0){ // we expect it to be a response, not query.
 				TRACE(<< "ParseReplyFromDNS(): (flags & 0x8000) = " << (flags & 0x8000) << std::endl)
-				return ParseResult(setka::dns_resolver::result::dns_error);
+				return ParseResult(setka::dns_result::dns_error);
 			}
 			
 			// Check response code
 			if((flags & 0xf) != 0){ // 0 means no error condition
 				if((flags & 0xf) == 3){ // name does not exist
-					return ParseResult(setka::dns_resolver::result::not_found);
+					return ParseResult(setka::dns_result::not_found);
 				}else{
 					TRACE(<< "ParseReplyFromDNS(): (flags & 0xf) = " << (flags & 0xf) << std::endl)
-					return ParseResult(setka::dns_resolver::result::dns_error);
+					return ParseResult(setka::dns_result::dns_error);
 				}
 			}
 		}
@@ -336,7 +336,7 @@ public:
 			p += 2;
 			
 			if(numQuestions != 1){
-				return ParseResult(setka::dns_resolver::result::dns_error);
+				return ParseResult(setka::dns_result::dns_error);
 			}
 		}
 		
@@ -346,7 +346,7 @@ public:
 		ASSERT(p <= (buf.end() - 1) || p == buf.end())
 		
 		if(numAnswers == 0){
-			return ParseResult(setka::dns_resolver::result::not_found);
+			return ParseResult(setka::dns_result::not_found);
 		}
 		
 		{
@@ -366,7 +366,7 @@ public:
 			
 			if(r->hostName != host){
 //				TRACE(<< "this->hostName = " << this->hostName << std::endl)
-				return ParseResult(setka::dns_resolver::result::dns_error); // wrong host name for ID.
+				return ParseResult(setka::dns_result::dns_error); // wrong host name for ID.
 			}
 		}
 		
@@ -376,7 +376,7 @@ public:
 			p += 2;
 			
 			if(type != r->recordType){
-				return ParseResult(setka::dns_resolver::result::dns_error); // wrong question type
+				return ParseResult(setka::dns_result::dns_error); // wrong question type
 			}
 		}
 		
@@ -386,7 +386,7 @@ public:
 			p += 2;
 			
 			if(cls != 1){
-				return ParseResult(setka::dns_resolver::result::dns_error); // wrong question class
+				return ParseResult(setka::dns_result::dns_error); // wrong question class
 			}
 		}
 		
@@ -395,7 +395,7 @@ public:
 		// loop through the answers
 		for(uint16_t n = 0; n != numAnswers; ++n){
 			if(p == buf.end()){
-				return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+				return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 			}
 			
 			// check if there is a domain name or a reference to the domain name
@@ -405,7 +405,7 @@ public:
 					ASSERT(buf.overlaps(p))
 				}
 				if(p == buf.end()){
-					return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+					return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 				}
 				++p;
 			}else{
@@ -415,31 +415,31 @@ public:
 			}
 			
 			if(buf.end() - p < 2){
-				return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+				return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 			}
 			uint16_t type = utki::deserialize16be(p);
 			p += 2;
 			
 			if(buf.end() - p < 2){
-				return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+				return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 			}
 //			uint16_t cls = ting::util::Deserialize16(p);
 			p += 2;
 			
 			if(buf.end() - p < 4){
-				return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+				return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 			}
 //			uint32_t ttl = ting::util::Deserialize32(p);//time till the returned value can be cached.
 			p += 4;
 			
 			if(buf.end() - p < 2){
-				return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+				return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 			}
 			uint16_t dataLen = utki::deserialize16be(p);
 			p += 2;
 			
 			if(buf.end() - p < dataLen){
-				return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+				return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 			}
 			if(type == r->recordType){
 				address::ip h;
@@ -447,14 +447,14 @@ public:
 				switch(type){
 					case D_DNSRecordA: // 'A' type answer
 						if(dataLen < 4){
-							return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+							return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 						}
 
 						h = address::ip(utki::deserialize32be(p));
 						break;
 					case D_DNSRecordAAAA: // 'AAAA' type answer
 						if(dataLen < 2 * 8){
-							return ParseResult(setka::dns_resolver::result::dns_error); // unexpected end of packet
+							return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 						}
 
 						h = address::ip(
@@ -472,12 +472,12 @@ public:
 				}
 				
 				TRACE(<< "host resolved: " << r->hostName << " = " << h.to_string() << std::endl)
-				return ParseResult(setka::dns_resolver::result::ok, h);
+				return ParseResult(setka::dns_result::ok, h);
 			}
 			p += dataLen;
 		}
 		
-		return ParseResult(setka::dns_resolver::result::dns_error); // no answer found
+		return ParseResult(setka::dns_result::dns_error); // no answer found
 	}
 	
 public:
@@ -537,7 +537,7 @@ private:
 #endif
 
 			// on_completed() does not throw any exceptions, so no worries about that.
-			this->CallCallback(r.operator->(), dns_resolver::result::error);
+			this->CallCallback(r.operator->(), dns_result::error);
 		}
 	}
 	
@@ -726,7 +726,7 @@ private:
 								if(host == i->second->hostName){
 									ParseResult res = this->ParseReplyFromDNS(i->second, utki::span<uint8_t>(&*buf.begin(), ret));
 									
-									if(res.result == setka::dns_resolver::result::not_found && i->second->recordType == D_DNSRecordAAAA){
+									if(res.result == setka::dns_result::not_found && i->second->recordType == D_DNSRecordAAAA){
 										// try getting record type A
 										TRACE(<< "no record AAAA found, trying to get record type A" << std::endl)
 										
@@ -743,7 +743,7 @@ private:
 										}catch(...){
 											// failed adding to sending list, report error
 											std::unique_ptr<dns::Resolver> r = this->RemoveResolver(i->second->hnr);
-											this->CallCallback(r.operator->(), setka::dns_resolver::result::error);
+											this->CallCallback(r.operator->(), setka::dns_result::error);
 										}										
 									}else{
 										std::unique_ptr<dns::Resolver> r = this->RemoveResolver(i->second->hnr);
@@ -794,7 +794,7 @@ private:
 								ASSERT(removedResolver)
 
 								// Notify about error. OnCompleted_ts() does not throw any exceptions, so no worries about that.
-								this->CallCallback(removedResolver.operator->(), dns_resolver::result::error, 0);
+								this->CallCallback(removedResolver.operator->(), dns_result::error, 0);
 							}
 						}
 					}catch(std::exception&
@@ -827,7 +827,7 @@ private:
 							ASSERT(r)
 
 							// Notify about timeout.
-							this->CallCallback(r.operator->(), dns_resolver::result::timeout, 0);
+							this->CallCallback(r.operator->(), dns_result::timeout, 0);
 						}
 						
 						ASSERT(this->timeMap1->size() == 0)
@@ -846,7 +846,7 @@ private:
 					ASSERT(r)
 					
 					// Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
-					this->CallCallback(r.operator->(), dns_resolver::result::timeout, 0);
+					this->CallCallback(r.operator->(), dns_result::timeout, 0);
 				}
 				
 				if(this->resolversMap.size() == 0){
@@ -1106,7 +1106,7 @@ void dns_resolver::clean_up(){
 	}
 }
 
-void dns_resolver::on_completed(result res, address::ip address)noexcept{
+void dns_resolver::on_completed(dns_result res, address::ip address)noexcept{
 	if(this->completed_handler){
 		this->completed_handler(res, address);
 	}

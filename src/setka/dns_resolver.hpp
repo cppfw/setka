@@ -13,6 +13,37 @@ namespace setka{
 class init_guard;
 
 /**
+ * @brief Enumeration of the DNS lookup operation result.
+ */
+enum class dns_result{
+	/**
+	 * @brief DNS lookup operation completed successfully.
+	 */
+	ok,
+	
+	/**
+	 * @brief Timeout hit while waiting for the response from DNS server.
+	 */
+	timeout,
+	
+	/**
+	 * @brief DNS server reported that there is not such domain name found.
+	 */
+	not_found,
+	
+	/**
+	 * @brief Error occurred while DNS lookup operation.
+	 * Error reported by DNS server.
+	 */
+	dns_error,
+
+	/**
+	 * @brief Local error occurred.
+	 */
+	error
+};
+
+/**
  * @brief Class for resolving IP-address of the host by its domain name.
  * This class allows asynchronous DNS lookup.
  * One has to derive his/her own class from this class to override the
@@ -66,44 +97,10 @@ public:
 	bool cancel()noexcept;
 	
 	/**
-	 * @brief Enumeration of the DNS lookup operation result.
-	 */
-	enum class result{
-		/**
-		 * @brief DNS lookup operation completed successfully.
-		 */
-		ok,
-		
-		/**
-		 * @brief Timeout hit while waiting for the response from DNS server.
-		 */
-		timeout,
-		
-		/**
-		 * @brief DNS server reported that there is not such domain name found.
-		 */
-		not_found,
-		
-		/**
-		 * @brief Error occurred while DNS lookup operation.
-		 * Error reported by DNS server.
-		 */
-		dns_error,
-		
-#if M_OS == M_OS_WINDOWS
-#	undef ERROR
-#endif
-		/**
-		 * @brief Local error occurred.
-		 */
-		error
-	};
-	
-	/**
 	 * @brief handler for resolve result.
 	 * Called by default implementation of virtual on_completed() function.
 	 */
-	std::function<void(result, address::ip)noexcept> completed_handler;
+	std::function<void(setka::dns_result, setka::address::ip)> completed_handler;
 
 	/**
 	 * @brief callback method called upon DNS lookup operation has finished.
@@ -113,7 +110,7 @@ public:
 	 * @param ip - resolved IP-address. This value can later be used to create the
 	 *             address object.
 	 */
-	virtual void on_completed(result r, address::ip ip)noexcept;
+	virtual void on_completed(dns_result r, address::ip ip)noexcept;
 	
 private:
 	friend class setka::init_guard;
