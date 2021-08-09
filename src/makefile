@@ -1,4 +1,5 @@
 include prorab.mk
+include prorab-license.mk
 
 $(eval $(call prorab-config, ../config))
 
@@ -15,3 +16,7 @@ ifeq ($(os),windows)
 endif
 
 $(eval $(prorab-build-lib))
+
+this_src_dir := 
+this_license_file := ../LICENSE
+$(eval $(prorab-license))
