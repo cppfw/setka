@@ -1,3 +1,9 @@
+libsetka (1.0.24) unstable; urgency=medium
+
+  * xcode: static framework
+
+ -- Ivan Gagis <igagis@gmail.com>  Mon, 08 Nov 2021 15:31:40 +0200
+
 libsetka (1.0.23) unstable; urgency=medium
 
   * use latest make in homebrew formulae
