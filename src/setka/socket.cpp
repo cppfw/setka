@@ -45,7 +45,10 @@ socket::~socket()noexcept{
 
 void socket::close()noexcept{
 //		TRACE(<< "socket::Close(): invoked " << this << std::endl)
-	ASSERT_INFO(!this->is_added(), "socket::close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.")
+	ASSERT(
+		!this->is_added(),
+		[&](auto&o){o << "socket::close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.";}
+	)
 	
 	if(this->is_open()){
 		ASSERT(!this->is_added())
@@ -243,7 +246,10 @@ void socket::close_event_for_waitable(){
 }
 
 void socket::set_waiting_events_for_windows(long flags){
-	ASSERT_INFO(this->is_open() && (this->event_for_waitable != WSA_INVALID_EVENT), "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.")
+	ASSERT(
+		this->is_open() && (this->event_for_waitable != WSA_INVALID_EVENT),
+		[&](auto&o){o << "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.";}
+	)
 
 	if(WSAEventSelect(
 			this->sock,

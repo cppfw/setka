@@ -512,7 +512,10 @@ public:
 			timeMap1(&resolversByTime1),
 			timeMap2(&resolversByTime2)
 	{
-		ASSERT_INFO(setka::init_guard::is_created(), "ting::net::Lib is not initialized before doing the DNS request")
+		ASSERT(
+			setka::init_guard::is_created(),
+			[&](auto&o){o << "setka::init_guard is not created before doing the DNS request";}
+		)
 	}
 
 	~LookupThread()noexcept{
@@ -1130,7 +1133,10 @@ void dns_resolver::clean_up(){
 		dns::thread->queue.push_back([](){});
 		dns::thread->join();
 
-		ASSERT_INFO(dns::thread->resolversMap.size() == 0, "There are active DNS requests upon Sockets library de-initialization, all active DNS requests must be canceled before that.")
+		ASSERT(
+			dns::thread->resolversMap.size() == 0,
+			[&](auto&o){o << "There are active DNS requests upon Sockets library de-initialization, all active DNS requests must be canceled before that.";}
+		)
 
 		dns::thread.reset();
 	}

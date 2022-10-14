@@ -261,8 +261,8 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destinatio
 	}
 
 	ASSERT(buf.size() <= size_t(std::numeric_limits<int>::max()))
-	ASSERT_INFO(len <= int(buf.size()), "res = " << len)
-	ASSERT_INFO((len == int(buf.size())) || (len == 0), "res = " << len)
+	ASSERT(len <= int(buf.size()), [&](auto&o){o << "res = " << len;})
+	ASSERT((len == int(buf.size())) || (len == 0), [&](auto&o){o << "res = " << len;})
 
 	ASSERT(len >= 0)
 	return size_t(len);
@@ -323,7 +323,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address &out_sender_address)
 	}
 
 	ASSERT(buf.size() <= size_t(std::numeric_limits<int>::max()))
-	ASSERT_INFO(len <= int(buf.size()), "len = " << len)
+	ASSERT(len <= int(buf.size()), [&](auto&o){o << "len = " << len;})
 
 	if(sockAddr.ss_family == AF_INET){
 		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(sockAddr);
@@ -332,7 +332,10 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address &out_sender_address)
 				uint16_t(ntohs(a.sin_port))
 			);
 	}else{
-		ASSERT_INFO(sockAddr.ss_family == AF_INET6, "sockAddr.ss_family = " << unsigned(sockAddr.ss_family) << " AF_INET = " << AF_INET << " AF_INET6 = " << AF_INET6)
+		ASSERT(
+			sockAddr.ss_family == AF_INET6,
+			[&](auto&o){o << "sockAddr.ss_family = " << unsigned(sockAddr.ss_family) << " AF_INET = " << AF_INET << " AF_INET6 = " << AF_INET6;}
+		)
 		sockaddr_in6& a = reinterpret_cast<sockaddr_in6&>(sockAddr);
 		out_sender_address = address(
 				address::ip(
