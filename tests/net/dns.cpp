@@ -194,7 +194,7 @@ public:
 };
 
 void Run(){
-	TRACE_ALWAYS(<< "\tRunning 'cacnel DNS lookup' test, it will take about 4 seconds" << std::endl)
+	utki::log([&](auto&o){o << "\tRunning 'cacnel DNS lookup' test, it will take about 4 seconds" << std::endl;});
 	Resolver r;
 	
 	r.resolve("rfesweefdqfdf.ru", 3000, setka::address("1.2.3.4", 53));

@@ -21,5 +21,5 @@ inline void TestTingSocket(){
 	TestRequestFromCallback::Run();
 	TestCancelDNSLookup::Run();
 
-	TRACE_ALWAYS(<< "[PASSED]: Socket test" << std::endl)
+	utki::log([&](auto&o){o << "[PASSED]: Socket test" << std::endl;});
 }
