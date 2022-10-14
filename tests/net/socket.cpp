@@ -53,14 +53,14 @@ void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
 	}
 
 	size_t left = buf.size();
-	ASSERT_ALWAYS(left >= 0)
+	utki::assert(left >= 0, SL);
 
 	size_t offset = 0;
 
 	while(true){
 		size_t res = s.send(decltype(buf)(&*buf.begin() + offset, buf.size() - offset));
 		left -= res;
-		ASSERT_ALWAYS(left >= 0)
+		utki::assert(left >= 0, SL);
 		offset += res;
 		if(offset == buf.size()){
 			break;
@@ -69,7 +69,7 @@ void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
 		std::this_thread::sleep_for(std::chrono::milliseconds(30));
 	}
 
-	ASSERT_ALWAYS(left == 0)
+	utki::assert(left == 0, SL);
 }
 
 class ServerThread : public nitki::thread{
@@ -83,7 +83,7 @@ public:
 
 			listenSock.open(13666); // start listening
 
-			ASSERT_ALWAYS(listenSock.get_local_port() == 13666)
+			utki::assert(listenSock.get_local_port() == 13666, SL);
 
 			// accept some connection
 			setka::tcp_socket sock;
@@ -95,10 +95,10 @@ public:
 				}
 			}
 
-			ASSERT_ALWAYS(sock.is_open())
+			utki::assert(sock.is_open(), SL);
 
-			ASSERT_ALWAYS(sock.get_local_address().host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(sock.get_remote_address().host.get_v4() == 0x7f000001)
+			utki::assert(sock.get_local_address().host.get_v4() == 0x7f000001, SL);
+			utki::assert(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
 
 			std::array<uint8_t, 4> data;
 			data[0] = '0';
@@ -107,7 +107,7 @@ public:
 			data[3] = '4';
 			SendAll(sock, utki::make_span(data));
 		}catch(std::exception &e){
-			ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
+			utki::assert(false, [&](auto&o){o << "Network error: " << e.what();}, SL);
 		}
 	}
 };
@@ -128,33 +128,37 @@ void Run(){
 
 		sock.open(ip);
 
-		ASSERT_ALWAYS(sock.is_open())
+		utki::assert(sock.is_open(), SL);
 
 		// give some time for socket to connect
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		
-		ASSERT_ALWAYS(sock.get_remote_address().host.get_v4() == 0x7f000001)
+		utki::assert(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
 
 		std::array<uint8_t, 4> data;
 		size_t bytesReceived = 0;
 		for(unsigned i = 0; i < 30; ++i){
-			ASSERT_ALWAYS(bytesReceived < 4)
+			utki::assert(bytesReceived < 4, SL);
 			bytesReceived += sock.recieve(utki::span<uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
-			ASSERT_ALWAYS(bytesReceived <= 4)
+			utki::assert(bytesReceived <= 4, SL);
 			if(bytesReceived == 4){
 				break;
 			}
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		ASSERT_ALWAYS(bytesReceived == 4)
+		utki::assert(bytesReceived == 4, SL);
 		
-		ASSERT_ALWAYS(data[0] == '0')
-		ASSERT_ALWAYS(data[1] == '1')
-		ASSERT_ALWAYS(data[2] == '2')
-		ASSERT_ALWAYS(data[3] == '4')
+		utki::assert(data[0] == '0', SL);
+		utki::assert(data[1] == '1', SL);
+		utki::assert(data[2] == '2', SL);
+		utki::assert(data[3] == '4', SL);
 	}catch(std::exception &e){
-		ASSERT_INFO_ALWAYS(false, "Network error: " << e.what())
+		utki::assert(
+			false,
+			[&](auto&o){o << "Network error: " << e.what(); },
+			SL
+		);
 	}
 	
 	serverThread.join();
@@ -186,8 +190,8 @@ void Run(){
 		sockR = serverSock.accept();
 	}
 
-	ASSERT_ALWAYS(sockS.is_open())
-	ASSERT_ALWAYS(sockR.is_open())
+	utki::assert(sockS.is_open(), SL);
+	utki::assert(sockR.is_open(), SL);
 
 	//Here we have 2 sockets sockS and sockR
 
@@ -196,8 +200,8 @@ void Run(){
 		setka::address addrR = sockR.get_remote_address();
 //		TRACE(<< "SendDataContinuously::Run(): addrS = " << std::hex << addrS.host << ":" << addrS.port << std::dec << std::endl)
 //		TRACE(<< "SendDataContinuously::Run(): addrR = " << std::hex << addrR.host << ":" << addrR.port << std::dec << std::endl)
-		ASSERT_ALWAYS(addrS.host.get_v4() == 0x7f000001) //check that IP is 127.0.0.1
-		ASSERT_ALWAYS(addrR.host.get_v4() == 0x7f000001) //check that IP is 127.0.0.1
+		utki::assert(addrS.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
+		utki::assert(addrR.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
 	}
 
 	opros::wait_set ws(2);
@@ -221,7 +225,7 @@ void Run(){
 
 		unsigned numTriggered = ws.wait(1000, utki::make_span(triggered));
 
-		ASSERT_ALWAYS(numTriggered <= 2)
+		utki::assert(numTriggered <= 2, SL);
 
 		if(numTriggered == 0){
 //			TRACE(<< "SendDataContinuously::Run(): 0 triggered" << std::endl)
@@ -231,64 +235,76 @@ void Run(){
 		//If 2 waitables have triggered they should be 2 different waitables.
 		if(numTriggered == 2){
 //			TRACE(<< "SendDataContinuously::Run(): 2 triggered" << std::endl)
-			ASSERT_ALWAYS(triggered[0] != triggered[1])
+			utki::assert(triggered[0] != triggered[1], SL);
 		}else{
-			ASSERT_ALWAYS(numTriggered == 1)
+			utki::assert(numTriggered == 1, SL);
 //			TRACE(<< "SendDataContinuously::Run(): 1 triggered" << std::endl)
 		}
 
 		for(unsigned i = 0; i < numTriggered; ++i){
 			if(triggered[i] == &sockS){
-				ASSERT_ALWAYS(triggered[i] != &sockR)
+				utki::assert(triggered[i] != &sockR, SL);
 
 //				TRACE(<< "SendDataContinuously::Run(): sockS triggered" << std::endl)
-				ASSERT_ALWAYS(!sockS.flags().get(opros::ready::read))
-				ASSERT_ALWAYS(!sockS.flags().get(opros::ready::error))
-				ASSERT_ALWAYS(sockS.flags().get(opros::ready::write))
+				utki::assert(!sockS.flags().get(opros::ready::read), SL);
+				utki::assert(!sockS.flags().get(opros::ready::error), SL);
+				utki::assert(sockS.flags().get(opros::ready::write), SL);
 
-				ASSERT_ALWAYS(bytesSent <= sendBuffer.size())
+				utki::assert(bytesSent <= sendBuffer.size(), SL);
 
 				if(sendBuffer.size() == bytesSent){
 					sendBuffer.resize(0xffff + 1);
 					bytesSent = 0;
 					
-					ASSERT_INFO_ALWAYS((sendBuffer.size() % sizeof(uint32_t)) == 0,
-							"sendBuffer.Size() = " << sendBuffer.size()
+					utki::assert(
+						(sendBuffer.size() % sizeof(uint32_t)) == 0,
+						[&](auto&o){
+							o << "sendBuffer.Size() = " << sendBuffer.size()
 							<< " (sendBuffer.Size() % sizeof(uint32_t)) = "
-							<< (sendBuffer.size() % sizeof(uint32_t))
-						)
+							<< (sendBuffer.size() % sizeof(uint32_t));
+						},
+						SL
+					);
 
 					uint8_t* p = &sendBuffer[0];
 					for(; p != (&sendBuffer[0]) + sendBuffer.size(); p += sizeof(uint32_t)){
-						ASSERT_INFO_ALWAYS(p < (((&sendBuffer[0]) + sendBuffer.size()) - (sizeof(uint32_t) - 1)), "p = " << p << " sendBuffer.End() = " << &*sendBuffer.end())
+						utki::assert(
+							p < (((&sendBuffer[0]) + sendBuffer.size()) - (sizeof(uint32_t) - 1)),
+							[&](auto&o){o << "p = " << p << " sendBuffer.End() = " << &*sendBuffer.end();},
+							SL
+						);
 						utki::serialize32le(scnt, p);
 						++scnt;
 					}
-					ASSERT_ALWAYS(p == (&sendBuffer[0]) + sendBuffer.size())
+					utki::assert(p == (&sendBuffer[0]) + sendBuffer.size(), SL);
 				}
 
-				ASSERT_ALWAYS(sendBuffer.size() > 0)
+				utki::assert(sendBuffer.size() > 0, SL);
 
 				try{
 					auto res = sockS.send(utki::span<uint8_t>(&*sendBuffer.begin() + bytesSent, sendBuffer.size() - bytesSent));
 					bytesSent += res;
 					if(res == 0){
-						ASSERT_ALWAYS(res > 0) // since it was CanWrite() we should be able to write at least something
+						utki::assert(res > 0, SL); // since it was CanWrite() we should be able to write at least something
 					}else{
 //						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
 					}
-					ASSERT_ALWAYS(!sockS.flags().get(opros::ready::write))
+					utki::assert(!sockS.flags().get(opros::ready::write), SL);
 				}catch(std::exception& e){
-					ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
+					utki::assert(
+						false,
+						[&](auto&o){o << "sockS.Send() failed: " << e.what();},
+						SL
+					);
 				}
-				ASSERT_ALWAYS(bytesSent <= sendBuffer.size())
+				utki::assert(bytesSent <= sendBuffer.size(), SL);
 			}else if(triggered[i] == &sockR){
-				ASSERT_ALWAYS(triggered[i] != &sockS)
+				utki::assert(triggered[i] != &sockS, SL);
 
 //				TRACE(<< "SendDataContinuously::Run(): sockR triggered" << std::endl)
-				ASSERT_ALWAYS(sockR.flags().get(opros::ready::read))
-				ASSERT_ALWAYS(!sockR.flags().get(opros::ready::error))
-				ASSERT_ALWAYS(!sockR.flags().get(opros::ready::write))
+				utki::assert(sockR.flags().get(opros::ready::read), SL);
+				utki::assert(!sockR.flags().get(opros::ready::error), SL);
+				utki::assert(!sockR.flags().get(opros::ready::write), SL);
 
 				while(true){
 					std::array<uint8_t, 0x2000> buf; // 8kb buffer
@@ -296,9 +312,13 @@ void Run(){
 					try{
 						numBytesReceived = sockR.recieve(utki::make_span(buf));
 					}catch(std::exception& e){
-						ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
+						utki::assert(
+							false,
+							[&](auto&o){o << "sockR.Recv() failed: " << e.what();},
+							SL
+						);
 					}
-					ASSERT_ALWAYS(numBytesReceived <= buf.size())
+					utki::assert(numBytesReceived <= buf.size(), SL);
 //					TRACE(<< "SendDataContinuously::Run(): " << numBytesReceived << " bytes received" << std::endl)
 
 					if(numBytesReceived == 0){
@@ -310,27 +330,29 @@ void Run(){
 						recvBuffer[recvBufBytes] = *p;
 						++recvBufBytes;
 
-						ASSERT_ALWAYS(recvBufBytes <= recvBuffer.size())
+						utki::assert(recvBufBytes <= recvBuffer.size(), SL);
 
 						if(recvBufBytes == recvBuffer.size()){
 							recvBufBytes = 0;
 							uint32_t num = utki::deserialize32le(&*recvBuffer.begin());
-							ASSERT_INFO_ALWAYS(
+							utki::assert(
 									rcnt == num,
-									"num = " << num << " rcnt = " << rcnt
+									[&](auto&o){o << "num = " << num << " rcnt = " << rcnt
 											<< " rcnt - num = " << (rcnt - num)
 											<< " recvBuffer = "
 											<< unsigned(recvBuffer[0]) << ", "
 											<< unsigned(recvBuffer[1]) << ", "
 											<< unsigned(recvBuffer[2]) << ", "
-											<< unsigned(recvBuffer[3])
-								)
+											<< unsigned(recvBuffer[3]);
+									},
+									SL
+								);
 							++rcnt;
 						}
 					}//~for
 				}//~while(true)
 			}else{
-				ASSERT_ALWAYS(false)
+				utki::assert(false, SL);
 			}
 		}//~for(triggered)
 	}//~while
@@ -364,15 +386,14 @@ void Run(){
 		sockR = serverSock.accept();
 	}
 
-	ASSERT_ALWAYS(sockS.is_open())
-	ASSERT_ALWAYS(sockR.is_open())
+	utki::assert(sockS.is_open(), SL);
+	utki::assert(sockR.is_open(), SL);
 
 	// here we have 2 sockets sockS and sockR
 
 	uint8_t scnt = 0;
 
 	uint8_t rcnt = 0;
-
 
 	uint32_t startTime = utki::get_ticks_ms();
 
@@ -383,14 +404,18 @@ void Run(){
 		try{
 			utki::span<uint8_t> buf(&scnt, 1);
 			auto res = sockS.send(buf);
-			ASSERT_ALWAYS(res <= 1)
+			utki::assert(res <= 1, SL);
 			if(res == 1){
 				++scnt;
 			}else{
-				ASSERT_ALWAYS(false)
+				utki::assert(false, SL);
 			}
 		}catch(std::exception& e){
-			ASSERT_INFO_ALWAYS(false, "sockS.Send() failed: " << e.what())
+			utki::assert(
+				false,
+				[&](auto&o){o << "sockS.Send() failed: " << e.what();},
+				SL
+			);
 		}
 
 
@@ -402,9 +427,13 @@ void Run(){
 			try{
 				numBytesReceived = sockR.recieve(utki::make_span(buf));
 			}catch(std::exception& e){
-				ASSERT_INFO_ALWAYS(false, "sockR.Recv() failed: " << e.what())
+				utki::assert(
+					false,
+					[&](auto&o){o << "sockR.Recv() failed: " << e.what();},
+					SL
+				);
 			}
-			ASSERT_ALWAYS(numBytesReceived <= buf.size())
+			utki::assert(numBytesReceived <= buf.size(), SL);
 //			TRACE(<< "SendDataContinuously::Run(): " << numBytesReceived << " bytes received" << std::endl)
 
 			if(numBytesReceived == 0){
@@ -413,7 +442,11 @@ void Run(){
 
 			auto p = buf.cbegin();
 			for(unsigned i = 0; i < numBytesReceived && p != buf.end(); ++p, ++i){
-				ASSERT_INFO_ALWAYS(rcnt == *p, "rcnt = " << unsigned(rcnt) << " *p = " << unsigned(*p) << " diff = " << unsigned(rcnt - *p))
+				utki::assert(
+					rcnt == *p,
+					[&](auto&o){o << "rcnt = " << unsigned(rcnt) << " *p = " << unsigned(*p) << " diff = " << unsigned(rcnt - *p);},
+					SL
+				);
 				++rcnt;
 			}//~for
 		}//~while(true)
@@ -431,36 +464,36 @@ void Run(){
 	{
 		try{
 			setka::address a("123.124.125.126", 5);
-			ASSERT_ALWAYS(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
-			ASSERT_ALWAYS(a.port == 5)
+			utki::assert(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126, SL);
+			utki::assert(a.port == 5, SL);
 		}catch(std::exception& e){
-			ASSERT_INFO_ALWAYS(false, e.what())
+			utki::assert(false, [&](auto&o){o << e.what();}, SL);
 		}
 	}
 
 	{
 		setka::address a(123, 124, 125, 126, 5);
-		ASSERT_ALWAYS(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
-		ASSERT_ALWAYS(a.port == 5)
+		utki::assert(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126, SL);
+		utki::assert(a.port == 5, SL);
 	}
 
 	//test copy constructor and operator=()
 	{
 		setka::address a(123, 124, 125, 126, 5);
-		ASSERT_ALWAYS(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
-		ASSERT_ALWAYS(a.port == 5)
+		utki::assert(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126, SL);
+		utki::assert(a.port == 5, SL);
 
 		setka::address a1(a);
-		ASSERT_ALWAYS(a1.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
-		ASSERT_ALWAYS(a1.port == 5)
+		utki::assert(a1.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126, SL);
+		utki::assert(a1.port == 5, SL);
 
 		setka::address a2;
 		a2 = a1;
-		ASSERT_ALWAYS(a2.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126)
-		ASSERT_ALWAYS(a2.port == 5)
+		utki::assert(a2.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126, SL);
+		utki::assert(a2.port == 5, SL);
 
-		ASSERT_ALWAYS(a == a1)
-		ASSERT_ALWAYS(a == a2)
+		utki::assert(a == a1, SL);
+		utki::assert(a == a2, SL);
 	}
 }
 
@@ -477,10 +510,10 @@ void Run(){
 	try{
 		recvSock.open(13666);
 	}catch(std::exception &e){
-		ASSERT_INFO_ALWAYS(false, e.what())
+		utki::assert(false, [&](auto&o){o << e.what();}, SL);
 	}
 
-	ASSERT_ALWAYS(recvSock.get_local_port() == 13666)
+	utki::assert(recvSock.get_local_port() == 13666, SL);
 
 	setka::udp_socket sendSock;
 
@@ -501,16 +534,16 @@ void Run(){
 
 		for(unsigned i = 0; i < 10; ++i){
 			bytesSent = sendSock.send(utki::make_span(data), addr);
-			ASSERT_ALWAYS(bytesSent == 4 || bytesSent == 0)
+			utki::assert(bytesSent == 4 || bytesSent == 0, SL);
 			if(bytesSent == 4){
 				break;
 			}
 			
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		ASSERT_ALWAYS(bytesSent == 4)
+		utki::assert(bytesSent == 4, SL);
 	}catch(std::exception &e){
-		ASSERT_INFO_ALWAYS(false, e.what())
+		utki::assert(false, [&](auto&o){o << e.what();}, SL);
 	}
 
 	try{
@@ -520,25 +553,37 @@ void Run(){
 		for(unsigned i = 0; i < 10; ++i){
 			setka::address ip;
 			bytesReceived = recvSock.recieve(utki::make_span(buf), ip);
-			ASSERT_ALWAYS(bytesReceived == 0 || bytesReceived == 4)//all or nothing
+			utki::assert(bytesReceived == 0 || bytesReceived == 4, SL); // all or nothing
 			if(bytesReceived == 4){
 				if(IsIPv6SupportedByOS()){
-					ASSERT_INFO_ALWAYS(ip.host.quad[3] == 1, "ip.host.Quad3() = " << std::hex << ip.host.quad[3] << std::dec)
+					utki::assert(
+						ip.host.quad[3] == 1,
+						[&](auto&o){o << "ip.host.Quad3() = " << std::hex << ip.host.quad[3] << std::dec;},
+						SL
+					);
 				}else{
-					ASSERT_INFO_ALWAYS(ip.host.get_v4() == 0x7f000001, "ip.host.IPv4Host() = " << std::hex << ip.host.get_v4() << std::dec)
+					utki::assert(
+						ip.host.get_v4() == 0x7f000001,
+						[&](auto&o){o << "ip.host.IPv4Host() = " << std::hex << ip.host.get_v4() << std::dec;},
+						SL
+					);
 				}
 				break;
 			}
 			
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		ASSERT_ALWAYS(bytesReceived == 4)
-		ASSERT_ALWAYS(buf[0] == '0')
-		ASSERT_ALWAYS(buf[1] == '1')
-		ASSERT_ALWAYS(buf[2] == '2')
-		ASSERT_ALWAYS(buf[3] == '4')
+		utki::assert(bytesReceived == 4, SL);
+		utki::assert(buf[0] == '0', SL);
+		utki::assert(buf[1] == '1', SL);
+		utki::assert(buf[2] == '2', SL);
+		utki::assert(buf[3] == '4', SL);
 	}catch(std::exception& e){
-		ASSERT_INFO_ALWAYS(false, e.what())
+		utki::assert(
+			false,
+			[&](auto&o){o << e.what();},
+			SL
+		);
 	}
 }
 }
@@ -561,13 +606,13 @@ void Run(){
 			utki::log([](auto&o){o << "WARNING: Waiting for writing to UDP socket does not work on Win32";});
 #endif
 		}else{
-			ASSERT_ALWAYS(sendSock.flags().get(opros::ready::write))
-			ASSERT_ALWAYS(!sendSock.flags().get(opros::ready::read))
+			utki::assert(sendSock.flags().get(opros::ready::write), SL);
+			utki::assert(!sendSock.flags().get(opros::ready::read), SL);
 		}
 
 		ws.remove(sendSock);
 	}catch(std::exception& e){
-		ASSERT_INFO_ALWAYS(false, e.what())
+		utki::assert(false, [&](auto&o){o << e.what();}, SL);
 	}
 }
 }
@@ -577,170 +622,170 @@ void Run(){
 	try{//test IP-address without port string parsing
 		try{//test correct string
 			setka::address ip("127.0.0.1", 80);
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(ip.port == 80)
+			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
+			utki::assert(ip.port == 80, SL);
 		}catch(std::exception&){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test correct string
 			setka::address ip("127.0.0.1:23ddqwd", 80);
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(ip.port == 80)
+			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
+			utki::assert(ip.port == 80, SL);
 		}catch(std::exception&){
-			ASSERT_ALWAYS(true)
+			utki::assert(true, SL);
 		}
 		try{//test correct string
 			setka::address ip("127.0.0.2555:23ddqwd", 80);
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f0000ff)
-			ASSERT_ALWAYS(ip.port == 80)
+			utki::assert(ip.host.get_v4() == 0x7f0000ff, SL);
+			utki::assert(ip.port == 80, SL);
 		}catch(std::exception&){
-			ASSERT_ALWAYS(true)
+			utki::assert(true, SL);
 		}
 		
 		try{//test incorrect string
 			setka::address ip("127.0.1803:65536");
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test incorrect string
 			setka::address ip("127.0.270.1:65536");
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 	}catch(...){
-		ASSERT_ALWAYS(false)
+		utki::assert(false, SL);
 	}
 	
 	try{//test IP-address with port string parsing
 		try{//test correct string
 			setka::address ip("127.0.0.1:80");
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(ip.port == 80)
+			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
+			utki::assert(ip.port == 80, SL);
 		}catch(std::exception&){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test incorrect string
 			setka::address ip("127.0.0.1803:43");
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test incorrect string
 			setka::address ip("127.0.0.180p43");
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test incorrect string
 			setka::address ip("127.0.0.180:123456");
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test incorrect string
 			setka::address ip("127.0.0.180:72345");
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test incorrect string
 			setka::address ip("127.0.0.1803:65536");
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test correct string
 			setka::address ip("127.0.0.1:65535");
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(ip.port == 0xffff)
+			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
+			utki::assert(ip.port == 0xffff, SL);
 		}catch(std::exception&){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test correct string
 			setka::address ip("127.0.0.1:0");
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(ip.port == 0)
+			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
+			utki::assert(ip.port == 0, SL);
 		}catch(std::exception&){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test correct string
 			setka::address ip("127.0.0.1:6535 ");
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(ip.port == 6535)
+			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
+			utki::assert(ip.port == 6535, SL);
 		}catch(std::exception&){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 		
 		try{//test correct string
 			setka::address ip("127.0.0.1:6535dwqd 345");
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
-			ASSERT_ALWAYS(ip.port == 6535)
+			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
+			utki::assert(ip.port == 6535, SL);
 		}catch(std::exception&){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 	}catch(...){
-		ASSERT_ALWAYS(false)
+		utki::assert(false, SL);
 	}
 	
 	// Test IPv6
 	if(IsIPv6SupportedByOS()){
 		try{
 			setka::address ip("1002:3004:5006::7008:900a");
-			ASSERT_ALWAYS(ip.port == 0)
-			ASSERT_ALWAYS(ip.host.quad[0] == 0x10023004)
-			ASSERT_ALWAYS(ip.host.quad[1] == 0x50060000)
-			ASSERT_ALWAYS(ip.host.quad[2] == 0x00000000)
-			ASSERT_ALWAYS(ip.host.quad[3] == 0x7008900a)
+			utki::assert(ip.port == 0, SL);
+			utki::assert(ip.host.quad[0] == 0x10023004, SL);
+			utki::assert(ip.host.quad[1] == 0x50060000, SL);
+			utki::assert(ip.host.quad[2] == 0x00000000, SL);
+			utki::assert(ip.host.quad[3] == 0x7008900a, SL);
 		}catch(std::exception& e){
-			ASSERT_INFO_ALWAYS(false, "exception caught: " << e.what())
+			utki::assert(false, [&](auto&o){o << "exception caught: " << e.what();}, SL);
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 
 		try{
 			setka::address ip("[1002:3004:5006::7008:900a]:134");
-			ASSERT_ALWAYS(ip.port == 134)
-			ASSERT_ALWAYS(ip.host.quad[0] == 0x10023004)
-			ASSERT_ALWAYS(ip.host.quad[1] == 0x50060000)
-			ASSERT_ALWAYS(ip.host.quad[2] == 0x00000000)
-			ASSERT_ALWAYS(ip.host.quad[3] == 0x7008900a)
+			utki::assert(ip.port == 134, SL);
+			utki::assert(ip.host.quad[0] == 0x10023004, SL);
+			utki::assert(ip.host.quad[1] == 0x50060000, SL);
+			utki::assert(ip.host.quad[2] == 0x00000000, SL);
+			utki::assert(ip.host.quad[3] == 0x7008900a, SL);
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 
 		try{
 			setka::address ip("[::ffff:127.0.0.1]:45");
-			ASSERT_ALWAYS(ip.port == 45)
-			ASSERT_ALWAYS(ip.host.is_v4())
-			ASSERT_ALWAYS(ip.host.get_v4() == 0x7f000001)
+			utki::assert(ip.port == 45, SL);
+			utki::assert(ip.host.is_v4(), SL);
+			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
 		}catch(...){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 	}
 }

@@ -54,13 +54,21 @@ void Run(){
 		TRACE(<< "TestSimpleDNSLookup::Run(): waiting on semaphore" << std::endl)
 		
 		if(!sema.wait(11000)){
-			ASSERT_ALWAYS(false)
+			utki::assert(false, SL);
 		}
 
-		ASSERT_INFO_ALWAYS(r.res == setka::dns_result::ok, "r.result = " << unsigned(r.res))
+		utki::assert(
+			r.res == setka::dns_result::ok,
+			[&](auto&o){o << "r.result = " << unsigned(r.res);},
+			SL
+		);
 
 //		ASSERT_INFO_ALWAYS(r.ip == 0x4D581503 || r.ip == 0x57FAFB03, "r.ip = " << r.ip)
-		ASSERT_INFO_ALWAYS(r.ip.is_valid(), "ip = " << r.ip.to_string())
+		utki::assert(
+			r.ip.is_valid(),
+			[&](auto&o){o << "ip = " << r.ip.to_string();},
+			SL
+		);
 
 		TRACE(<< "ip = " << r.ip.to_string() << std::endl)
 	}
@@ -85,15 +93,19 @@ void Run(){
 		
 		for(unsigned i = 0; i < r.size(); ++i){
 			if(!sema.wait(11000)){
-				ASSERT_ALWAYS(false)
+				utki::assert(false, SL);
 			}
 		}
 //		TRACE(<< "resolutions done" << std::endl)
 		
 		for(T_ResolverIter i = r.begin(); i != r.end(); ++i){
-			ASSERT_INFO_ALWAYS((*i)->res == setka::dns_result::ok, "result = " << unsigned((*i)->res) << " host to resolve = " << (*i)->hostName)
+			utki::assert(
+				(*i)->res == setka::dns_result::ok,
+				[&](auto&o){o << "result = " << unsigned((*i)->res) << " host to resolve = " << (*i)->hostName;},
+				SL
+			);
 //			ASSERT_INFO_ALWAYS((*i)->ip == 0x4D581503 || (*i)->ip == 0x57FAFB03, "(*i)->ip = " << (*i)->ip)
-			ASSERT_ALWAYS((*i)->ip.is_valid())
+			utki::assert((*i)->ip.is_valid(), SL);
 		}
 	}
 }
@@ -125,13 +137,17 @@ public:
 //		ASSERT_INFO_ALWAYS(result == ting::net::dns_resolver::OK, "result = " << result)
 		
 		if(this->host.size() == 0){
-			ASSERT_INFO_ALWAYS(res == setka::dns_result::not_found, "result = " << unsigned(res))
-			ASSERT_ALWAYS(!ip.is_valid())
+			utki::assert(
+				res == setka::dns_result::not_found,
+				[&](auto&o){o << "result = " << unsigned(res);},
+				SL
+			);
+			utki::assert(!ip.is_valid(), SL);
 			
 			this->host = "ya.ru";
 			this->resolve(this->host, 5000);
 		}else{
-			ASSERT_ALWAYS(this->host == "ya.ru")
+			utki::assert(this->host == "ya.ru", SL);
 			this->res = res;
 			this->ip = ip;
 			this->sema.signal();
@@ -147,13 +163,17 @@ void Run(){
 	r.resolve("rfesfdf.ru", 3000);
 	
 	if(!sema.wait(8000)){
-		ASSERT_ALWAYS(false)
+		utki::assert(false, SL);
 	}
 	
-	ASSERT_INFO_ALWAYS(r.res == setka::dns_result::ok, "r.result = " << unsigned(r.res))
+	utki::assert(
+		r.res == setka::dns_result::ok,
+		[&](auto&o){o << "r.result = " << unsigned(r.res);},
+		SL
+	);
 
 //	ASSERT_INFO_ALWAYS(r.ip == 0x4D581503 || r.ip == 0x57FAFB03, "r.ip = " << r.ip)
-	ASSERT_ALWAYS(r.ip.is_valid())
+	utki::assert(r.ip.is_valid(), SL);
 }
 }
 
@@ -185,8 +205,8 @@ void Run(){
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 	
-	ASSERT_ALWAYS(res)
+	utki::assert(res, SL);
 	
-	ASSERT_ALWAYS(!r.called)
+	utki::assert(!r.called, SL);
 }
 }
