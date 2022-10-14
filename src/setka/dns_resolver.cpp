@@ -274,7 +274,9 @@ public:
 		ASSERT(&*buf.begin() <= p && p <= &*buf.end());
 		ASSERT(size_t(p - &*buf.begin()) == packetSize);
 		
-		TRACE(<< "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl)
+		LOG([&](auto&o){
+			o << "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->hostName << ", reqID = " << r->id << std::endl;
+		})
 		size_t ret = this->socket.send(utki::make_span(&*buf.begin(), packetSize), r->dns);
 		
 		ASSERT(ret == packetSize || ret == 0)
@@ -314,10 +316,10 @@ public:
 	// NOTE: call to this function should be protected by mutex,
 	//       this function will call the Resolver callback
 	ParseResult ParseReplyFromDNS(dns::Resolver* r, const utki::span<uint8_t> buf){
-		TRACE(<< "dns::Resolver::ParseReplyFromDNS(): enter" << std::endl)
+		LOG([&](auto&o){o << "dns::Resolver::ParseReplyFromDNS(): enter" << std::endl;})
 #ifdef DEBUG
 		for(unsigned i = 0; i < buf.size(); ++i){
-			TRACE(<< std::hex << int(buf[i]) << std::dec << std::endl)
+			LOG([&](auto&o){o << std::hex << int(buf[i]) << std::dec << std::endl;})
 		}
 #endif
 		
@@ -341,7 +343,7 @@ public:
 			p += 2;
 			
 			if((flags & 0x8000) == 0){ // we expect it to be a response, not query.
-				TRACE(<< "ParseReplyFromDNS(): (flags & 0x8000) = " << (flags & 0x8000) << std::endl)
+				LOG([&](auto&o){o << "ParseReplyFromDNS(): (flags & 0x8000) = " << (flags & 0x8000) << std::endl;})
 				return ParseResult(setka::dns_result::dns_error);
 			}
 			
@@ -350,7 +352,7 @@ public:
 				if((flags & 0xf) == 3){ // name does not exist
 					return ParseResult(setka::dns_result::not_found);
 				}else{
-					TRACE(<< "ParseReplyFromDNS(): (flags & 0xf) = " << (flags & 0xf) << std::endl)
+					LOG([&](auto&o){o << "ParseReplyFromDNS(): (flags & 0xf) = " << (flags & 0xf) << std::endl;})
 					return ParseResult(setka::dns_result::dns_error);
 				}
 			}
@@ -497,7 +499,7 @@ public:
 						break;
 				}
 				
-				TRACE(<< "host resolved: " << r->hostName << " = " << h.to_string() << std::endl)
+				LOG([&](auto&o){o << "host resolved: " << r->hostName << " = " << h.to_string() << std::endl;})
 				return ParseResult(setka::dns_result::ok, h);
 			}
 			p += dataLen;
@@ -605,14 +607,14 @@ private:
 				DWORD len = DWORD(value.size());
 				
 				if(RegQueryValueEx(hSub, "NameServer", 0, NULL, &*value.begin(), &len) != ERROR_SUCCESS){
-					TRACE(<< "NameServer reading failed " << std::endl)
+					LOG([&](auto&o){o << "NameServer reading failed " << std::endl;})
 				}else{
 					try{
 						std::string str(reinterpret_cast<char*>(&*value.begin()));
 						size_t spaceIndex = str.find(' ');
 
 						std::string ip = str.substr(0, spaceIndex);
-						TRACE(<< "NameServer ip = " << ip << std::endl)
+						LOG([&](auto&o){o << "NameServer ip = " << ip << std::endl;})
 				
 						this->dns = setka::address(ip.c_str(), 53);
 						RegCloseKey(hSub);
@@ -622,7 +624,7 @@ private:
 
 				len = DWORD(value.size());
 				if(RegQueryValueEx(hSub, "DhcpNameServer", 0, NULL, &*value.begin(), &len) != ERROR_SUCCESS){
-					TRACE(<< "DhcpNameServer reading failed " << std::endl)
+					LOG([&](auto&o){o << "DhcpNameServer reading failed " << std::endl;})
 					RegCloseKey(hSub);
 					continue;
 				}
@@ -632,7 +634,7 @@ private:
 					size_t spaceIndex = str.find(' ');
 
 					std::string ip = str.substr(0, spaceIndex);
-					TRACE(<< "DhcpNameServer ip = " << ip << std::endl)
+					LOG([&](auto&o){o << "DhcpNameServer ip = " << ip << std::endl;})
 				
 					this->dns = setka::address(ip.c_str(), 53);
 					RegCloseKey(hSub);
@@ -672,7 +674,7 @@ private:
 				
 				std::string ipstr = line.substr(ipStart, ipEnd - ipStart);
 				
-				TRACE(<< "dns ipstr = " << ipstr << std::endl)
+				LOG([&](auto&o){o << "dns ipstr = " << ipstr << std::endl;})
 				
 				try{
 					this->dns = setka::address(ipstr.c_str(), 53);
@@ -680,7 +682,7 @@ private:
 				}catch(...){}
 			}
 #else
-			TRACE(<< "InitDNS(): don't know how to get DNS IP on this OS" << std::endl)
+			LOG([&](auto&o){o << "InitDNS(): don't know how to get DNS IP on this OS" << std::endl;})
 #endif
 		}catch(...){
 		}
@@ -688,7 +690,7 @@ private:
 	}
 	
 	void run()override{
-		TRACE(<< "DNS lookup thread started" << std::endl)
+		LOG([&](auto&o){o << "DNS lookup thread started" << std::endl;})
 		
 		// destroy previous thread if necessary
 		if(this->prevThread){
@@ -697,14 +699,14 @@ private:
 			// started thread.
 			this->prevThread->join();
 			this->prevThread.reset();
-			TRACE(<< "Previous thread destroyed" << std::endl)
+			LOG([&](auto&o){o << "Previous thread destroyed" << std::endl;})
 		}
 		
-		TRACE(<< "calling this->InitDNS()" << std::endl)
+		LOG([&](auto&o){o << "calling this->InitDNS()" << std::endl;})
 		
 		this->InitDNS();
 		
-		TRACE(<< "this->dns.host = " << this->dns.host.to_string() << std::endl)
+		LOG([&](auto&o){o << "this->dns.host = " << this->dns.host.to_string() << std::endl;})
 		
 		{
 			std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex); // mutex is needed because socket opening may fail and we will have to set isExiting flag which should be protected by mutex
@@ -733,7 +735,7 @@ private:
 				}
 
 				if(this->socket.flags().get(opros::ready::read)){
-					TRACE(<< "can read" << std::endl)
+					LOG([&](auto&o){o << "can read" << std::endl;})
 					try{
 						std::array<uint8_t, 512> buf; // RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
 						setka::address address;
@@ -757,7 +759,7 @@ private:
 									
 									if(res.result == setka::dns_result::not_found && i->second->recordType == D_DNSRecordAAAA){
 										// try getting record type A
-										TRACE(<< "no record AAAA found, trying to get record type A" << std::endl)
+										LOG([&](auto&o){o << "no record AAAA found, trying to get record type A" << std::endl;})
 										
 										i->second->recordType = D_DNSRecordA;
 										
@@ -799,7 +801,7 @@ private:
 				if(this->socket.flags().get(opros::ready::write))
 #endif
 				{
-					TRACE(<< "can write" << std::endl)
+					LOG([&](auto&o){o << "can write" << std::endl;})
 					// send request
 					ASSERT(this->sendList.size() > 0)
 					
@@ -812,10 +814,10 @@ private:
 
 							if(r->dns.host.is_valid()){
 								if(!this->SendRequestToDNS(r)){
-									TRACE(<< "request not sent" << std::endl)
+									LOG([&](auto&o){o << "request not sent" << std::endl;})
 									break; // socket is not ready for sending, go out of requests sending loop.
 								}
-								TRACE(<< "request sent" << std::endl)
+								LOG([&](auto&o){o << "request sent" << std::endl;})
 								r->sendIter = this->sendList.end(); // end() value will indicate that the request has already been sent
 								this->sendList.pop_front();
 							}else{
@@ -832,7 +834,7 @@ private:
 #endif
 						)
 					{
-						TRACE(<< "writing to a socket failed: " << e.what() << std::endl)
+						LOG([&](auto&o){o << "writing to a socket failed: " << e.what() << std::endl;})
 						this->isExiting = true;
 						this->RemoveAllResolvers();
 						break; // exit thread
@@ -841,7 +843,7 @@ private:
 					if(this->sendList.size() == 0){
 						// move socket to waiting for READ condition only
 						this->waitSet.change(this->socket, utki::make_flags({opros::ready::read}));
-						TRACE(<< "socket wait mode changed to read only" << std::endl)
+						LOG([&](auto&o){o << "socket wait mode changed to read only" << std::endl;})
 					}
 				}
 				
@@ -904,7 +906,7 @@ private:
 			}
 #endif
 			
-			TRACE(<< "DNS thread: waiting with timeout = " << timeout << std::endl)
+			LOG([&](auto&o){o << "DNS thread: waiting with timeout = " << timeout << std::endl;})
 			if(this->waitSet.wait(timeout) == 0){
 				// no waitables triggered
 //				TRACE(<< "timeout hit" << std::endl)
@@ -920,7 +922,7 @@ private:
 		
 		this->waitSet.remove(this->socket);
 		this->waitSet.remove(this->queue);
-		TRACE(<< "DNS lookup thread stopped" << std::endl)
+		LOG([&](auto&o){o << "DNS lookup thread stopped" << std::endl;})
 	}
 };
 
@@ -1087,7 +1089,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 			dns::thread->lastTicksInFirstHalf = curTime < (uint32_t(-1) / 2);
 			dns::thread->start();
 			dns::thread->isExiting = false; // thread has just started, clear the exiting flag
-			TRACE(<< "dns_resolver::Resolve_ts(): thread started" << std::endl)
+			LOG([&](auto&o){o << "dns_resolver::Resolve_ts(): thread started" << std::endl;})
 		}
 	}catch(...){
 		dns::thread->resolversMap.erase(this);

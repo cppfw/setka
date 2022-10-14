@@ -32,7 +32,7 @@ public:
 	}
 	
 	void on_completed(setka::dns_result res, setka::address::ip ip)noexcept override{
-		TRACE(<< "onCompleted_ts(): result = " << unsigned(res) << " ip = " << ip.to_string() << std::endl)
+		LOG([&](auto&o){o << "onCompleted_ts(): result = " << unsigned(res) << " ip = " << ip.to_string() << std::endl;})
 		
 //		ASSERT_INFO_ALWAYS(result == ting::net::dns_resolver::OK, "result = " << result)
 		this->res = res;
@@ -51,7 +51,7 @@ void Run(){
 
 		r.resolve("google.com", 10000);
 
-		TRACE(<< "TestSimpleDNSLookup::Run(): waiting on semaphore" << std::endl)
+		LOG([&](auto&o){o << "TestSimpleDNSLookup::Run(): waiting on semaphore" << std::endl;})
 		
 		if(!sema.wait(11000)){
 			utki::assert(false, SL);
@@ -70,7 +70,7 @@ void Run(){
 			SL
 		);
 
-		TRACE(<< "ip = " << r.ip.to_string() << std::endl)
+		LOG([&](auto&o){o << "ip = " << r.ip.to_string() << std::endl;})
 	}
 	
 	{//test several resolves at a time
