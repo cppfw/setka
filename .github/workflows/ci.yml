@@ -69,15 +69,17 @@ jobs:
       run: |
         brew tap cppfw/tap
         brew update
-    - name: remove conflicting python stuff
-      run: |
-        rm '/usr/local/bin/2to3-3.11'
-        rm '/usr/local/bin/idle3.11'
-        rm '/usr/local/bin/pydoc3.11'
-        rm '/usr/local/bin/python3.11'
-        rm '/usr/local/bin/python3.11-config'
+    # - name: remove conflicting python stuff
+    #   run: |
+    #     rm '/usr/local/bin/2to3-3.11'
+    #     rm '/usr/local/bin/idle3.11'
+    #     rm '/usr/local/bin/pydoc3.11'
+    #     rm '/usr/local/bin/python3.11'
+    #     rm '/usr/local/bin/python3.11-config'
     - name: install ci tools
-      run: brew install myci make
+      run: |
+        brew install --overwrite myci
+        myci-brew-install.sh make
     - name: set PATH to use latest make
       uses: myci-actions/export-env-var@master
       with: {name: PATH, value: "/usr/local/opt/make/libexec/gnubin:$PATH"}
@@ -99,7 +101,7 @@ jobs:
         brew tap cppfw/tap
         brew update
     - name: install ci tools
-      run: brew install myci
+      run: brew install --overwrite myci
     - name: git clone
       uses: myci-actions/checkout@master
     - name: set PACKAGE_VERSION
