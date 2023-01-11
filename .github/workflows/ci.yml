@@ -70,7 +70,12 @@ jobs:
         brew tap cppfw/tap
         brew update
     - name: remove conflicting python stuff
-      run: rm '/usr/local/bin/2to3-3.11'
+      run: |
+        rm '/usr/local/bin/2to3-3.11'
+        rm '/usr/local/bin/idle3.11'
+        rm '/usr/local/bin/pydoc3.11'
+        rm '/usr/local/bin/python3.11'
+        rm '/usr/local/bin/python3.11-config'
     - name: install ci tools
       run: brew install myci make
     - name: set PATH to use latest make
