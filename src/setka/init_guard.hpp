@@ -41,7 +41,7 @@ namespace setka{
  */
 class init_guard : public utki::intrusive_singleton<init_guard>{
 	friend class utki::intrusive_singleton<init_guard>;
-	static utki::intrusive_singleton<init_guard>::T_Instance instance;
+	static utki::intrusive_singleton<init_guard>::instance_type instance;
 	
 public:
 	init_guard();
