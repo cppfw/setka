@@ -12,6 +12,10 @@
 
 #include "socket.hpp"
 
+#ifdef assert
+#	undef assert
+#endif
+
 namespace{
 bool IsIPv6SupportedByOS(){
 #if M_OS == M_OS_WINDOWS
