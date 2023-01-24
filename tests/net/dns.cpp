@@ -8,6 +8,10 @@
 #include <memory>
 #include <vector>
 
+#ifdef assert
+#	undef assert
+#endif
+
 namespace TestSimpleDNSLookup{
 
 class Resolver : public setka::dns_resolver{
