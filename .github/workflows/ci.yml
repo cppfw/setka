@@ -35,7 +35,7 @@ jobs:
         with:
           repo: deb http://gagis.hopto.org/repo/cppfw/${{ matrix.os }} ${{ matrix.codename }} main
           repo-name: cppfw
-          key-asc: http://gagis.hopto.org/repo/cppfw/pubkey.gpg
+          keys-asc: http://gagis.hopto.org/repo/cppfw/pubkey.gpg
           install: myci git
       - name: install ci tools
         run: |
@@ -134,7 +134,7 @@ jobs:
       with:
         repo: deb http://gagis.hopto.org/repo/cppfw/$(lsb_release --id --short | tr '[:upper:]' '[:lower:]') $(lsb_release --codename --short) main
         repo-name: cppfw
-        key-asc: http://gagis.hopto.org/repo/cppfw/pubkey.gpg
+        keys-asc: http://gagis.hopto.org/repo/cppfw/pubkey.gpg
         install: myci
     - name: set PACKAGE_VERSION
       uses: myci-actions/export-env-var@master
