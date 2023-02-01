@@ -1,3 +1,9 @@
+libsetka (1.0.26) unstable; urgency=medium
+
+  * fix typo in method name recieve() -> receive()
+
+ -- Ivan Gagis <igagis@gmail.com>  Wed, 01 Feb 2023 19:49:55 +0200
+
 libsetka (1.0.25) unstable; urgency=medium
 
   * fix debian dev package dependencies
