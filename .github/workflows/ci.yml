@@ -35,7 +35,7 @@ jobs:
         with:
           repo: deb http://gagis.hopto.org/repo/cppfw/${{ matrix.os }} ${{ matrix.codename }} main
           repo-name: cppfw
-          key-server: http://gagis.hopto.org/repo/cppfw/pubkey.gpg
+          key-asc: http://gagis.hopto.org/repo/cppfw/pubkey.gpg
           install: myci git
       - name: install ci tools
         run: |
@@ -134,7 +134,7 @@ jobs:
       with:
         repo: deb http://gagis.hopto.org/repo/cppfw/$(lsb_release --id --short | tr '[:upper:]' '[:lower:]') $(lsb_release --codename --short) main
         repo-name: cppfw
-        key-server: http://gagis.hopto.org/repo/cppfw/pubkey.gpg
+        key-asc: http://gagis.hopto.org/repo/cppfw/pubkey.gpg
         install: myci
     - name: set PACKAGE_VERSION
       uses: myci-actions/export-env-var@master
@@ -210,7 +210,7 @@ jobs:
         shell: powershell
     steps:
     - name: git clone
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: install CoAPP tools
       uses: myci-actions/install-coapp-tools@master
     - name: nuget update
@@ -218,7 +218,7 @@ jobs:
         nuget restore msvs_solution/msvs_solution.sln
         nuget update msvs_solution/msvs_solution.sln
     - name: add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v1.1
     - name: build
       run: .\nuget\build_nuget.ps1
     - name: deploy
