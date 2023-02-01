@@ -89,7 +89,7 @@ public:
 	 * @param buf - pointer to the buffer where to put received data.
 	 * @return the number of bytes written to the buffer.
 	 */
-	size_t recieve(utki::span<uint8_t> buf);
+	size_t receive(utki::span<uint8_t> buf);
 
 	/**
 	 * @brief Get local IP address and port.

@@ -175,14 +175,14 @@ size_t tcp_socket::send(const utki::span<uint8_t> buf){
 	return size_t(len);
 }
 
-size_t tcp_socket::recieve(utki::span<uint8_t> buf){
+size_t tcp_socket::receive(utki::span<uint8_t> buf){
 	// the 'ready to read' flag shall be cleared even if this function fails to avoid subsequent
 	// calls to recv() because it indicates that there's activity.
 	// So, do it at the beginning of the function.
 	this->readiness_flags.clear(opros::ready::read);
 
 	if(!this->is_open()){
-		throw std::logic_error("tcp_socket::recieve(): socket is not opened");
+		throw std::logic_error("tcp_socket::receive(): socket is not opened");
 	}
 
 #if M_OS == M_OS_WINDOWS

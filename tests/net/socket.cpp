@@ -143,7 +143,7 @@ void Run(){
 		size_t bytesReceived = 0;
 		for(unsigned i = 0; i < 30; ++i){
 			utki::assert(bytesReceived < 4, SL);
-			bytesReceived += sock.recieve(utki::span<uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
+			bytesReceived += sock.receive(utki::span<uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
 			utki::assert(bytesReceived <= 4, SL);
 			if(bytesReceived == 4){
 				break;
@@ -314,7 +314,7 @@ void Run(){
 					std::array<uint8_t, 0x2000> buf; // 8kb buffer
 					size_t numBytesReceived;
 					try{
-						numBytesReceived = sockR.recieve(utki::make_span(buf));
+						numBytesReceived = sockR.receive(utki::make_span(buf));
 					}catch(std::exception& e){
 						utki::assert(
 							false,
@@ -429,7 +429,7 @@ void Run(){
 			std::array<uint8_t, 0x2000> buf; // 8kb buffer
 			size_t numBytesReceived;
 			try{
-				numBytesReceived = sockR.recieve(utki::make_span(buf));
+				numBytesReceived = sockR.receive(utki::make_span(buf));
 			}catch(std::exception& e){
 				utki::assert(
 					false,
