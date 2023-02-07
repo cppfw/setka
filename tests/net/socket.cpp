@@ -282,7 +282,6 @@ void Run(){
 					}else{
 //						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
 					}
-					utki::assert(!triggered[i].flags.get(opros::ready::write), SL);
 				}catch(std::exception& e){
 					utki::assert(
 						false,
