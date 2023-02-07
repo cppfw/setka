@@ -128,12 +128,12 @@ udp_socket::udp_socket(uint16_t port)
 				== socket_error)
 			{
 #if CFG_OS == CFG_OS_WINDOWS
-				int errorCode = WSAGetLastError();
+				int error_code = WSAGetLastError();
 #else
-				int errorCode = errno;
+				int error_code = errno;
 #endif
 				throw std::system_error(
-					errorCode,
+					error_code,
 					std::generic_category(),
 					"could not bind socket to network address, bind() failed"
 				);
@@ -243,18 +243,18 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destinatio
 
 		if (len == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
-			int errorCode = WSAGetLastError();
+			int error_code = WSAGetLastError();
 #else
-			int errorCode = errno;
+			int error_code = errno;
 #endif
-			if (errorCode == error_interrupted) {
+			if (error_code == error_interrupted) {
 				continue;
-			} else if (errorCode == error_again) {
+			} else if (error_code == error_again) {
 				// can't send more bytes, return 0 bytes sent
 				len = 0;
 			} else {
 				throw std::system_error(
-					errorCode,
+					error_code,
 					std::generic_category(),
 					"could not send data over UDP, sendto() failed"
 				);
@@ -307,17 +307,17 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 
 		if (len == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
-			int errorCode = WSAGetLastError();
+			int error_code = WSAGetLastError();
 #else
-			int errorCode = errno;
+			int error_code = errno;
 #endif
-			if (errorCode == error_interrupted) {
+			if (error_code == error_interrupted) {
 				continue;
-			} else if (errorCode == error_again) {
+			} else if (error_code == error_again) {
 				return 0; // no data available, return 0 bytes received
 			} else {
 				throw std::system_error(
-					errorCode,
+					error_code,
 					std::generic_category(),
 					"could not receive data over UDP, recvfrom() failed"
 				);

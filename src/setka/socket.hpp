@@ -100,7 +100,7 @@ protected:
 		//		TRACE(<< "Socket::Socket(): invoked " << this << std::endl)
 	}
 
-	socket& operator=(socket&& s);
+	socket& operator=(socket&& s) noexcept(false);
 
 	void disable_naggle();
 

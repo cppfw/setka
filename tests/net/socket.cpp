@@ -116,7 +116,7 @@ public:
 
 
 
-void Run(){
+void run(){
 	ServerThread serverThread;
 	
 	serverThread.start();
@@ -170,13 +170,13 @@ void Run(){
 
 namespace SendDataContinuouslyWithWaitSet{
 
-void Run(){
+void run(){
 	setka::tcp_server_socket serverSock(13666);
 
 	setka::tcp_socket sockS(setka::address("127.0.0.1", 13666));
 
 	//Accept connection
-//	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
+//	TRACE(<< "SendDataContinuously::run(): accepting connection" << std::endl)
 	setka::tcp_socket sockR;
 	for(unsigned i = 0; i < 20 && sockR.is_empty(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -191,8 +191,8 @@ void Run(){
 	{
 		setka::address addrS = sockS.get_remote_address();
 		setka::address addrR = sockR.get_remote_address();
-//		TRACE(<< "SendDataContinuously::Run(): addrS = " << std::hex << addrS.host << ":" << addrS.port << std::dec << std::endl)
-//		TRACE(<< "SendDataContinuously::Run(): addrR = " << std::hex << addrR.host << ":" << addrR.port << std::dec << std::endl)
+//		TRACE(<< "SendDataContinuously::run(): addrS = " << std::hex << addrS.host << ":" << addrS.port << std::dec << std::endl)
+//		TRACE(<< "SendDataContinuously::run(): addrR = " << std::hex << addrR.host << ":" << addrR.port << std::dec << std::endl)
 		utki::assert(addrS.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
 		utki::assert(addrR.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
 	}
@@ -221,24 +221,24 @@ void Run(){
 		utki::assert(numTriggered <= 2, SL);
 
 		if(numTriggered == 0){
-//			TRACE(<< "SendDataContinuously::Run(): 0 triggered" << std::endl)
+//			TRACE(<< "SendDataContinuously::run(): 0 triggered" << std::endl)
 			continue;
 		}
 
 		//If 2 waitables have triggered they should be 2 different waitables.
 		if(numTriggered == 2){
-//			TRACE(<< "SendDataContinuously::Run(): 2 triggered" << std::endl)
+//			TRACE(<< "SendDataContinuously::run(): 2 triggered" << std::endl)
 			utki::assert(triggered[0].w != triggered[1].w, SL);
 		}else{
 			utki::assert(numTriggered == 1, SL);
-//			TRACE(<< "SendDataContinuously::Run(): 1 triggered" << std::endl)
+//			TRACE(<< "SendDataContinuously::run(): 1 triggered" << std::endl)
 		}
 
 		for(unsigned i = 0; i < numTriggered; ++i){
 			if(triggered[i].w == &sockS){
 				utki::assert(triggered[i].w != &sockR, SL);
 
-//				TRACE(<< "SendDataContinuously::Run(): sockS triggered" << std::endl)
+//				TRACE(<< "SendDataContinuously::run(): sockS triggered" << std::endl)
 				utki::assert(!triggered[i].flags.get(opros::ready::read), SL);
 				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
 				utki::assert(triggered[i].flags.get(opros::ready::write), SL);
@@ -280,7 +280,7 @@ void Run(){
 					if(res == 0){
 						utki::assert(res > 0, SL); // since it was CanWrite() we should be able to write at least something
 					}else{
-//						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
+//						TRACE(<< "SendDataContinuously::run(): " << res << " bytes sent" << std::endl)
 					}
 				}catch(std::exception& e){
 					utki::assert(
@@ -293,7 +293,7 @@ void Run(){
 			}else if(triggered[i].w == &sockR){
 				utki::assert(triggered[i].w != &sockS, SL);
 
-//				TRACE(<< "SendDataContinuously::Run(): sockR triggered" << std::endl)
+//				TRACE(<< "SendDataContinuously::run(): sockR triggered" << std::endl)
 				utki::assert(triggered[i].flags.get(opros::ready::read), SL);
 				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
 				utki::assert(!triggered[i].flags.get(opros::ready::write), SL);
@@ -311,7 +311,7 @@ void Run(){
 						);
 					}
 					utki::assert(numBytesReceived <= buf.size(), SL);
-//					TRACE(<< "SendDataContinuously::Run(): " << numBytesReceived << " bytes received" << std::endl)
+//					TRACE(<< "SendDataContinuously::run(): " << numBytesReceived << " bytes received" << std::endl)
 
 					if(numBytesReceived == 0){
 						break;//~while(true)
@@ -359,13 +359,13 @@ void Run(){
 
 namespace SendDataContinuously{
 
-void Run(){
+void run(){
 	setka::tcp_server_socket serverSock(13666);
 
 	setka::tcp_socket sockS(setka::address("127.0.0.1", 13666));
 
 	// accept connection
-//	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
+//	TRACE(<< "SendDataContinuously::run(): accepting connection" << std::endl)
 	setka::tcp_socket sockR;
 	for(unsigned i = 0; i < 20 && sockR.is_empty(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -420,7 +420,7 @@ void Run(){
 				);
 			}
 			utki::assert(numBytesReceived <= buf.size(), SL);
-//			TRACE(<< "SendDataContinuously::Run(): " << numBytesReceived << " bytes received" << std::endl)
+//			TRACE(<< "SendDataContinuously::run(): " << numBytesReceived << " bytes received" << std::endl)
 
 			if(numBytesReceived == 0){
 				break;//~while(true)
@@ -446,7 +446,7 @@ void Run(){
 
 namespace Basicip_addressTest{
 
-void Run(){
+void run(){
 	{
 		try{
 			setka::address a("123.124.125.126", 5);
@@ -489,7 +489,7 @@ void Run(){
 
 namespace BasicUDPSocketsTest{
 
-void Run(){
+void run(){
 
 	setka::udp_socket recvSock;
 
@@ -575,7 +575,7 @@ void Run(){
 }
 
 namespace TestUDPSocketWaitForWriting{
-void Run(){
+void run(){
 	try{
 		setka::udp_socket sendSock(0);
 
@@ -604,7 +604,7 @@ void Run(){
 }
 
 namespace Testip_address{
-void Run(){
+void run(){
 	try{//test IP-address without port string parsing
 		try{//test correct string
 			setka::address ip("127.0.0.1", 80);

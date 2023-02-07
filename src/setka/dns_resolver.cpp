@@ -108,7 +108,7 @@ typedef T_ResolversMap::iterator T_ResolversIter;
 struct Resolver {
 	dns_resolver* hnr;
 
-	std::string hostName; // host name to resolve
+	std::string host_name; // host name to resolve
 
 	uint16_t recordType; // type of DNS record to get
 
@@ -206,7 +206,7 @@ public:
 			2 + // Number of answers
 			2 + // Number of authority records
 			2 + // Number of other records
-			r->hostName.size() + 2 + // domain name
+			r->host_name.size() + 2 + // domain name
 			2 + // Question type
 			2 // Question class
 			;
@@ -240,24 +240,24 @@ public:
 		p += 2;
 
 		// domain name
-		for (size_t dotPos = 0; dotPos < r->hostName.size();) {
-			size_t oldDotPos = dotPos;
-			dotPos = r->hostName.find('.', dotPos);
-			if (dotPos == std::string::npos) {
-				dotPos = r->hostName.size();
+		for (size_t dot_pos = 0; dot_pos < r->host_name.size();) {
+			size_t old_dot_pos = dot_pos;
+			dot_pos = r->host_name.find('.', dot_pos);
+			if (dot_pos == std::string::npos) {
+				dot_pos = r->host_name.size();
 			}
 
-			ASSERT(dotPos <= 0xff)
-			size_t labelLength = dotPos - oldDotPos;
+			ASSERT(dot_pos <= 0xff)
+			size_t labelLength = dot_pos - old_dot_pos;
 			ASSERT(labelLength <= 0xff)
 
 			*p = uint8_t(labelLength); // save label length
 			++p;
 			// copy the label bytes
-			memcpy(p, r->hostName.c_str() + oldDotPos, labelLength);
+			memcpy(p, r->host_name.c_str() + old_dot_pos, labelLength);
 			p += labelLength;
 
-			++dotPos;
+			++dot_pos;
 
 			ASSERT(p <= &*buf.end());
 		}
@@ -276,7 +276,7 @@ public:
 		ASSERT(size_t(p - &*buf.begin()) == packetSize);
 
 		LOG([&](auto& o) {
-			o << "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->hostName
+			o << "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->host_name
 			  << ", reqID = " << r->id << std::endl;
 		})
 		size_t ret = this->socket.send(utki::make_span(&*buf.begin(), packetSize), r->dns);
@@ -407,8 +407,8 @@ public:
 			std::string host = dns::ParseHostNameFromDNSPacket(p, buf.end());
 			//			TRACE(<< "host = " << host << std::endl)
 
-			if (r->hostName != host) {
-				//				TRACE(<< "this->hostName = " << this->hostName << std::endl)
+			if (r->host_name != host) {
+				//				TRACE(<< "this->host_name = " << this->host_name << std::endl)
 				return ParseResult(setka::dns_result::dns_error); // wrong host name for ID.
 			}
 		}
@@ -516,7 +516,7 @@ public:
 				}
 
 				LOG([&](auto& o) {
-					o << "host resolved: " << r->hostName << " = " << h.to_string() << std::endl;
+					o << "host resolved: " << r->host_name << " = " << h.to_string() << std::endl;
 				})
 				return ParseResult(setka::dns_result::ok, h);
 			}
@@ -752,7 +752,7 @@ private:
 		})
 
 		{
-			std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex
+			std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex
 			); // mutex is needed because socket opening may fail and we will have to set isExiting flag which should be
 			   // protected by mutex
 
@@ -775,7 +775,7 @@ private:
 			uint32_t timeout;
 
 			{
-				std::lock_guard<decltype(this->mutex)> mutexGuard(this->mutex);
+				std::lock_guard<decltype(this->mutex)> mutex_guard(this->mutex);
 
 				utki::flags<opros::ready> flags(false);
 				for (size_t i = 0; i != num_triggered; ++i) {
@@ -814,7 +814,7 @@ private:
 								const uint8_t* p = &*buf.begin() + 12; // start of the host name
 								std::string host = dns::ParseHostNameFromDNSPacket(p, &*buf.end());
 
-								if (host == i->second->hostName) {
+								if (host == i->second->host_name) {
 									ParseResult res =
 										this->ParseReplyFromDNS(i->second, utki::span<uint8_t>(&*buf.begin(), ret));
 
@@ -1020,10 +1020,10 @@ dns_resolver::~dns_resolver()
 {
 #ifdef DEBUG
 	// check that there is no ongoing DNS lookup operation.
-	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
+	std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex);
 
 	if (dns::thread) {
-		std::lock_guard<decltype(dns::thread->mutex)> mutexGuard(dns::thread->mutex);
+		std::lock_guard<decltype(dns::thread->mutex)> mutex_guard(dns::thread->mutex);
 
 		dns::T_ResolversIter i = dns::thread->resolversMap.find(this);
 		if (i != dns::thread->resolversMap.end()) {
@@ -1039,26 +1039,26 @@ dns_resolver::~dns_resolver()
 #endif
 }
 
-void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, const setka::address& dnsIP)
+void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, const setka::address& dns_ip)
 {
 	//	TRACE(<< "dns_resolver::Resolve_ts(): enter" << std::endl)
 
 	ASSERT(setka::init_guard::is_created())
 
-	if (hostName.size() > 253) {
+	if (host_name.size() > 253) {
 		throw std::logic_error("Too long domain name, it should not exceed 253 characters according to RFC 2181");
 	}
 
-	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
+	std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex);
 
-	bool needStartTheThread = false;
+	bool need_start_the_thread = false;
 
 	// check if thread is created
 	if (!dns::thread) {
 		dns::thread = std::make_unique<dns::LookupThread>();
-		needStartTheThread = true;
+		need_start_the_thread = true;
 	} else {
-		std::lock_guard<decltype(dns::thread->mutex)> mutexGuard(dns::thread->mutex);
+		std::lock_guard<decltype(dns::thread->mutex)> mutex_guard(dns::thread->mutex);
 
 		// check if already in progress
 		if (dns::thread->resolversMap.find(this) != dns::thread->resolversMap.end()) {
@@ -1071,7 +1071,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 			auto t = std::make_unique<dns::LookupThread>();
 			t->prevThread = std::move(dns::thread);
 			dns::thread = std::move(t);
-			needStartTheThread = true;
+			need_start_the_thread = true;
 		}
 	}
 
@@ -1079,8 +1079,8 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 
 	auto r = std::make_unique<dns::Resolver>();
 	r->hnr = this;
-	r->hostName = hostName;
-	r->dns = dnsIP;
+	r->host_name = host_name;
+	r->dns = dns_ip;
 
 #if CFG_OS == CFG_OS_WINDOWS
 	// check OS version, if WinXP then start from record A, since setka does not support IPv6 on WinXP
@@ -1119,7 +1119,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 	r->recordType = D_DNSRecordAAAA; // start with IPv6 first
 #endif
 
-	std::lock_guard<decltype(dns::thread->mutex)> mutexGuard2(dns::thread->mutex);
+	std::lock_guard<decltype(dns::thread->mutex)> mutex_guard_2(dns::thread->mutex);
 
 	// find free ID, it will throw TooMuchRequestsExc if there are no free IDs
 	{
@@ -1133,7 +1133,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 	// calculate time
 	uint32_t curTime = utki::get_ticks_ms();
 	{
-		uint32_t endTime = curTime + timeoutMillis;
+		uint32_t endTime = curTime + timeout_ms;
 		//		TRACE(<< "dns_resolver::Resolve_ts(): curTime = " << curTime << std::endl)
 		//		TRACE(<< "dns_resolver::Resolve_ts(): endTime = " << endTime << std::endl)
 		if (endTime < curTime) { // if warped around
@@ -1172,7 +1172,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 		}
 
 		// Start the thread if we created the new one.
-		if (needStartTheThread) {
+		if (need_start_the_thread) {
 			dns::thread->lastTicksInFirstHalf = curTime < (uint32_t(-1) / 2);
 			dns::thread->start();
 			dns::thread->isExiting = false; // thread has just started, clear the exiting flag
@@ -1191,13 +1191,13 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 
 bool dns_resolver::cancel() noexcept
 {
-	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
+	std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex);
 
 	if (!dns::thread) {
 		return false;
 	}
 
-	std::lock_guard<decltype(dns::thread->mutex)> mutexGuard2(dns::thread->mutex);
+	std::lock_guard<decltype(dns::thread->mutex)> mutex_guard_2(dns::thread->mutex);
 
 	bool ret = bool(dns::thread->RemoveResolver(this));
 
@@ -1211,7 +1211,7 @@ bool dns_resolver::cancel() noexcept
 		// Because upon calling the callback the resolver object is already removed from all the lists and maps
 		// and if 'ret' is false then it is possible that the resolver is in process of calling the callback.
 		// To do that, lock and unlock the mutex.
-		std::lock_guard<decltype(dns::thread->completedMutex)> mutexGuard(dns::thread->completedMutex);
+		std::lock_guard<decltype(dns::thread->completedMutex)> mutex_guard(dns::thread->completedMutex);
 	}
 
 	return ret;
@@ -1219,7 +1219,7 @@ bool dns_resolver::cancel() noexcept
 
 void dns_resolver::clean_up()
 {
-	std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex);
+	std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex);
 
 	if (dns::thread) {
 		dns::thread->quitFlag = true;

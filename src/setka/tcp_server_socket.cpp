@@ -71,12 +71,12 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 	if (!ipv4) {
 #if CFG_OS == CFG_OS_WINDOWS
 		char no = 0;
-		const char* noPtr = &no;
+		const char* no_ptr = &no;
 #else
 		int no = 0;
-		void* noPtr = &no;
+		void* no_ptr = &no;
 #endif
-		if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0) {
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, no_ptr, sizeof(no)) != 0) {
 			// Dual stack is not supported, proceed with IPv4 only.
 
 			this->close(); // close IPv6 socket
@@ -132,23 +132,23 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 	// Bind the socket for listening
 	if (bind(sock, reinterpret_cast<sockaddr*>(&socket_address), socket_address_length) == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
-		int errorCode = WSAGetLastError();
+		int error_code = WSAGetLastError();
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
-		int errorCode = errno;
+		int error_code = errno;
 #else
 #	error "Unsupported OS"
 #endif
 
 		this->close();
 
-		throw std::system_error(errorCode, std::generic_category(), "could not bind socket, bind() failed");
+		throw std::system_error(error_code, std::generic_category(), "could not bind socket, bind() failed");
 	}
 
 	if (listen(sock, int(queue_size)) == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
-		int errorCode = WSAGetLastError();
+		int error_code = WSAGetLastError();
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
-		int errorCode = errno;
+		int error_code = errno;
 #else
 #	error "Unsupported OS"
 #endif
@@ -156,7 +156,7 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 		this->close();
 
 		throw std::system_error(
-			errorCode,
+			error_code,
 			std::generic_category(),
 			"couldn't listen on the local port, listen() failed"
 		);

@@ -12,13 +12,13 @@
 #	undef assert
 #endif
 
-namespace TestSimpleDNSLookup{
+namespace test_simple_dns_lookup{
 
-class Resolver : public setka::dns_resolver{
+class resolver : public setka::dns_resolver{
 	
 public:
 	
-	Resolver(nitki::semaphore& sema, const std::string& hostName = std::string()) :
+	resolver(nitki::semaphore& sema, const std::string& hostName = std::string()) :
 			sema(sema),
 			hostName(hostName)
 	{}
@@ -47,15 +47,15 @@ public:
 	}
 };
 
-void Run(){
+void run(){
 	{//test one resolve at a time
 		nitki::semaphore sema;
 
-		Resolver r(sema);
+		resolver r(sema);
 
 		r.resolve("google.com", 10000);
 
-		LOG([&](auto&o){o << "TestSimpleDNSLookup::Run(): waiting on semaphore" << std::endl;})
+		LOG([&](auto&o){o << "test_simple_dns_lookup::run(): waiting on semaphore" << std::endl;})
 		
 		if(!sema.wait(11000)){
 			utki::assert(false, SL);
@@ -80,18 +80,18 @@ void Run(){
 	{//test several resolves at a time
 		nitki::semaphore sema;
 
-		typedef std::vector<std::unique_ptr<Resolver> > T_ResolverList;
-		typedef T_ResolverList::iterator T_ResolverIter;
-		T_ResolverList r;
+		typedef std::vector<std::unique_ptr<resolver> > resolver_list_type;
+		typedef resolver_list_type::iterator resolver_iter_type;
+		resolver_list_type r;
 
-		r.push_back(std::make_unique<Resolver>(sema, "google.ru"));
-		r.push_back(std::make_unique<Resolver>(sema, "ya.ru"));
-		r.push_back(std::make_unique<Resolver>(sema, "mail.ru"));
-		r.push_back(std::make_unique<Resolver>(sema, "vk.com"));
+		r.push_back(std::make_unique<resolver>(sema, "google.ru"));
+		r.push_back(std::make_unique<resolver>(sema, "ya.ru"));
+		r.push_back(std::make_unique<resolver>(sema, "mail.ru"));
+		r.push_back(std::make_unique<resolver>(sema, "vk.com"));
 		
 //		TRACE(<< "starting resolutions" << std::endl)
 		
-		for(T_ResolverIter i = r.begin(); i != r.end(); ++i){
+		for(resolver_iter_type i = r.begin(); i != r.end(); ++i){
 			(*i)->Resolve();
 		}
 		
@@ -102,7 +102,7 @@ void Run(){
 		}
 //		TRACE(<< "resolutions done" << std::endl)
 		
-		for(T_ResolverIter i = r.begin(); i != r.end(); ++i){
+		for(resolver_iter_type i = r.begin(); i != r.end(); ++i){
 			utki::assert(
 				(*i)->res == setka::dns_result::ok,
 				[&](auto&o){o << "result = " << unsigned((*i)->res) << " host to resolve = " << (*i)->hostName;},
@@ -118,13 +118,13 @@ void Run(){
 
 
 
-namespace TestRequestFromCallback{
+namespace test_request_from_callback{
 
-class Resolver : public setka::dns_resolver{
+class resolver : public setka::dns_resolver{
 	
 public:
 	
-	Resolver(nitki::semaphore& sema) :
+	resolver(nitki::semaphore& sema) :
 			sema(sema)
 	{}
 	
@@ -159,10 +159,10 @@ public:
 	}
 };
 
-void Run(){
+void run(){
 	nitki::semaphore sema;
 	
-	Resolver r(sema);
+	resolver r(sema);
 	
 	r.resolve("rfesfdf.ru", 3000);
 	
@@ -183,12 +183,12 @@ void Run(){
 
 
 
-namespace TestCancelDNSLookup{
-class Resolver : public setka::dns_resolver{
+namespace test_cancel_dns_lookup{
+class resolver : public setka::dns_resolver{
 	
 public:
 	
-	Resolver(){}
+	resolver(){}
 	
 	volatile bool called = false;
 	
@@ -197,9 +197,9 @@ public:
 	}
 };
 
-void Run(){
+void run(){
 	utki::log([&](auto&o){o << "\tRunning 'cacnel DNS lookup' test, it will take about 4 seconds" << std::endl;});
-	Resolver r;
+	resolver r;
 	
 	r.resolve("rfesweefdqfdf.ru", 3000, setka::address("1.2.3.4", 53));
 	

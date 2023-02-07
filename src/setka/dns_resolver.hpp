@@ -98,9 +98,9 @@ public:
 	/**
 	 * @brief Start asynchronous IP-address resolving.
 	 * The method is thread-safe.
-	 * @param hostName - host name to resolve IP-address for. The host name string is case sensitive.
-	 * @param timeoutMillis - timeout for waiting for DNS server response in milliseconds.
-	 * @param dnsIP - IP-address of the DNS to use for host name resolving. The default value is invalid IP-address
+	 * @param host_name - host name to resolve IP-address for. The host name string is case sensitive.
+	 * @param timeout_ms - timeout for waiting for DNS server response in milliseconds.
+	 * @param dns_ip - IP-address of the DNS to use for host name resolving. The default value is invalid IP-address
 	 *                in which case the DNS IP-address will be retrieved from underlying OS.
 	 * @throw std::logic_error when supplied for resolution domain name is too long. Must be 253 characters at most.
 	 * @throw std::logic_error when DNS lookup operation served by this resolver object is already in progress.
@@ -108,9 +108,9 @@ public:
 	 * one.
 	 */
 	void resolve(
-		const std::string& hostName,
-		uint32_t timeoutMillis = 20000,
-		const setka::address& dnsIP = setka::address(setka::address::ip(0), 0)
+		const std::string& host_name,
+		uint32_t timeout_ms = 20000,
+		const setka::address& dns_ip = setka::address(setka::address::ip(0), 0)
 	);
 
 	/**

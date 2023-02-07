@@ -8,18 +8,18 @@
 inline void TestTingSocket(){
 	setka::init_guard netLib;
 	
-	Basicip_addressTest::Run();
-	Testip_address::Run();
+	Basicip_addressTest::run();
+	Testip_address::run();
 		
-	BasicClientServerTest::Run();
-	BasicUDPSocketsTest::Run();
-	TestUDPSocketWaitForWriting::Run();
-	SendDataContinuouslyWithWaitSet::Run();
-	SendDataContinuously::Run();
+	BasicClientServerTest::run();
+	BasicUDPSocketsTest::run();
+	TestUDPSocketWaitForWriting::run();
+	SendDataContinuouslyWithWaitSet::run();
+	SendDataContinuously::run();
 
-	TestSimpleDNSLookup::Run();
-	TestRequestFromCallback::Run();
-	TestCancelDNSLookup::Run();
+	test_simple_dns_lookup::run();
+	test_request_from_callback::run();
+	test_cancel_dns_lookup::run();
 
 	utki::log([&](auto&o){o << "[PASSED]: Socket test" << std::endl;});
 }

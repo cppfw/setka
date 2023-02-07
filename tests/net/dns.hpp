@@ -2,16 +2,16 @@
 
 
 
-namespace TestSimpleDNSLookup{
-void Run();
+namespace test_simple_dns_lookup{
+void run();
 }
 
-namespace TestRequestFromCallback{
-void Run();	
+namespace test_request_from_callback{
+void run();	
 }
 
-namespace TestCancelDNSLookup{
-void Run();
+namespace test_cancel_dns_lookup{
+void run();
 }
 
 //TODO: test explicit dns server IP
