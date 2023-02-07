@@ -67,8 +67,8 @@ public:
 
 	udp_socket& operator=(udp_socket&& s)
 	{
-		this->socket::operator=(std::move(s));
 		this->ipv4 = s.ipv4;
+		this->socket::operator=(std::move(s));
 		return *this;
 	}
 

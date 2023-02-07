@@ -61,7 +61,7 @@ class socket : public opros::waitable
 {
 protected:
 #if CFG_OS == CFG_OS_WINDOWS
-	typedef SOCKET socket_type;
+	using socket_type = SOCKET;
 
 	static const socket_type invalid_socket = INVALID_SOCKET;
 	static const int socket_error = SOCKET_ERROR;
@@ -70,7 +70,7 @@ protected:
 	static const int error_in_progress = WSAEWOULDBLOCK;
 
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
-	typedef int socket_type;
+	using socket_type = int;
 
 	static const socket_type invalid_socket = -1;
 	static const socket_type socket_error = -1;
@@ -117,7 +117,7 @@ protected:
 	void close() noexcept;
 
 public:
-	socket(socket&& s) :
+	socket(socket&& s) noexcept(false) :
 		// NOTE: operator=() will call close(), so the socket should be in invalid state!!!
 		// Therefore, initialize variables to invalid values.
 		socket()

@@ -59,7 +59,7 @@ public:
 		/**
 		 * @brief Creates an undefined ip object.
 		 */
-		ip() noexcept {}
+		ip() noexcept = default;
 
 		/**
 		 * @brief Creates a ip object using given IPv6 quads.
@@ -235,7 +235,7 @@ public:
 	/**
 	 * @brief Construct IP address with undefined host and port.
 	 */
-	address() noexcept {}
+	address() noexcept = default;
 
 	/**
 	 * @brief Create IPv4-address specifying exact IP-address and port number.

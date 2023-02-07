@@ -80,7 +80,7 @@ address::ip address::ip::parse_v4(const char* str)
 #	error "Unknown OS"
 #endif
 
-	return address::ip(ntohl(a.sin_addr.s_addr));
+	return {ntohl(a.sin_addr.s_addr)};
 }
 
 address::ip address::ip::parse_v6(const char* str)
@@ -124,7 +124,7 @@ address::ip address::ip::parse_v6(const char* str)
 		a.s6_addr[15]
 	);
 #else
-	return address::ip(
+	return {
 		a.__in6_u.__u6_addr8[0],
 		a.__in6_u.__u6_addr8[1],
 		a.__in6_u.__u6_addr8[2],
@@ -140,8 +140,7 @@ address::ip address::ip::parse_v6(const char* str)
 		a.__in6_u.__u6_addr8[12],
 		a.__in6_u.__u6_addr8[13],
 		a.__in6_u.__u6_addr8[14],
-		a.__in6_u.__u6_addr8[15]
-	);
+		a.__in6_u.__u6_addr8[15]};
 #endif
 }
 

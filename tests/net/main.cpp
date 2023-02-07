@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[]){
 	
-	TestTingSocket();
+	test_setka_socket();
 	
 	return 0;
 }

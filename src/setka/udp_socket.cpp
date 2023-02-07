@@ -108,14 +108,14 @@ udp_socket::udp_socket(uint16_t port)
 			socklen_t socket_address_length;
 
 			if (this->ipv4) {
-				sockaddr_in& sa = reinterpret_cast<sockaddr_in&>(socket_address);
+				auto& sa = reinterpret_cast<sockaddr_in&>(socket_address);
 				memset(&sa, 0, sizeof(sa));
 				sa.sin_family = AF_INET;
 				sa.sin_addr.s_addr = INADDR_ANY;
 				sa.sin_port = htons(port);
 				socket_address_length = sizeof(sa);
 			} else {
-				sockaddr_in6& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
+				auto& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
 				memset(&sa, 0, sizeof(sa));
 				sa.sin6_family = AF_INET6;
 				sa.sin6_addr = in6addr_any; // 'in6addr_any' allows accepting both IPv4 and IPv6 connections
@@ -185,14 +185,14 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destinatio
 			destination_address.host.is_v4()
 		)
 	{
-		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(socket_address);
+		auto& a = reinterpret_cast<sockaddr_in&>(socket_address);
 		memset(&a, 0, sizeof(a));
 		a.sin_family = AF_INET;
 		a.sin_addr.s_addr = htonl(destination_address.host.get_v4());
 		a.sin_port = htons(destination_address.port);
 		socket_address_length = sizeof(a);
 	} else {
-		sockaddr_in6& a = reinterpret_cast<sockaddr_in6&>(socket_address);
+		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		memset(&a, 0, sizeof(a));
 		a.sin6_family = AF_INET6;
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
@@ -332,14 +332,14 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 	})
 
 	if (socket_address.ss_family == AF_INET) {
-		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(socket_address);
+		auto& a = reinterpret_cast<sockaddr_in&>(socket_address);
 		out_sender_address = address(ntohl(a.sin_addr.s_addr), uint16_t(ntohs(a.sin_port)));
 	} else {
 		ASSERT(socket_address.ss_family == AF_INET6, [&](auto& o) {
 			o << "socket_address.ss_family = " << unsigned(socket_address.ss_family) << " AF_INET = " << AF_INET
 			  << " AF_INET6 = " << AF_INET6;
 		})
-		sockaddr_in6& a = reinterpret_cast<sockaddr_in6&>(socket_address);
+		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		out_sender_address = address(
 			address::ip(
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \

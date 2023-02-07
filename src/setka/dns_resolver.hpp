@@ -81,7 +81,7 @@ public:
 	dns_resolver(const dns_resolver&) = delete;
 	dns_resolver& operator=(const dns_resolver&) = delete;
 
-	dns_resolver() {}
+	dns_resolver() = default;
 
 	virtual ~dns_resolver();
 

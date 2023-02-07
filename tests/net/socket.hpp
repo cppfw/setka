@@ -1,18 +1,10 @@
 #pragma once
 
-namespace Testip_address{
+namespace test_ip_address{
 void run();
 }//~namespace
 
-namespace BasicClientServerTest{
-
-void run();
-
-}//~namespace
-
-
-
-namespace SendDataContinuouslyWithWaitSet{
+namespace basic_client_server_test{
 
 void run();
 
@@ -20,7 +12,7 @@ void run();
 
 
 
-namespace SendDataContinuously{
+namespace send_data_continuously_with_wait_set{
 
 void run();
 
@@ -28,7 +20,7 @@ void run();
 
 
 
-namespace Basicip_addressTest{
+namespace send_data_continuously{
 
 void run();
 
@@ -36,7 +28,7 @@ void run();
 
 
 
-namespace BasicUDPSocketsTest{
+namespace basic_ip_address_test{
 
 void run();
 
@@ -44,7 +36,15 @@ void run();
 
 
 
-namespace TestUDPSocketWaitForWriting{
+namespace basic_udp_sockets_test{
+
+void run();
+
+}//~namespace
+
+
+
+namespace test_udp_socket_wait_for_writing{
 
 void run();
 

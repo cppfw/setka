@@ -114,14 +114,14 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 	socklen_t socket_address_length;
 
 	if (ipv4) {
-		sockaddr_in& sa = reinterpret_cast<sockaddr_in&>(socket_address);
+		auto& sa = reinterpret_cast<sockaddr_in&>(socket_address);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin_family = AF_INET;
 		sa.sin_addr.s_addr = INADDR_ANY;
 		sa.sin_port = htons(port);
 		socket_address_length = sizeof(sa);
 	} else {
-		sockaddr_in6& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
+		auto& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin6_family = AF_INET6;
 		sa.sin6_addr = in6addr_any; // 'in6addr_any' allows accepting both IPv4 and IPv6 connections!!!

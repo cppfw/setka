@@ -61,7 +61,7 @@ SOFTWARE.
 #	include <utki/windows.hpp>
 
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_UNIX || CFG_OS == CFG_OS_MACOSX
-#	include <signal.h>
+#	include <csignal>
 
 #else
 #	error "Unsupported OS"
@@ -93,7 +93,7 @@ init_guard::init_guard()
 #endif
 }
 
-init_guard::~init_guard() noexcept
+init_guard::~init_guard()
 {
 	// check that there are no active dns lookups and finish the DNS request thread
 	dns_resolver::clean_up();

@@ -72,13 +72,13 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 		sockaddr_storage socket_address;
 
 		if (ip.host.is_v4()) {
-			sockaddr_in& sa = reinterpret_cast<sockaddr_in&>(socket_address);
+			auto& sa = reinterpret_cast<sockaddr_in&>(socket_address);
 			memset(&sa, 0, sizeof(sa));
 			sa.sin_family = AF_INET;
 			sa.sin_addr.s_addr = htonl(ip.host.get_v4());
 			sa.sin_port = htons(ip.port);
 		} else {
-			sockaddr_in6& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
+			auto& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
 			memset(&sa, 0, sizeof(sa));
 			sa.sin6_family = AF_INET6;
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
@@ -234,14 +234,15 @@ namespace {
 address make_ip_address(const sockaddr_storage& addr)
 {
 	if (addr.ss_family == AF_INET) {
-		const sockaddr_in& a = reinterpret_cast<const sockaddr_in&>(addr);
-		return address(uint32_t(ntohl(a.sin_addr.s_addr)), uint16_t(ntohs(a.sin_port)));
+		const auto& a = reinterpret_cast<const sockaddr_in&>(addr);
+		return {uint32_t(ntohl(a.sin_addr.s_addr)), uint16_t(ntohs(a.sin_port))};
 	} else {
 		ASSERT(addr.ss_family == AF_INET6)
 
-		const sockaddr_in6& a = reinterpret_cast<const sockaddr_in6&>(addr);
+		const auto& a = reinterpret_cast<const sockaddr_in6&>(addr);
 
-		return address(
+		return
+		{
 			address::ip(
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
 	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
@@ -260,8 +261,8 @@ address make_ip_address(const sockaddr_storage& addr)
 				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
 #endif
 			),
-			uint16_t(ntohs(a.sin6_port))
-		);
+				uint16_t(ntohs(a.sin6_port))
+		};
 	}
 }
 } // namespace

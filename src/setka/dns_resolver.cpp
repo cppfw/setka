@@ -925,9 +925,9 @@ private:
 					}
 				}
 
-				uint32_t curTime = utki::get_ticks_ms();
+				uint32_t cur_time = utki::get_ticks_ms();
 				{ // check if time has wrapped around and it is necessary to swap time maps
-					bool isFirstHalf = curTime < (uint32_t(-1) / 2);
+					bool isFirstHalf = cur_time < (uint32_t(-1) / 2);
 					if (isFirstHalf && !this->lastTicksInFirstHalf) {
 						// Time wrapped.
 						// Timeout all requests from first time map
@@ -947,7 +947,7 @@ private:
 				}
 
 				while (this->timeMap1->size() != 0) {
-					if (this->timeMap1->begin()->first > curTime) {
+					if (this->timeMap1->begin()->first > cur_time) {
 						break;
 					}
 
@@ -965,14 +965,14 @@ private:
 				}
 
 				ASSERT(this->timeMap1->size() > 0)
-				ASSERT(this->timeMap1->begin()->first > curTime)
+				ASSERT(this->timeMap1->begin()->first > cur_time)
 
-				//				TRACE(<< "DNS thread: curTime = " << curTime << std::endl)
+				//				TRACE(<< "DNS thread: cur_time = " << cur_time << std::endl)
 				//				TRACE(<< "DNS thread: this->timeMap1->begin()->first = " <<
 				//(this->timeMap1->begin()->first)
 				//<< std::endl)
 
-				timeout = this->timeMap1->begin()->first - curTime;
+				timeout = this->timeMap1->begin()->first - cur_time;
 			}
 
 			// Make sure that ting::GetTicks is called at least 4 times per full time warp around cycle.
@@ -1016,6 +1016,7 @@ std::unique_ptr<LookupThread> thread;
 } // namespace dns
 } // namespace
 
+// NOLINTNEXTLINE(modernize-use-equals-default, "destructor is not trivial in DEBUG mode")
 dns_resolver::~dns_resolver()
 {
 #ifdef DEBUG
@@ -1131,18 +1132,18 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 	}
 
 	// calculate time
-	uint32_t curTime = utki::get_ticks_ms();
+	uint32_t cur_time = utki::get_ticks_ms();
 	{
-		uint32_t endTime = curTime + timeout_ms;
-		//		TRACE(<< "dns_resolver::Resolve_ts(): curTime = " << curTime << std::endl)
-		//		TRACE(<< "dns_resolver::Resolve_ts(): endTime = " << endTime << std::endl)
-		if (endTime < curTime) { // if warped around
+		uint32_t end_time = cur_time + timeout_ms;
+		//		TRACE(<< "dns_resolver::Resolve_ts(): cur_time = " << cur_time << std::endl)
+		//		TRACE(<< "dns_resolver::Resolve_ts(): end_time = " << end_time << std::endl)
+		if (end_time < cur_time) { // if warped around
 			r->timeMap = dns::thread->timeMap2;
 		} else {
 			r->timeMap = dns::thread->timeMap1;
 		}
 		try {
-			r->timeMapIter = r->timeMap->insert(std::pair<uint32_t, dns::Resolver*>(endTime, r.operator->()));
+			r->timeMapIter = r->timeMap->insert(std::pair<uint32_t, dns::Resolver*>(end_time, r.operator->()));
 		} catch (...) {
 			dns::thread->idMap.erase(r->idIter);
 			throw;
@@ -1173,7 +1174,7 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 
 		// Start the thread if we created the new one.
 		if (need_start_the_thread) {
-			dns::thread->lastTicksInFirstHalf = curTime < (uint32_t(-1) / 2);
+			dns::thread->lastTicksInFirstHalf = cur_time < (uint32_t(-1) / 2);
 			dns::thread->start();
 			dns::thread->isExiting = false; // thread has just started, clear the exiting flag
 			LOG([&](auto& o) {

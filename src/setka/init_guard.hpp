@@ -47,7 +47,7 @@ class init_guard : public utki::intrusive_singleton<init_guard>
 public:
 	init_guard();
 
-	~init_guard() noexcept;
+	~init_guard() override;
 };
 
 } // namespace setka

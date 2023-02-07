@@ -18,9 +18,9 @@ class resolver : public setka::dns_resolver{
 	
 public:
 	
-	resolver(nitki::semaphore& sema, const std::string& hostName = std::string()) :
+	resolver(nitki::semaphore& sema, std::string host_name = std::string()) :
 			sema(sema),
-			hostName(hostName)
+			host_name(std::move(host_name))
 	{}
 	
 	setka::address::ip ip;
@@ -29,10 +29,10 @@ public:
 	
 	setka::dns_result res;
 	
-	std::string hostName;
+	std::string host_name;
 	
-	void Resolve(){
-		this->resolve(this->hostName, 10000);
+	void resolve_host(){
+		this->resolve(this->host_name, 10000);
 	}
 	
 	void on_completed(setka::dns_result res, setka::address::ip ip)noexcept override{
@@ -81,7 +81,6 @@ void run(){
 		nitki::semaphore sema;
 
 		typedef std::vector<std::unique_ptr<resolver> > resolver_list_type;
-		typedef resolver_list_type::iterator resolver_iter_type;
 		resolver_list_type r;
 
 		r.push_back(std::make_unique<resolver>(sema, "google.ru"));
@@ -91,8 +90,8 @@ void run(){
 		
 //		TRACE(<< "starting resolutions" << std::endl)
 		
-		for(resolver_iter_type i = r.begin(); i != r.end(); ++i){
-			(*i)->Resolve();
+		for(auto i = r.begin(); i != r.end(); ++i){
+			(*i)->resolve_host();
 		}
 		
 		for(unsigned i = 0; i < r.size(); ++i){
@@ -102,10 +101,10 @@ void run(){
 		}
 //		TRACE(<< "resolutions done" << std::endl)
 		
-		for(resolver_iter_type i = r.begin(); i != r.end(); ++i){
+		for(auto i = r.begin(); i != r.end(); ++i){
 			utki::assert(
 				(*i)->res == setka::dns_result::ok,
-				[&](auto&o){o << "result = " << unsigned((*i)->res) << " host to resolve = " << (*i)->hostName;},
+				[&](auto&o){o << "result = " << unsigned((*i)->res) << " host to resolve = " << (*i)->host_name;},
 				SL
 			);
 //			ASSERT_INFO_ALWAYS((*i)->ip == 0x4D581503 || (*i)->ip == 0x57FAFB03, "(*i)->ip = " << (*i)->ip)
