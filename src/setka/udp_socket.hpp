@@ -67,7 +67,7 @@ public:
 		this->socket::operator=(std::move(s));
 		this->ipv4 = s.ipv4;
 		return *this;
-	
+	}
 
 	/**
 	 * @brief Send datagram over UDP socket.
