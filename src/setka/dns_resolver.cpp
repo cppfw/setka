@@ -723,18 +723,29 @@ private:
 		this->waitSet.add(this->queue, utki::make_flags({opros::ready::read}));
 		this->waitSet.add(this->socket, utki::make_flags({opros::ready::read}));
 		
+		std::array<opros::event_info, 2> triggered;
+		size_t num_triggered = 0;
+
 		while(!this->quitFlag){
 			uint32_t timeout;
+
 			{
 				std::lock_guard<decltype(this->mutex)> mutexGuard(this->mutex);
 				
-				if(this->socket.flags().get(opros::ready::error)){
+				utki::flags<opros::ready> flags(false);
+				for(size_t i = 0; i != num_triggered; ++i){
+					if(triggered[i].w == &this->socket){
+						flags = triggered[i].flags;
+					}
+				}
+
+				if(flags.get(opros::ready::error)){
 					this->isExiting = true;
 					this->RemoveAllResolvers();
 					break; // exit thread
 				}
 
-				if(this->socket.flags().get(opros::ready::read)){
+				if(flags.get(opros::ready::read)){
 					LOG([&](auto&o){o << "can read" << std::endl;})
 					try{
 						std::array<uint8_t, 512> buf; // RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger buffer.
@@ -798,7 +809,7 @@ private:
 #if CFG_OS == CFG_OS_WINDOWS
 				if(this->sendList.size() != 0)
 #else
-				if(this->socket.flags().get(opros::ready::write))
+				if(flags.get(opros::ready::write))
 #endif
 				{
 					LOG([&](auto&o){o << "can write" << std::endl;})
@@ -907,17 +918,16 @@ private:
 #endif
 			
 			LOG([&](auto&o){o << "DNS thread: waiting with timeout = " << timeout << std::endl;})
-			if(this->waitSet.wait(timeout) == 0){
+			num_triggered = this->waitSet.wait(timeout, triggered);
+			if(num_triggered == 0){
 				// no waitables triggered
 //				TRACE(<< "timeout hit" << std::endl)
 				continue;
 			}
 			
-			if(this->queue.flags().get(opros::ready::read)){
-				while(auto m = this->queue.pop_front()){
-					m();
-				}
-			}			
+			while(auto m = this->queue.pop_front()){
+				m();
+			}
 		} // ~while(!this->quitFlag)
 		
 		this->waitSet.remove(this->socket);
