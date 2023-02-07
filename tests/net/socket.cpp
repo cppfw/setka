@@ -51,9 +51,9 @@ bool is_ipv6_supported_by_os(){
 }
 
 namespace basic_client_server_test{
-void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
+void send_all(setka::tcp_socket& s, utki::span<uint8_t> buf){
 	if(s.is_empty()){
-		throw std::logic_error("SendAll(): socket is not opened");
+		throw std::logic_error("send_all(): socket is not opened");
 	}
 
 	size_t left = buf.size();
@@ -107,7 +107,7 @@ public:
 			data[1] = '1';
 			data[2] = '2';
 			data[3] = '4';
-			SendAll(sock, utki::make_span(data));
+			send_all(sock, utki::make_span(data));
 		}catch(std::exception &e){
 			utki::assert(false, [&](auto&o){o << "Network error: " << e.what();}, SL);
 		}
@@ -117,9 +117,9 @@ public:
 
 
 void run(){
-	server_thread serverThread;
+	server_thread server_thread;
 	
-	serverThread.start();
+	server_thread.start();
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	
@@ -161,7 +161,7 @@ void run(){
 		);
 	}
 	
-	serverThread.join();
+	server_thread.join();
 }
 
 }
