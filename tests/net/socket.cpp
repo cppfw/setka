@@ -17,7 +17,7 @@
 #endif
 
 namespace{
-bool IsIPv6SupportedByOS(){
+bool is_ipv6_supported_by_os(){
 #if CFG_OS == CFG_OS_WINDOWS
 	{
 		OSVERSIONINFOEX osvi;
@@ -136,18 +136,18 @@ void run(){
 		utki::assert(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
 
 		std::array<uint8_t, 4> data;
-		size_t bytesReceived = 0;
+		size_t num_bytes_received = 0;
 		for(unsigned i = 0; i < 30; ++i){
-			utki::assert(bytesReceived < 4, SL);
-			bytesReceived += sock.receive(utki::span<uint8_t>(&*data.begin() + bytesReceived, data.size() - bytesReceived));
-			utki::assert(bytesReceived <= 4, SL);
-			if(bytesReceived == 4){
+			utki::assert(num_bytes_received < 4, SL);
+			num_bytes_received += sock.receive(utki::span<uint8_t>(&*data.begin() + num_bytes_received, data.size() - num_bytes_received));
+			utki::assert(num_bytes_received <= 4, SL);
+			if(num_bytes_received == 4){
 				break;
 			}
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		utki::assert(bytesReceived == 4, SL);
+		utki::assert(num_bytes_received == 4, SL);
 		
 		utki::assert(data[0] == '0', SL);
 		utki::assert(data[1] == '1', SL);
@@ -204,7 +204,7 @@ void run(){
 
 	uint32_t scnt = 0;
 	std::vector<uint8_t> sendBuffer;
-	size_t bytesSent = 0;
+	size_t num_bytes_send = 0;
 
 	uint32_t rcnt = 0;
 	std::array<uint8_t, sizeof(uint32_t)> recvBuffer;
@@ -243,11 +243,11 @@ void run(){
 				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
 				utki::assert(triggered[i].flags.get(opros::ready::write), SL);
 
-				utki::assert(bytesSent <= sendBuffer.size(), SL);
+				utki::assert(num_bytes_send <= sendBuffer.size(), SL);
 
-				if(sendBuffer.size() == bytesSent){
+				if(sendBuffer.size() == num_bytes_send){
 					sendBuffer.resize(0xffff + 1);
-					bytesSent = 0;
+					num_bytes_send = 0;
 					
 					utki::assert(
 						(sendBuffer.size() % sizeof(uint32_t)) == 0,
@@ -275,8 +275,8 @@ void run(){
 				utki::assert(sendBuffer.size() > 0, SL);
 
 				try{
-					auto res = sockS.send(utki::span<uint8_t>(&*sendBuffer.begin() + bytesSent, sendBuffer.size() - bytesSent));
-					bytesSent += res;
+					auto res = sockS.send(utki::span<uint8_t>(&*sendBuffer.begin() + num_bytes_send, sendBuffer.size() - num_bytes_send));
+					num_bytes_send += res;
 					if(res == 0){
 						utki::assert(res > 0, SL); // since it was CanWrite() we should be able to write at least something
 					}else{
@@ -289,7 +289,7 @@ void run(){
 						SL
 					);
 				}
-				utki::assert(bytesSent <= sendBuffer.size(), SL);
+				utki::assert(num_bytes_send <= sendBuffer.size(), SL);
 			}else if(triggered[i].w == &sockR){
 				utki::assert(triggered[i].w != &sockS, SL);
 
@@ -501,33 +501,33 @@ void run(){
 
 	utki::assert(recvSock.get_local_port() == 13666, SL);
 
-	setka::udp_socket sendSock;
+	setka::udp_socket send_sock;
 
 	try{
-		sendSock = setka::udp_socket(0);
+		send_sock = setka::udp_socket(0);
 
 		std::array<uint8_t, 4> data;
 		data[0] = '0';
 		data[1] = '1';
 		data[2] = '2';
 		data[3] = '4';
-		size_t bytesSent = 0;
+		size_t num_bytes_send = 0;
 
 		setka::address addr(
-				IsIPv6SupportedByOS() ? "::1" : "127.0.0.1",
+				is_ipv6_supported_by_os() ? "::1" : "127.0.0.1",
 				13666
 			);
 
 		for(unsigned i = 0; i < 10; ++i){
-			bytesSent = sendSock.send(utki::make_span(data), addr);
-			utki::assert(bytesSent == 4 || bytesSent == 0, SL);
-			if(bytesSent == 4){
+			num_bytes_send = send_sock.send(utki::make_span(data), addr);
+			utki::assert(num_bytes_send == 4 || num_bytes_send == 0, SL);
+			if(num_bytes_send == 4){
 				break;
 			}
 			
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		utki::assert(bytesSent == 4, SL);
+		utki::assert(num_bytes_send == 4, SL);
 	}catch(std::exception &e){
 		utki::assert(false, [&](auto&o){o << e.what();}, SL);
 	}
@@ -535,13 +535,13 @@ void run(){
 	try{
 		std::array<uint8_t, 1024> buf;
 		
-		size_t bytesReceived = 0;
+		size_t num_bytes_received = 0;
 		for(unsigned i = 0; i < 10; ++i){
 			setka::address ip;
-			bytesReceived = recvSock.recieve(utki::make_span(buf), ip);
-			utki::assert(bytesReceived == 0 || bytesReceived == 4, SL); // all or nothing
-			if(bytesReceived == 4){
-				if(IsIPv6SupportedByOS()){
+			num_bytes_received = recvSock.recieve(utki::make_span(buf), ip);
+			utki::assert(num_bytes_received == 0 || num_bytes_received == 4, SL); // all or nothing
+			if(num_bytes_received == 4){
+				if(is_ipv6_supported_by_os()){
 					utki::assert(
 						ip.host.quad[3] == 1,
 						[&](auto&o){o << "ip.host.Quad3() = " << std::hex << ip.host.quad[3] << std::dec;},
@@ -559,7 +559,7 @@ void run(){
 			
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		utki::assert(bytesReceived == 4, SL);
+		utki::assert(num_bytes_received == 4, SL);
 		utki::assert(buf[0] == '0', SL);
 		utki::assert(buf[1] == '1', SL);
 		utki::assert(buf[2] == '2', SL);
@@ -577,11 +577,11 @@ void run(){
 namespace test_udp_socket_wait_for_writing{
 void run(){
 	try{
-		setka::udp_socket sendSock(0);
+		setka::udp_socket send_sock(0);
 
 		opros::wait_set ws(1);
 
-		ws.add(sendSock, utki::make_flags({opros::ready::read, opros::ready::write}));
+		ws.add(send_sock, utki::make_flags({opros::ready::read, opros::ready::write}));
 
 		std::array<opros::event_info, 1> triggered;
 
@@ -596,7 +596,7 @@ void run(){
 			utki::assert(!triggered[0].flags.get(opros::ready::read), SL);
 		}
 
-		ws.remove(sendSock);
+		ws.remove(send_sock);
 	}catch(std::exception& e){
 		utki::assert(false, [&](auto&o){o << e.what();}, SL);
 	}
@@ -740,7 +740,7 @@ void run(){
 	}
 	
 	// Test IPv6
-	if(IsIPv6SupportedByOS()){
+	if(is_ipv6_supported_by_os()){
 		try{
 			setka::address ip("1002:3004:5006::7008:900a");
 			utki::assert(ip.port == 0, SL);

@@ -90,8 +90,8 @@ void run(){
 		
 //		TRACE(<< "starting resolutions" << std::endl)
 		
-		for(auto i = r.begin(); i != r.end(); ++i){
-			(*i)->resolve_host();
+		for(auto& rslvr : r){
+			rslvr->resolve_host();
 		}
 		
 		for(unsigned i = 0; i < r.size(); ++i){
@@ -101,14 +101,14 @@ void run(){
 		}
 //		TRACE(<< "resolutions done" << std::endl)
 		
-		for(auto i = r.begin(); i != r.end(); ++i){
+		for(auto& rslvr: r){
 			utki::assert(
-				(*i)->res == setka::dns_result::ok,
-				[&](auto&o){o << "result = " << unsigned((*i)->res) << " host to resolve = " << (*i)->host_name;},
+				rslvr->res == setka::dns_result::ok,
+				[&](auto&o){o << "result = " << unsigned(rslvr->res) << " host to resolve = " << rslvr->host_name;},
 				SL
 			);
-//			ASSERT_INFO_ALWAYS((*i)->ip == 0x4D581503 || (*i)->ip == 0x57FAFB03, "(*i)->ip = " << (*i)->ip)
-			utki::assert((*i)->ip.is_valid(), SL);
+
+			utki::assert(rslvr->ip.is_valid(), SL);
 		}
 	}
 }
