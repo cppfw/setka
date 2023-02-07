@@ -316,7 +316,7 @@ address tcp_socket::get_remote_address()
 #endif
 
 	if (getpeername(sock, reinterpret_cast<sockaddr*>(&addr), &len) == socket_error) {
-#if CFG_OS == M_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 		int error_code = WSAGetLastError();
 #else
 		int error_code = errno;
