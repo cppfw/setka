@@ -100,6 +100,8 @@ protected:
 		//		TRACE(<< "Socket::Socket(): invoked " << this << std::endl)
 	}
 
+	// TODO: remove lint suppression when https://github.com/llvm/llvm-project/issues/55143 is fixed
+	// NOLINTNEXTLINE(bugprone-exception-escape)
 	socket& operator=(socket&& s) noexcept(false);
 
 	void disable_naggle();
@@ -117,6 +119,8 @@ protected:
 	void close() noexcept;
 
 public:
+	// TODO: remove lint suppression when https://github.com/llvm/llvm-project/issues/55143 is fixed
+	// NOLINTNEXTLINE(bugprone-exception-escape)
 	socket(socket&& s) noexcept(false) :
 		// NOTE: operator=() will call close(), so the socket should be in invalid state!!!
 		// Therefore, initialize variables to invalid values.

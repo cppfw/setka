@@ -127,10 +127,10 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 #else
 #	error "Unsupported OS"
 #endif
-			if (error_code == error_interrupted) {
-				// do nothing, for non-blocking socket the connection request still should remain active
-			} else if (error_code == error_in_progress) {
-				// do nothing, this is not an error, we have non-blocking socket
+			if (error_code == error_interrupted || error_code == error_in_progress) {
+				// Ignore error_interrupted,
+				// for non-blocking socket the connection request still should remain active.
+				// Ignore error_in_progress, since we have non-blocking socket, it is not an error.
 			} else {
 				throw std::system_error(
 					error_code,

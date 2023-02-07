@@ -67,7 +67,9 @@ void socket::close() noexcept
 #endif
 }
 
-setka::socket& socket::operator=(socket&& s)
+// TODO: remove lint suppression when https://github.com/llvm/llvm-project/issues/55143 is fixed
+// NOLINTNEXTLINE(bugprone-exception-escape)
+setka::socket& socket::operator=(socket&& s) noexcept(false)
 {
 	if (this == &s) { // detect self-assignment
 		return *this;
