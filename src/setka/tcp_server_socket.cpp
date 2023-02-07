@@ -34,7 +34,7 @@ SOFTWARE.
 
 using namespace setka;
 
-void tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_t queue_size) :
+tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_t queue_size) :
 	disable_naggle(disable_naggle)
 {
 #if CFG_OS == CFG_OS_WINDOWS
@@ -195,7 +195,9 @@ tcp_socket tcp_server_socket::accept(){
 		);
 
 	if(accepted_sock == invalid_socket){
+#if CFG_OS == CFG_OS_WINDOWS
 		s.close_event_for_waitable();
+#endif
 		return s; // no connections to be accepted, return invalid socket
 	}
 

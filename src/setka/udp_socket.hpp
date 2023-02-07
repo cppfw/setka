@@ -54,10 +54,10 @@ public:
 	 *               If 0 is passed then system will assign some free port if any. If there
 	 *               are no free ports, then it is an error and an exception will be thrown.
 	 */
-	udp_socket(uint16_t port = 0);
+	udp_socket(uint16_t port);
 
 	udp_socket(const udp_socket&) = delete;
-	udp_socket& operaotr=(const udp_socket&) = delete;
+	udp_socket& operator=(const udp_socket&) = delete;
 
 	udp_socket(udp_socket&& s) :
 			socket(std::move(s))

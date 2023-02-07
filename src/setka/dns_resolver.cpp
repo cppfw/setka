@@ -712,7 +712,7 @@ private:
 			std::lock_guard<decltype(dns::mutex)> mutexGuard(dns::mutex); // mutex is needed because socket opening may fail and we will have to set isExiting flag which should be protected by mutex
 			
 			try{
-				this->socket.open();
+				this->socket = setka::udp_socket(0);
 			}catch(...){
 				this->isExiting = true;
 				this->RemoveAllResolvers();

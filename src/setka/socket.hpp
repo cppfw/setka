@@ -105,6 +105,16 @@ protected:
 
 	void set_nonblocking_mode();
 
+protected:
+	// socket is not supposed to be used as polymorphic class,
+	// hence the destructor is protected
+	~socket()noexcept;
+
+	/**
+	 * @brief Closes the socket disconnecting it if necessary.
+	 */
+	void close()noexcept;
+
 public:
 	socket(socket&& s) :
 			// NOTE: operator=() will call close(), so the socket should be in invalid state!!!
@@ -113,8 +123,6 @@ public:
 	{
 		this->operator=(std::move(s));
 	}
-
-	virtual ~socket()noexcept;
 
 	/**
 	 * @brief Tells whether the socket is empty or not.
@@ -137,12 +145,6 @@ public:
 	 *         0 means that the socket is not bound to a port.
 	 */
 	uint16_t get_local_port();
-
-private:
-	/**
-	 * @brief Closes the socket disconnecting it if necessary.
-	 */
-	void close()noexcept;
 
 #if CFG_OS == CFG_OS_WINDOWS
 private:

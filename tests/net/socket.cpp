@@ -52,7 +52,7 @@ bool IsIPv6SupportedByOS(){
 
 namespace BasicClientServerTest{
 void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
-	if(!s.is_open()){
+	if(s.is_empty()){
 		throw std::logic_error("SendAll(): socket is not opened");
 	}
 
@@ -83,15 +83,13 @@ public:
 
 	void run()override{
 		try{
-			setka::tcp_server_socket listenSock;
-
-			listenSock.open(13666); // start listening
+			setka::tcp_server_socket listenSock(13666); // start listening
 
 			utki::assert(listenSock.get_local_port() == 13666, SL);
 
 			// accept some connection
 			setka::tcp_socket sock;
-			while(!sock.is_open() && !this->quitFlag){
+			while(sock.is_empty() && !this->quitFlag){
 				sock = listenSock.accept();
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				if(auto m = this->queue.pop_front()){
@@ -99,7 +97,7 @@ public:
 				}
 			}
 
-			utki::assert(sock.is_open(), SL);
+			utki::assert(!sock.is_empty(), SL);
 
 			utki::assert(sock.get_local_address().host.get_v4() == 0x7f000001, SL);
 			utki::assert(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
@@ -128,11 +126,9 @@ void Run(){
 	try{
 		setka::address ip("127.0.0.1", 13666);
 
-		setka::tcp_socket sock;
+		setka::tcp_socket sock(ip);
 
-		sock.open(ip);
-
-		utki::assert(sock.is_open(), SL);
+		utki::assert(!sock.is_empty(), SL);
 
 		// give some time for socket to connect
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -175,27 +171,20 @@ void Run(){
 namespace SendDataContinuouslyWithWaitSet{
 
 void Run(){
-	setka::tcp_server_socket serverSock;
+	setka::tcp_server_socket serverSock(13666);
 
-	serverSock.open(13666);
-
-
-	setka::tcp_socket sockS;
-	{
-		setka::address ip("127.0.0.1", 13666);
-		sockS.open(ip);
-	}
+	setka::tcp_socket sockS(setka::address("127.0.0.1", 13666));
 
 	//Accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	setka::tcp_socket sockR;
-	for(unsigned i = 0; i < 20 && !sockR.is_open(); ++i){
+	for(unsigned i = 0; i < 20 && sockR.is_empty(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sockR = serverSock.accept();
 	}
 
-	utki::assert(sockS.is_open(), SL);
-	utki::assert(sockR.is_open(), SL);
+	utki::assert(!sockS.is_empty(), SL);
+	utki::assert(!sockR.is_empty(), SL);
 
 	//Here we have 2 sockets sockS and sockR
 
@@ -225,7 +214,7 @@ void Run(){
 	uint32_t startTime = utki::get_ticks_ms();
 	
 	while(utki::get_ticks_ms() - startTime < 5000){ // 5 seconds
-		std::array<opros::waitable*, 2> triggered;
+		std::array<opros::event_info, 2> triggered;
 
 		unsigned numTriggered = ws.wait(1000, utki::make_span(triggered));
 
@@ -239,20 +228,20 @@ void Run(){
 		//If 2 waitables have triggered they should be 2 different waitables.
 		if(numTriggered == 2){
 //			TRACE(<< "SendDataContinuously::Run(): 2 triggered" << std::endl)
-			utki::assert(triggered[0] != triggered[1], SL);
+			utki::assert(triggered[0].w != triggered[1].w, SL);
 		}else{
 			utki::assert(numTriggered == 1, SL);
 //			TRACE(<< "SendDataContinuously::Run(): 1 triggered" << std::endl)
 		}
 
 		for(unsigned i = 0; i < numTriggered; ++i){
-			if(triggered[i] == &sockS){
-				utki::assert(triggered[i] != &sockR, SL);
+			if(triggered[i].w == &sockS){
+				utki::assert(triggered[i].w != &sockR, SL);
 
 //				TRACE(<< "SendDataContinuously::Run(): sockS triggered" << std::endl)
-				utki::assert(!sockS.flags().get(opros::ready::read), SL);
-				utki::assert(!sockS.flags().get(opros::ready::error), SL);
-				utki::assert(sockS.flags().get(opros::ready::write), SL);
+				utki::assert(!triggered[i].flags.get(opros::ready::read), SL);
+				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
+				utki::assert(triggered[i].flags.get(opros::ready::write), SL);
 
 				utki::assert(bytesSent <= sendBuffer.size(), SL);
 
@@ -293,7 +282,7 @@ void Run(){
 					}else{
 //						TRACE(<< "SendDataContinuously::Run(): " << res << " bytes sent" << std::endl)
 					}
-					utki::assert(!sockS.flags().get(opros::ready::write), SL);
+					utki::assert(!triggered[i].flags.get(opros::ready::write), SL);
 				}catch(std::exception& e){
 					utki::assert(
 						false,
@@ -302,13 +291,13 @@ void Run(){
 					);
 				}
 				utki::assert(bytesSent <= sendBuffer.size(), SL);
-			}else if(triggered[i] == &sockR){
-				utki::assert(triggered[i] != &sockS, SL);
+			}else if(triggered[i].w == &sockR){
+				utki::assert(triggered[i].w != &sockS, SL);
 
 //				TRACE(<< "SendDataContinuously::Run(): sockR triggered" << std::endl)
-				utki::assert(sockR.flags().get(opros::ready::read), SL);
-				utki::assert(!sockR.flags().get(opros::ready::error), SL);
-				utki::assert(!sockR.flags().get(opros::ready::write), SL);
+				utki::assert(triggered[i].flags.get(opros::ready::read), SL);
+				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
+				utki::assert(!triggered[i].flags.get(opros::ready::write), SL);
 
 				while(true){
 					std::array<uint8_t, 0x2000> buf; // 8kb buffer
@@ -372,26 +361,20 @@ void Run(){
 namespace SendDataContinuously{
 
 void Run(){
-	setka::tcp_server_socket serverSock;
+	setka::tcp_server_socket serverSock(13666);
 
-	serverSock.open(13666);
-
-	setka::tcp_socket sockS;
-	{
-		setka::address ip("127.0.0.1", 13666);
-		sockS.open(ip);
-	}
+	setka::tcp_socket sockS(setka::address("127.0.0.1", 13666));
 
 	// accept connection
 //	TRACE(<< "SendDataContinuously::Run(): accepting connection" << std::endl)
 	setka::tcp_socket sockR;
-	for(unsigned i = 0; i < 20 && !sockR.is_open(); ++i){
+	for(unsigned i = 0; i < 20 && sockR.is_empty(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sockR = serverSock.accept();
 	}
 
-	utki::assert(sockS.is_open(), SL);
-	utki::assert(sockR.is_open(), SL);
+	utki::assert(!sockS.is_empty(), SL);
+	utki::assert(!sockR.is_empty(), SL);
 
 	// here we have 2 sockets sockS and sockR
 
@@ -512,7 +495,7 @@ void Run(){
 	setka::udp_socket recvSock;
 
 	try{
-		recvSock.open(13666);
+		recvSock = setka::udp_socket(13666);
 	}catch(std::exception &e){
 		utki::assert(false, [&](auto&o){o << e.what();}, SL);
 	}
@@ -522,7 +505,7 @@ void Run(){
 	setka::udp_socket sendSock;
 
 	try{
-		sendSock.open();
+		sendSock = setka::udp_socket(0);
 
 		std::array<uint8_t, 4> data;
 		data[0] = '0';
@@ -595,23 +578,23 @@ void Run(){
 namespace TestUDPSocketWaitForWriting{
 void Run(){
 	try{
-		setka::udp_socket sendSock;
-
-		sendSock.open();
+		setka::udp_socket sendSock(0);
 
 		opros::wait_set ws(1);
 
 		ws.add(sendSock, utki::make_flags({opros::ready::read, opros::ready::write}));
 
-		if(ws.wait(3000) == 0){
+		std::array<opros::event_info, 1> triggered;
+
+		if(ws.wait(3000, triggered) == 0){
 			// if timeout was hit
 			// NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
 #if CFG_OS == CFG_OS_WINDOWS
 			utki::log([](auto&o){o << "WARNING: Waiting for writing to UDP socket does not work on Win32";});
 #endif
 		}else{
-			utki::assert(sendSock.flags().get(opros::ready::write), SL);
-			utki::assert(!sendSock.flags().get(opros::ready::read), SL);
+			utki::assert(triggered[0].flags.get(opros::ready::write), SL);
+			utki::assert(!triggered[0].flags.get(opros::ready::read), SL);
 		}
 
 		ws.remove(sendSock);
