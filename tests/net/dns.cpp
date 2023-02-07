@@ -185,10 +185,7 @@ void run(){
 namespace test_cancel_dns_lookup{
 class resolver : public setka::dns_resolver{
 	
-public:
-	
-	resolver(){}
-	
+public:	
 	volatile bool called = false;
 	
 	void on_completed(setka::dns_result res, setka::address::ip ip)noexcept override{
