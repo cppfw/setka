@@ -18,7 +18,7 @@
 
 namespace{
 bool IsIPv6SupportedByOS(){
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 	{
 		OSVERSIONINFOEX osvi;
 		memset(&osvi, 0, sizeof(osvi));
@@ -606,7 +606,7 @@ void Run(){
 		if(ws.wait(3000) == 0){
 			// if timeout was hit
 			// NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 			utki::log([](auto&o){o << "WARNING: Waiting for writing to UDP socket does not work on Win32";});
 #endif
 		}else{

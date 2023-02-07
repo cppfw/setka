@@ -38,7 +38,7 @@ SOFTWARE.
 
 #include <opros/wait_set.hpp>
 
-#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+#if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 #	include <papki/fs_file.hpp>
 #endif
 
@@ -563,7 +563,7 @@ private:
 			std::unique_ptr<dns::Resolver> r = this->RemoveResolver(this->resolversMap.begin()->first);
 			ASSERT(r)
 
-#if M_OS == M_OS_WINDOWS && defined(ERROR)
+#if CFG_OS == CFG_OS_WINDOWS && defined(ERROR)
 #	undef ERROR
 #endif
 
@@ -574,7 +574,7 @@ private:
 	
 	void InitDNS(){
 		try{
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 			struct WinRegKey{
 				HKEY	key;
 			
@@ -643,7 +643,7 @@ private:
 				RegCloseKey(hSub);
 			}
 
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 			papki::fs_file f("/etc/resolv.conf");
 			
 			std::vector<uint8_t> buf = f.load(0xfff); // 4kb max
@@ -795,7 +795,7 @@ private:
 // WORKAROUND: for strange bug on Win32 (reproduced on WinXP at least).
 //             For some reason waiting for WRITE on UDP socket does not work. It hangs in the
 //             wait() method until timeout is hit. So, just try to send data to the socket without waiting for WRITE.
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 				if(this->sendList.size() != 0)
 #else
 				if(this->socket.flags().get(opros::ready::write))
@@ -900,7 +900,7 @@ private:
 // Workaround for strange bug on Win32 (reproduced on WinXP at least).
 // For some reason waiting for WRITE on UDP socket does not work. It hangs in the
 // Wait() method until timeout is hit. So, just check every 100ms if it is OK to write to UDP socket.
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 			if(this->sendList.size() > 0){
 				timeout = std::min(timeout, uint32_t(100)); // clamp top
 			}
@@ -994,7 +994,7 @@ void dns_resolver::resolve(const std::string& hostName, uint32_t timeoutMillis, 
 	r->hostName = hostName;
 	r->dns = dnsIP;
 	
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 	// check OS version, if WinXP then start from record A, since setka does not support IPv6 on WinXP
 	{
 		OSVERSIONINFOEX osvi;

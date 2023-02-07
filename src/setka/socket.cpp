@@ -28,12 +28,12 @@ SOFTWARE.
 
 #include <utki/config.hpp>
 
-#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+#if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 #	include <netinet/in.h>
 #	include <netinet/tcp.h>
 #	include <fcntl.h>
 #	include <unistd.h>
-#elif M_OS == M_OS_WINDOWS
+#elif CFG_OS == CFG_OS_WINDOWS
 #	include <ws2tcpip.h>
 #endif
 
@@ -45,62 +45,69 @@ socket::~socket()noexcept{
 
 void socket::close()noexcept{
 //		TRACE(<< "socket::Close(): invoked " << this << std::endl)
-	ASSERT(
-		!this->is_added(),
-		[&](auto&o){o << "socket::close(): trying to close socket which is added to the WaitSet. Remove the socket from WaitSet before closing.";}
-	)
-	
-	if(this->is_open()){
-		ASSERT(!this->is_added())
+	if(this->is_empty()){
+		return;
+	}
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 		// Closing socket in Win32.
 		// refer to http://tangentsoft.net/wskfaq/newbie.html#howclose for details
-		shutdown(this->sock, SD_BOTH);
-		closesocket(this->sock);
+		shutdown(this->win_sock, SD_BOTH);
+		closesocket(this->win_sock);
 
 		this->close_event_for_waitable();
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-		::close(this->sock);
+		this->win_sock = invalid_socket;
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
+		::close(this->handle);
+		this->handle = invalid_socket;
 #else
 #	error "Unsupported OS"
 #endif
-	}
-	this->readiness_flags.clear();
-	this->sock = invalid_socket;
 }
 
 setka::socket& socket::operator=(socket&& s){
-//	TRACE(<< "socket::operator=(): invoked " << this << std::endl)
-	if(this == &s){//detect self-assignment
+	if(this == &s){ // detect self-assignment
 		return *this;
 	}
 
-	// first, assign as Waitable, it may throw an exception
-	// if the waitable is added to some waitset
-	this->waitable::operator=(std::move(s));
+	if(!this->is_empty()){
+		throw std::logic_error("socket::operator=(socket&&): cannot not move to non-empty socket");
+	}
 
-	this->close();
-	this->sock = s.sock;
+	this->handle = s.handle;
 
-#if M_OS == M_OS_WINDOWS
-	this->event_for_waitable = s.event_for_waitable;
-	const_cast<socket&>(s).event_for_waitable= WSA_INVALID_EVENT;
+#if CFG_OS == CFG_OS_WINDOWS
+	this->win_sock = s.win_sock;
+	s.win_sock = invalid_socket;
+	s.handle = WSA_INVALID_EVENT;
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
+	s.handle = invalid_socket;
+#else
+#	error "Unknown OS"
 #endif
 
-	const_cast<socket&>(s).sock = invalid_socket;
 	return *this;
 }
 
 void socket::disable_naggle(){
-	if(!this->is_open()){
-		throw std::logic_error("socket::disable_naggle(): socket is not valid");
+	if(this->is_empty()){
+		throw std::logic_error("socket::disable_naggle(): socket is empty");
 	}
 
-#if M_OS == M_OS_WINDOWS || M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+#if CFG_OS == CFG_OS_WINDOWS || CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	{
 		int yes = 1;
-		setsockopt(this->sock, IPPROTO_TCP, TCP_NODELAY, (char*)&yes, sizeof(yes));
+		setsockopt(
+#if CFG_OS == CFG_OS_WINDOWS
+			this->win_sock,
+#else
+			this->handle,
+#endif
+			IPPROTO_TCP,
+			TCP_NODELAY,
+			(char*)&yes,
+			sizeof(yes)
+		);
 	}
 #else
 #	error "Unsupported OS"
@@ -108,25 +115,25 @@ void socket::disable_naggle(){
 }
 
 void socket::set_nonblocking_mode(){
-	if(!this->is_open()){
-		throw std::logic_error("socket::set_nonblocking_mode(): socket is not valid");
+	if(this->is_empty()){
+		throw std::logic_error("socket::set_nonblocking_mode(): socket is empty");
 	}
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 	{
 		u_long mode = 1;
-		if(ioctlsocket(this->sock, FIONBIO, &mode) != 0){
+		if(ioctlsocket(this->win_sock, FIONBIO, &mode) != 0){
 			throw std::system_error(WSAGetLastError(), std::generic_category(), "could not set socket non-blocking mode, ioctlsocket(FIONBIO) failed");
 		}
 	}
 	
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	{
-		int flags = fcntl(this->sock, F_GETFL, 0);
+		int flags = fcntl(this->handle, F_GETFL, 0);
 		if(flags == -1){
 			throw std::system_error(errno, std::generic_category(), "could not set socket non-blocking mode, fcntl(F_GETFL) failed");
 		}
-		if(fcntl(this->sock, F_SETFL, flags | O_NONBLOCK) != 0){
+		if(fcntl(this->handle, F_SETFL, flags | O_NONBLOCK) != 0){
 			throw std::system_error(errno, std::generic_category(), "could not set socket non-blocking mode, fcntl(F_SETFL) failed");
 		}
 	}
@@ -136,22 +143,24 @@ void socket::set_nonblocking_mode(){
 }
 
 uint16_t socket::get_local_port(){
-	if(!this->is_open()){
+	if(this->is_empty()){
 		throw std::logic_error("socket::GetLocalPort(): socket is not valid");
 	}
 
 	sockaddr_storage addr;
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 	int len = sizeof(addr);
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+	int sock = this->win_sock;
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	socklen_t len = sizeof(addr);
+	int sock = this->handle;
 #else
 #	error "Unsupported OS"
 #endif
 
 	if(getsockname(
-			this->sock,
+			sock,
 			reinterpret_cast<sockaddr*>(&addr),
 			&len
 		) < 0)
@@ -169,91 +178,87 @@ uint16_t socket::get_local_port(){
 	}
 }
 
-#if M_OS == M_OS_WINDOWS
-HANDLE socket::get_handle(){
-	return this->event_for_waitable;
-}
-
-bool socket::check_signaled(){
+#if CFG_OS == CFG_OS_WINDOWS
+utki::flags<ready> socket::get_readiness_flags(){
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
-	ASSERT(this->is_open())
-	if(WSAEnumNetworkEvents(this->sock, this->event_for_waitable, &events) != 0){
+	ASSERT(!this->is_empty())
+	if(WSAEnumNetworkEvents(this->win_sock, this->handle, &events) != 0){
 		throw std::system_error(WSAGetLastError(), std::generic_category(), "could not check for network events, WSAEnumNetworkEvents() failed");
 	}
 
 	// NOTE: sometimes no events are reported, don't know why.
 //	ASSERT(events.lNetworkEvents != 0)
 
+	utki::flags<ready> flags;
+
 	if((events.lNetworkEvents & FD_CLOSE) != 0){
-		this->readiness_flags.set(opros::ready::error);
+		flags.set(opros::ready::error);
 	}
 
 	if((events.lNetworkEvents & FD_READ) != 0){
-		this->readiness_flags.set(opros::ready::read);
+		flags.set(opros::ready::read);
 		ASSERT(FD_READ_BIT < FD_MAX_EVENTS)
 		if(events.iErrorCode[FD_READ_BIT] != 0){
-			this->readiness_flags.set(opros::ready::error);
+			flags.set(opros::ready::error);
 		}
 	}
 
 	if((events.lNetworkEvents & FD_ACCEPT) != 0){
-		this->readiness_flags.set(opros::ready::read);
+		flags.set(opros::ready::read);
 		ASSERT(FD_ACCEPT_BIT < FD_MAX_EVENTS)
 		if(events.iErrorCode[FD_ACCEPT_BIT] != 0){
-			this->readiness_flags.set(opros::ready::error);
+			flags.set(opros::ready::error);
 		}
 	}
 
 	if((events.lNetworkEvents & FD_WRITE) != 0){
-		this->readiness_flags.set(opros::ready::write);
+		flags.set(opros::ready::write);
 		ASSERT(FD_WRITE_BIT < FD_MAX_EVENTS)
 		if(events.iErrorCode[FD_WRITE_BIT] != 0){
-			this->readiness_flags.set(opros::ready::error);
+			flags.set(opros::ready::error);
 		}
 	}
 
 	if((events.lNetworkEvents & FD_CONNECT) != 0){
-		this->readiness_flags.set(opros::ready::write);
+		flags.set(opros::ready::write);
 		ASSERT(FD_CONNECT_BIT < FD_MAX_EVENTS)
 		if(events.iErrorCode[FD_CONNECT_BIT] != 0){
-			this->readiness_flags.set(opros::ready::error);
+			flags.set(opros::ready::error);
 		}
 	}
 
 #ifdef DEBUG
 	// if some event occurred then some of readiness flags should be set
 	if(events.lNetworkEvents != 0){
-		utki::assert(!this->readiness_flags.is_clear(), SL);
+		utki::assert(!flags.is_clear(), SL);
 	}
 #endif
 
-	return this->waitable::check_signaled();
+	return flags;
 }
 
 void socket::create_event_for_waitable(){
-	ASSERT(this->event_for_waitable== WSA_INVALID_EVENT)
-	this->event_for_waitable= WSACreateEvent();
-	if(this->event_for_waitable== WSA_INVALID_EVENT){
+	this->handle = WSACreateEvent();
+	if(this->handle == WSA_INVALID_EVENT){
 		throw std::system_error(WSAGetLastError(), std::generic_category(), "could not create event, WSACreateEvent() failed");
 	}
 }
 
 void socket::close_event_for_waitable(){
-	ASSERT(this->event_for_waitable != WSA_INVALID_EVENT)
-	WSACloseEvent(this->event_for_waitable);
-	this->event_for_waitable= WSA_INVALID_EVENT;
+	ASSERT(this->handle != WSA_INVALID_EVENT)
+	WSACloseEvent(this->handle);
 }
 
 void socket::set_waiting_events_for_windows(long flags){
 	ASSERT(
-		this->is_open() && (this->event_for_waitable != WSA_INVALID_EVENT),
+		!this->is_empty() && (this->handle != WSA_INVALID_EVENT),
 		[&](auto&o){o << "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.";}
 	)
 
 	if(WSAEventSelect(
-			this->sock,
-			this->event_for_waitable,
+			this->win_sock,
+			this->handle,
 			flags
 		) != 0)
 	{
@@ -261,12 +266,7 @@ void socket::set_waiting_events_for_windows(long flags){
 	}
 }
 
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-
-int socket::get_handle(){
-	return this->sock;
-}
-
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 #else
 #	error "unsupported OS"
 #endif

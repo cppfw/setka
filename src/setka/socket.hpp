@@ -32,7 +32,7 @@ SOFTWARE.
 #include <utki/config.hpp>
 #include <utki/debug.hpp>
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 #	include <winsock2.h>
 #	include <ws2tcpip.h>
 #	include <utki/windows.hpp>
@@ -42,7 +42,7 @@ SOFTWARE.
 #		define IPV6_V6ONLY 27
 #	endif
 
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 #	include <sys/socket.h>
 
 #else
@@ -59,7 +59,7 @@ namespace setka{
  */
 class socket : public opros::waitable{
 protected:
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 	typedef SOCKET socket_type;
 
 	static const socket_type invalid_socket = INVALID_SOCKET;
@@ -68,7 +68,7 @@ protected:
 	static const int error_again = WSAEWOULDBLOCK;
 	static const int error_in_progress = WSAEWOULDBLOCK;
 
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	typedef int socket_type;
 
 	static const socket_type invalid_socket = -1;
@@ -81,17 +81,20 @@ protected:
 #	error "Unsupported OS"
 #endif
 
-#if M_OS == M_OS_WINDOWS
-	WSAEVENT event_for_waitable;
+#if CFG_OS == CFG_OS_WINDOWS
+	socket_type win_sock = invalid_socket;
 #endif
-
-	socket_type sock;
 
 	socket() :
-#if M_OS == M_OS_WINDOWS
-			event_for_waitable(WSA_INVALID_EVENT),
+		opros::waitable(
+#if CFG_OS == CFG_OS_WINDOWS
+			WSA_INVALID_EVENT,
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX
+			invalid_socket
+#else
+#	error "Unknown OS"
 #endif
-			sock(invalid_socket)
+		)
 	{
 //		TRACE(<< "Socket::Socket(): invoked " << this << std::endl)
 	}
@@ -114,18 +117,19 @@ public:
 	virtual ~socket()noexcept;
 
 	/**
-	 * @brief Tells whether the socket is opened or not.
-	 * @return Returns true if the socket is opened or false otherwise.
+	 * @brief Tells whether the socket is empty or not.
+	 * @return Returns true if the socket is empty or false otherwise.
 	 */
 
-	bool is_open()const noexcept{
-		return this->sock != invalid_socket;
+	bool is_empty()const noexcept{
+#if CFG_OS == CFG_OS_WINDOWS
+		return this->handle == WSA_INVALID_EVENT;
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX
+		return this->handle == invalid_socket;
+#else
+#	error "Unknown OS"
+#endif
 	}
-
-	/**
-	 * @brief Closes the socket disconnecting it if necessary.
-	 */
-	void close()noexcept;
 
 	/**
 	 * @brief Returns local port this socket is bound to.
@@ -134,11 +138,15 @@ public:
 	 */
 	uint16_t get_local_port();
 
-#if M_OS == M_OS_WINDOWS
 private:
-	HANDLE get_handle()override;
+	/**
+	 * @brief Closes the socket disconnecting it if necessary.
+	 */
+	void close()noexcept;
 
-	bool check_signaled()override;
+#if CFG_OS == CFG_OS_WINDOWS
+private:
+	utki::flags<ready> get_readiness_flags()override;
 
 protected:
 	void create_event_for_waitable();
@@ -147,9 +155,7 @@ protected:
 
 	void set_waiting_events_for_windows(long flags);
 
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-private:
-	int get_handle()override;
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 #else
 #	error "Unsupported OS"
 #endif

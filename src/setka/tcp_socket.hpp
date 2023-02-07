@@ -44,11 +44,17 @@ class tcp_socket : public socket{
 public:
 	
 	/**
-	 * @brief Constructs an invalid TCP socket object.
+	 * @brief Constructs an empty TCP socket object.
 	 */
-	tcp_socket(){
-//		TRACE(<< "tcp_socket::tcp_socket(): invoked " << this << std::endl)
-	}
+	tcp_socket() = default;
+
+	/**
+	 * @brief Creates and connects the socket.
+	 * This constructor connects the socket to remote TCP server socket.
+	 * @param address - IP address.
+	 * @param disable_naggle - enable/disable Naggle algorithm.
+	 */
+	tcp_socket(const address& address, bool disable_naggle = false);
 	
 	tcp_socket(const tcp_socket&) = delete;
 	tcp_socket& operator=(const tcp_socket&) = delete;
@@ -61,14 +67,6 @@ public:
 		this->socket::operator=(std::move(s));
 		return *this;
 	}
-	
-	/**
-	 * @brief Connects the socket.
-	 * This method connects the socket to remote TCP server socket.
-	 * @param address - IP address.
-	 * @param disable_naggle - enable/disable Naggle algorithm.
-	 */
-	void open(const address& address, bool disable_naggle = false);
 
 	/**
 	 * @brief Send data to connected socket.
@@ -103,7 +101,7 @@ public:
 	 */
 	address get_remote_address();
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 private:
 	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
 #endif

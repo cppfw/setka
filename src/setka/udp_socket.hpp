@@ -45,9 +45,19 @@ namespace setka{
 class udp_socket : public socket{
 	bool ipv4;
 public:
-	udp_socket(){}
+	udp_socket() = default;
+
+	/**
+	 * @brief Create and open the socket.
+	 * Creates and opens the socket, this socket can further be used to send or receive data.
+	 * @param port - IP port number on which the socket will listen for incoming datagrams.
+	 *               If 0 is passed then system will assign some free port if any. If there
+	 *               are no free ports, then it is an error and an exception will be thrown.
+	 */
+	udp_socket(uint16_t port = 0);
 
 	udp_socket(const udp_socket&) = delete;
+	udp_socket& operaotr=(const udp_socket&) = delete;
 
 	udp_socket(udp_socket&& s) :
 			socket(std::move(s))
@@ -57,21 +67,7 @@ public:
 		this->socket::operator=(std::move(s));
 		this->ipv4 = s.ipv4;
 		return *this;
-	}
 	
-	/**
-	 * @brief Open the socket.
-	 * This method opens the socket, this socket can further be used to send or receive data.
-	 * After the socket is opened it becomes a valid socket and Socket::IsValid() will return true for such socket.
-	 * After the socket is closed it becomes invalid.
-	 * In other words, a valid socket is an opened socket.
-	 * In case of errors this method throws net::Exc.
-	 * @param port - IP port number on which the socket will listen for incoming datagrams.
-	 *               If 0 is passed then system will assign some free port if any. If there
-	 *               are no free ports, then it is an error and an exception will be thrown.
-	 *               This is useful for server-side sockets, for client-side sockets use udp_socket::Open().
-	 */
-	void open(uint16_t port = 0);
 
 	/**
 	 * @brief Send datagram over UDP socket.
@@ -103,7 +99,7 @@ public:
 	 */
 	size_t recieve(utki::span<uint8_t> buf, address &out_sender_address);
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 private:
 	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
 #endif

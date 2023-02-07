@@ -31,9 +31,9 @@ SOFTWARE.
 #include <utki/config.hpp>
 #include <utki/span.hpp>
 
-#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX
+#if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX
 #	include <arpa/inet.h>
-#elif M_OS == M_OS_WINDOWS
+#elif CFG_OS == CFG_OS_WINDOWS
 #	include <Ws2tcpip.h>
 #else
 #	error "Unknown OS"
@@ -66,7 +66,7 @@ address::ip address::ip::parse(const char* str){
 address::ip address::ip::parse_v4(const char* str){
 	sockaddr_in a;
 	
-#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS
 	int res = inet_pton(
 			AF_INET,
 			str,
@@ -85,14 +85,14 @@ address::ip address::ip::parse_v4(const char* str){
 }
 
 address::ip address::ip::parse_v6(const char* str){
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 	sockaddr_in6 aa;
 	in6_addr& a = aa.sin6_addr;
 #else
 	in6_addr a;
 #endif	
 		
-#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS
 	int res = inet_pton(
 			AF_INET6,
 			str,
@@ -107,7 +107,7 @@ address::ip address::ip::parse_v6(const char* str){
 #	error "Unknown OS"
 #endif
 
-#if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
 	return address::ip(
 			a.s6_addr[0],
 			a.s6_addr[1],
