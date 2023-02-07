@@ -45,26 +45,30 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 #endif
 
 	bool ipv4 = false;
-	
+
 	sock = ::socket(PF_INET6, SOCK_STREAM, 0);
-	
-	if(sock == invalid_socket){
+
+	if (sock == invalid_socket) {
 		// maybe IPv6 is not supported by OS, try creating IPv4 socket
-		
+
 		sock = ::socket(PF_INET, SOCK_STREAM, 0);
 
-		if(sock == invalid_socket){
+		if (sock == invalid_socket) {
 #if CFG_OS == CFG_OS_WINDOWS
 			this->close_event_for_waitable();
 #endif
-			throw std::system_error(errno, std::generic_category(), "couldn't create IPv4 TCP server socket, socket() failed");
+			throw std::system_error(
+				errno,
+				std::generic_category(),
+				"couldn't create IPv4 TCP server socket, socket() failed"
+			);
 		}
-		
+
 		ipv4 = true;
 	}
-	
+
 	// turn off IPv6 only mode to allow also accepting IPv4 connections
-	if(!ipv4){
+	if (!ipv4) {
 #if CFG_OS == CFG_OS_WINDOWS
 		char no = 0;
 		const char* noPtr = &no;
@@ -72,30 +76,34 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 		int no = 0;
 		void* noPtr = &no;
 #endif
-		if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0) {
 			// Dual stack is not supported, proceed with IPv4 only.
-			
+
 			this->close(); // close IPv6 socket
-			
+
 			// create IPv4 socket
-			
+
 #if CFG_OS == CFG_OS_WINDOWS
 			this->create_event_for_waitable();
 #endif
 
 			sock = ::socket(PF_INET, SOCK_STREAM, 0);
-	
-			if(sock == invalid_socket){
+
+			if (sock == invalid_socket) {
 #if CFG_OS == CFG_OS_WINDOWS
 				this->close_event_for_waitable();
 #endif
-				throw std::system_error(errno, std::generic_category(), "couldn't create IPv4 server socket, socket() failed");
+				throw std::system_error(
+					errno,
+					std::generic_category(),
+					"couldn't create IPv4 server socket, socket() failed"
+				);
 			}
-			
+
 			ipv4 = true;
 		}
 	}
-	
+
 	// allow local address reuse
 	{
 		int yes = 1;
@@ -104,15 +112,15 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 
 	sockaddr_storage socket_address;
 	socklen_t socket_address_length;
-	
-	if(ipv4){
+
+	if (ipv4) {
 		sockaddr_in& sa = reinterpret_cast<sockaddr_in&>(socket_address);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin_family = AF_INET;
 		sa.sin_addr.s_addr = INADDR_ANY;
 		sa.sin_port = htons(port);
 		socket_address_length = sizeof(sa);
-	}else{
+	} else {
 		sockaddr_in6& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin6_family = AF_INET6;
@@ -122,12 +130,7 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 	}
 
 	// Bind the socket for listening
-	if(bind(
-			sock,
-			reinterpret_cast<sockaddr*>(&socket_address),
-			socket_address_length
-		) == socket_error)
-	{
+	if (bind(sock, reinterpret_cast<sockaddr*>(&socket_address), socket_address_length) == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
 		int errorCode = WSAGetLastError();
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
@@ -141,7 +144,7 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 		throw std::system_error(errorCode, std::generic_category(), "could not bind socket, bind() failed");
 	}
 
-	if(listen(sock, int(queue_size)) == socket_error){
+	if (listen(sock, int(queue_size)) == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
 		int errorCode = WSAGetLastError();
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
@@ -151,20 +154,25 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 #endif
 
 		this->close();
-		
-		throw std::system_error(errorCode, std::generic_category(), "couldn't listen on the local port, listen() failed");
+
+		throw std::system_error(
+			errorCode,
+			std::generic_category(),
+			"couldn't listen on the local port, listen() failed"
+		);
 	}
 
-	try{
+	try {
 		this->set_nonblocking_mode();
-	}catch(...){
+	} catch (...) {
 		this->close();
 		throw;
 	}
 }
 
-tcp_socket tcp_server_socket::accept(){
-	if(this->is_empty()){
+tcp_socket tcp_server_socket::accept()
+{
+	if (this->is_empty()) {
 		throw std::logic_error("tcp_server_socket::accept(): the socket is not opened");
 	}
 
@@ -188,20 +196,16 @@ tcp_socket tcp_server_socket::accept(){
 	s.create_event_for_waitable();
 #endif
 
-	accepted_sock = ::accept(
-			sock,
-			reinterpret_cast<sockaddr*>(&socket_address),
-			&sock_alen
-		);
+	accepted_sock = ::accept(sock, reinterpret_cast<sockaddr*>(&socket_address), &sock_alen);
 
-	if(accepted_sock == invalid_socket){
+	if (accepted_sock == invalid_socket) {
 #if CFG_OS == CFG_OS_WINDOWS
 		s.close_event_for_waitable();
 #endif
 		return s; // no connections to be accepted, return invalid socket
 	}
 
-	try{
+	try {
 #if CFG_OS == CFG_OS_WINDOWS
 		// NOTE: accepted socket is associated with the same event object as the listening socket which accepted it.
 		// Re-associate the socket with its own event object.
@@ -209,25 +213,26 @@ tcp_socket tcp_server_socket::accept(){
 #endif
 		s.set_nonblocking_mode();
 
-		if(this->disable_naggle){
+		if (this->disable_naggle) {
 			s.disable_naggle();
 		}
 
 		return s; // return a newly created socket
-	}catch(...){
+	} catch (...) {
 		s.close();
 		throw;
 	}
 }
 
 #if CFG_OS == CFG_OS_WINDOWS
-void tcp_server_socket::set_waiting_flags(utki::flags<opros::ready> waiting_flags){
-	if(!waiting_flags.is_clear() && !waiting_flags.get(opros::ready::read)){
+void tcp_server_socket::set_waiting_flags(utki::flags<opros::ready> waiting_flags)
+{
+	if (!waiting_flags.is_clear() && !waiting_flags.get(opros::ready::read)) {
 		throw std::logic_error("tcp_server_socket::SetWaitingEvents(): only READ flag allowed");
 	}
 
 	long flags = FD_CLOSE;
-	if(waiting_flags.get(opros::ready::read)){
+	if (waiting_flags.get(opros::ready::read)) {
 		flags |= FD_ACCEPT;
 	}
 	this->set_waiting_events_for_windows(flags);

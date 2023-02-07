@@ -31,19 +31,21 @@ SOFTWARE.
 #include <utki/config.hpp>
 #include <utki/span.hpp>
 
-#include "socket.hpp"
 #include "address.hpp"
+#include "socket.hpp"
 
-namespace setka{
+namespace setka {
 
 /**
  * @brief UDP socket class.
  * Socket for User Datagram Protocol.
- * NOTE: Win32 specific: when using UDP socket with wait_set be aware that waiting on UDP socket for writing does not work on Win32 OS.
- *       On other operating systems it works OK.
+ * NOTE: Win32 specific: when using UDP socket with wait_set be aware that waiting on UDP socket for writing does not
+ * work on Win32 OS. On other operating systems it works OK.
  */
-class udp_socket : public socket{
+class udp_socket : public socket
+{
 	bool ipv4;
+
 public:
 	udp_socket() = default;
 
@@ -60,10 +62,11 @@ public:
 	udp_socket& operator=(const udp_socket&) = delete;
 
 	udp_socket(udp_socket&& s) :
-			socket(std::move(s))
+		socket(std::move(s))
 	{}
 
-	udp_socket& operator=(udp_socket&& s){
+	udp_socket& operator=(udp_socket&& s)
+	{
 		this->socket::operator=(std::move(s));
 		this->ipv4 = s.ipv4;
 		return *this;
@@ -97,11 +100,12 @@ public:
 	 *                             of the sender will be stored.
 	 * @return number of bytes stored in the output buffer.
 	 */
-	size_t recieve(utki::span<uint8_t> buf, address &out_sender_address);
+	size_t recieve(utki::span<uint8_t> buf, address& out_sender_address);
 
 #if CFG_OS == CFG_OS_WINDOWS
+
 private:
-	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
+	void set_waiting_flags(utki::flags<opros::ready> waiting_flags) override;
 #endif
 };
-}
+} // namespace setka

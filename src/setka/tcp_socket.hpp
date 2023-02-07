@@ -29,20 +29,21 @@ SOFTWARE.
 #include <utki/config.hpp>
 #include <utki/span.hpp>
 
-#include "socket.hpp"
 #include "address.hpp"
+#include "socket.hpp"
 
-namespace setka{
+namespace setka {
 
 class tcp_server_socket;
 
 /**
  * @brief a class which represents a TCP socket.
  */
-class tcp_socket : public socket{
+class tcp_socket : public socket
+{
 	friend class setka::tcp_server_socket;
+
 public:
-	
 	/**
 	 * @brief Constructs an empty TCP socket object.
 	 */
@@ -55,15 +56,16 @@ public:
 	 * @param disable_naggle - enable/disable Naggle algorithm.
 	 */
 	tcp_socket(const address& address, bool disable_naggle = false);
-	
+
 	tcp_socket(const tcp_socket&) = delete;
 	tcp_socket& operator=(const tcp_socket&) = delete;
-	
+
 	tcp_socket(tcp_socket&& s) :
-			socket(std::move(s))
+		socket(std::move(s))
 	{}
 
-	tcp_socket& operator=(tcp_socket&& s){
+	tcp_socket& operator=(tcp_socket&& s)
+	{
 		this->socket::operator=(std::move(s));
 		return *this;
 	}
@@ -102,8 +104,9 @@ public:
 	address get_remote_address();
 
 #if CFG_OS == CFG_OS_WINDOWS
+
 private:
-	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
+	void set_waiting_flags(utki::flags<opros::ready> waiting_flags) override;
 #endif
 };
-}
+} // namespace setka

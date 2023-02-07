@@ -26,8 +26,8 @@ SOFTWARE.
 
 #pragma once
 
-#include <string>
 #include <sstream>
+#include <string>
 
 #include <utki/config.hpp>
 #include <utki/debug.hpp>
@@ -51,13 +51,14 @@ SOFTWARE.
 
 #include <opros/waitable.hpp>
 
-namespace setka{
+namespace setka {
 
 /**
  * @brief Basic socket class.
  * This is a base class for all socket types such as TCP sockets or UDP sockets.
  */
-class socket : public opros::waitable{
+class socket : public opros::waitable
+{
 protected:
 #if CFG_OS == CFG_OS_WINDOWS
 	typedef SOCKET socket_type;
@@ -96,7 +97,7 @@ protected:
 #endif
 		)
 	{
-//		TRACE(<< "Socket::Socket(): invoked " << this << std::endl)
+		//		TRACE(<< "Socket::Socket(): invoked " << this << std::endl)
 	}
 
 	socket& operator=(socket&& s);
@@ -108,18 +109,18 @@ protected:
 protected:
 	// socket is not supposed to be used as polymorphic class,
 	// hence the destructor is protected
-	~socket()noexcept;
+	~socket() noexcept;
 
 	/**
 	 * @brief Closes the socket disconnecting it if necessary.
 	 */
-	void close()noexcept;
+	void close() noexcept;
 
 public:
 	socket(socket&& s) :
-			// NOTE: operator=() will call close(), so the socket should be in invalid state!!!
-			// Therefore, initialize variables to invalid values.
-			socket()
+		// NOTE: operator=() will call close(), so the socket should be in invalid state!!!
+		// Therefore, initialize variables to invalid values.
+		socket()
 	{
 		this->operator=(std::move(s));
 	}
@@ -129,7 +130,8 @@ public:
 	 * @return Returns true if the socket is empty or false otherwise.
 	 */
 
-	bool is_empty()const noexcept{
+	bool is_empty() const noexcept
+	{
 #if CFG_OS == CFG_OS_WINDOWS
 		return this->handle == WSA_INVALID_EVENT;
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX
@@ -147,8 +149,9 @@ public:
 	uint16_t get_local_port();
 
 #if CFG_OS == CFG_OS_WINDOWS
+
 private:
-	utki::flags<ready> get_readiness_flags()override;
+	utki::flags<ready> get_readiness_flags() override;
 
 protected:
 	void create_event_for_waitable();
@@ -163,4 +166,4 @@ protected:
 #endif
 };
 
-}
+} // namespace setka

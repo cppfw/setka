@@ -35,15 +35,17 @@ SOFTWARE.
  * @brief the main namespace of ting library.
  * All the declarations of ting library are made inside this namespace.
  */
-namespace setka{
+namespace setka {
 
 /**
  * @brief a class which represents a TCP server socket.
  * TCP server socket is the socket which can listen for new connections
  * and accept them creating an ordinary TCP socket for it.
  */
-class tcp_server_socket : public socket{
+class tcp_server_socket : public socket
+{
 	bool disable_naggle; // this flag indicates if accepted sockets should be created with disabled Naggle
+
 public:
 	/**
 	 * @brief Creates an invalid (unopened) TCP server socket.
@@ -61,18 +63,19 @@ public:
 
 	tcp_server_socket(const tcp_server_socket&) = delete;
 	tcp_server_socket& operator=(const tcp_server_socket&) = delete;
-	
+
 	tcp_server_socket(tcp_server_socket&& s) :
-			socket(std::move(s)),
-			disable_naggle(s.disable_naggle)
+		socket(std::move(s)),
+		disable_naggle(s.disable_naggle)
 	{}
-	
-	tcp_server_socket& operator=(tcp_server_socket&& s){
+
+	tcp_server_socket& operator=(tcp_server_socket&& s)
+	{
 		this->disable_naggle = s.disable_naggle;
 		this->socket::operator=(std::move(s));
 		return *this;
 	}
-	
+
 	/**
 	 * @brief Accepts one of the pending connections, non-blocking.
 	 * Accepts one of the pending connections and returns a TCP socket object which represents
@@ -82,14 +85,16 @@ public:
 	 * One can also wait on the socket for opros::ready::read to wait for connections.
 	 * @return tcp_socket object. One can later check if the returned socket object
 	 *         is empty or not by calling socket::is_empty() method on that object.
-	 *         - if the socket is non-empty then it is a newly connected socket, further it can be used to send or receive data.
+	 *         - if the socket is non-empty then it is a newly connected socket, further it can be used to send or
+	 * receive data.
 	 *         - if the socket is empty then there was no any connections pending, so no connection was accepted.
 	 */
 	tcp_socket accept();
 
 #if CFG_OS == CFG_OS_WINDOWS
+
 private:
-	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
+	void set_waiting_flags(utki::flags<opros::ready> waiting_flags) override;
 #endif
 };
-}
+} // namespace setka
