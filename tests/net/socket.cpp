@@ -76,21 +76,21 @@ void SendAll(setka::tcp_socket& s, utki::span<uint8_t> buf){
 	utki::assert(left == 0, SL);
 }
 
-class ServerThread : public nitki::thread{
+class server_thread : public nitki::thread{
 public:
-	volatile bool quitFlag = false;
+	volatile bool quit_flag = false;
 	nitki::queue queue;
 
 	void run()override{
 		try{
-			setka::tcp_server_socket listenSock(13666); // start listening
+			setka::tcp_server_socket listen_sock(13666); // start listening
 
-			utki::assert(listenSock.get_local_port() == 13666, SL);
+			utki::assert(listen_sock.get_local_port() == 13666, SL);
 
 			// accept some connection
 			setka::tcp_socket sock;
-			while(sock.is_empty() && !this->quitFlag){
-				sock = listenSock.accept();
+			while(sock.is_empty() && !this->quit_flag){
+				sock = listen_sock.accept();
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				if(auto m = this->queue.pop_front()){
 					m();
@@ -117,7 +117,7 @@ public:
 
 
 void run(){
-	ServerThread serverThread;
+	server_thread serverThread;
 	
 	serverThread.start();
 	
@@ -171,111 +171,111 @@ void run(){
 namespace send_data_continuously_with_wait_set{
 
 void run(){
-	setka::tcp_server_socket serverSock(13666);
+	setka::tcp_server_socket server_sock(13666);
 
-	setka::tcp_socket sockS(setka::address("127.0.0.1", 13666));
+	setka::tcp_socket sock_s(setka::address("127.0.0.1", 13666));
 
 	//Accept connection
 //	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
-	setka::tcp_socket sockR;
-	for(unsigned i = 0; i < 20 && sockR.is_empty(); ++i){
+	setka::tcp_socket sock_r;
+	for(unsigned i = 0; i < 20 && sock_r.is_empty(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		sockR = serverSock.accept();
+		sock_r = server_sock.accept();
 	}
 
-	utki::assert(!sockS.is_empty(), SL);
-	utki::assert(!sockR.is_empty(), SL);
+	utki::assert(!sock_s.is_empty(), SL);
+	utki::assert(!sock_r.is_empty(), SL);
 
-	//Here we have 2 sockets sockS and sockR
+	//Here we have 2 sockets sock_s and sock_r
 
 	{
-		setka::address addrS = sockS.get_remote_address();
-		setka::address addrR = sockR.get_remote_address();
-//		TRACE(<< "send_data_continuously::run(): addrS = " << std::hex << addrS.host << ":" << addrS.port << std::dec << std::endl)
-//		TRACE(<< "send_data_continuously::run(): addrR = " << std::hex << addrR.host << ":" << addrR.port << std::dec << std::endl)
-		utki::assert(addrS.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
-		utki::assert(addrR.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
+		setka::address addr_s = sock_s.get_remote_address();
+		setka::address addr_r = sock_r.get_remote_address();
+//		TRACE(<< "send_data_continuously::run(): addr_s = " << std::hex << addr_s.host << ":" << addr_s.port << std::dec << std::endl)
+//		TRACE(<< "send_data_continuously::run(): addr_r = " << std::hex << addr_r.host << ":" << addr_r.port << std::dec << std::endl)
+		utki::assert(addr_s.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
+		utki::assert(addr_r.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
 	}
 
 	opros::wait_set ws(2);
-	ws.add(sockR, utki::make_flags({opros::ready::read}));
-	ws.add(sockS, utki::make_flags({opros::ready::write}));
+	ws.add(sock_r, utki::make_flags({opros::ready::read}));
+	ws.add(sock_s, utki::make_flags({opros::ready::write}));
 
 
 	uint32_t scnt = 0;
-	std::vector<uint8_t> sendBuffer;
+	std::vector<uint8_t> send_buffer;
 	size_t num_bytes_send = 0;
 
 	uint32_t rcnt = 0;
-	std::array<uint8_t, sizeof(uint32_t)> recvBuffer;
-	unsigned recvBufBytes = 0;
+	std::array<uint8_t, sizeof(uint32_t)> recv_buffer;
+	unsigned num_recv_buf_bytes= 0;
 
 
-	uint32_t startTime = utki::get_ticks_ms();
+	uint32_t start_time = utki::get_ticks_ms();
 	
-	while(utki::get_ticks_ms() - startTime < 5000){ // 5 seconds
+	while(utki::get_ticks_ms() - start_time < 5000){ // 5 seconds
 		std::array<opros::event_info, 2> triggered;
 
-		unsigned numTriggered = ws.wait(1000, utki::make_span(triggered));
+		unsigned num_triggered = ws.wait(1000, utki::make_span(triggered));
 
-		utki::assert(numTriggered <= 2, SL);
+		utki::assert(num_triggered <= 2, SL);
 
-		if(numTriggered == 0){
+		if(num_triggered == 0){
 //			TRACE(<< "send_data_continuously::run(): 0 triggered" << std::endl)
 			continue;
 		}
 
 		//If 2 waitables have triggered they should be 2 different waitables.
-		if(numTriggered == 2){
+		if(num_triggered == 2){
 //			TRACE(<< "send_data_continuously::run(): 2 triggered" << std::endl)
 			utki::assert(triggered[0].w != triggered[1].w, SL);
 		}else{
-			utki::assert(numTriggered == 1, SL);
+			utki::assert(num_triggered == 1, SL);
 //			TRACE(<< "send_data_continuously::run(): 1 triggered" << std::endl)
 		}
 
-		for(unsigned i = 0; i < numTriggered; ++i){
-			if(triggered[i].w == &sockS){
-				utki::assert(triggered[i].w != &sockR, SL);
+		for(unsigned i = 0; i < num_triggered; ++i){
+			if(triggered[i].w == &sock_s){
+				utki::assert(triggered[i].w != &sock_r, SL);
 
-//				TRACE(<< "send_data_continuously::run(): sockS triggered" << std::endl)
+//				TRACE(<< "send_data_continuously::run(): sock_s triggered" << std::endl)
 				utki::assert(!triggered[i].flags.get(opros::ready::read), SL);
 				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
 				utki::assert(triggered[i].flags.get(opros::ready::write), SL);
 
-				utki::assert(num_bytes_send <= sendBuffer.size(), SL);
+				utki::assert(num_bytes_send <= send_buffer.size(), SL);
 
-				if(sendBuffer.size() == num_bytes_send){
-					sendBuffer.resize(0xffff + 1);
+				if(send_buffer.size() == num_bytes_send){
+					send_buffer.resize(0xffff + 1);
 					num_bytes_send = 0;
 					
 					utki::assert(
-						(sendBuffer.size() % sizeof(uint32_t)) == 0,
+						(send_buffer.size() % sizeof(uint32_t)) == 0,
 						[&](auto&o){
-							o << "sendBuffer.Size() = " << sendBuffer.size()
-							<< " (sendBuffer.Size() % sizeof(uint32_t)) = "
-							<< (sendBuffer.size() % sizeof(uint32_t));
+							o << "send_buffer.Size() = " << send_buffer.size()
+							<< " (send_buffer.Size() % sizeof(uint32_t)) = "
+							<< (send_buffer.size() % sizeof(uint32_t));
 						},
 						SL
 					);
 
-					uint8_t* p = &sendBuffer[0];
-					for(; p != (&sendBuffer[0]) + sendBuffer.size(); p += sizeof(uint32_t)){
+					uint8_t* p = &send_buffer[0];
+					for(; p != (&send_buffer[0]) + send_buffer.size(); p += sizeof(uint32_t)){
 						utki::assert(
-							p < (((&sendBuffer[0]) + sendBuffer.size()) - (sizeof(uint32_t) - 1)),
-							[&](auto&o){o << "p = " << p << " sendBuffer.End() = " << &*sendBuffer.end();},
+							p < (((&send_buffer[0]) + send_buffer.size()) - (sizeof(uint32_t) - 1)),
+							[&](auto&o){o << "p = " << p << " send_buffer.End() = " << &*send_buffer.end();},
 							SL
 						);
 						utki::serialize32le(scnt, p);
 						++scnt;
 					}
-					utki::assert(p == (&sendBuffer[0]) + sendBuffer.size(), SL);
+					utki::assert(p == (&send_buffer[0]) + send_buffer.size(), SL);
 				}
 
-				utki::assert(sendBuffer.size() > 0, SL);
+				utki::assert(send_buffer.size() > 0, SL);
 
 				try{
-					auto res = sockS.send(utki::span<uint8_t>(&*sendBuffer.begin() + num_bytes_send, sendBuffer.size() - num_bytes_send));
+					auto res = sock_s.send(utki::span<uint8_t>(&*send_buffer.begin() + num_bytes_send, send_buffer.size() - num_bytes_send));
 					num_bytes_send += res;
 					if(res == 0){
 						utki::assert(res > 0, SL); // since it was CanWrite() we should be able to write at least something
@@ -285,57 +285,57 @@ void run(){
 				}catch(std::exception& e){
 					utki::assert(
 						false,
-						[&](auto&o){o << "sockS.Send() failed: " << e.what();},
+						[&](auto&o){o << "sock_s.Send() failed: " << e.what();},
 						SL
 					);
 				}
-				utki::assert(num_bytes_send <= sendBuffer.size(), SL);
-			}else if(triggered[i].w == &sockR){
-				utki::assert(triggered[i].w != &sockS, SL);
+				utki::assert(num_bytes_send <= send_buffer.size(), SL);
+			}else if(triggered[i].w == &sock_r){
+				utki::assert(triggered[i].w != &sock_s, SL);
 
-//				TRACE(<< "send_data_continuously::run(): sockR triggered" << std::endl)
+//				TRACE(<< "send_data_continuously::run(): sock_r triggered" << std::endl)
 				utki::assert(triggered[i].flags.get(opros::ready::read), SL);
 				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
 				utki::assert(!triggered[i].flags.get(opros::ready::write), SL);
 
 				while(true){
 					std::array<uint8_t, 0x2000> buf; // 8kb buffer
-					size_t numBytesReceived;
+					size_t num_bytes_received;
 					try{
-						numBytesReceived = sockR.receive(utki::make_span(buf));
+						num_bytes_received = sock_r.receive(utki::make_span(buf));
 					}catch(std::exception& e){
 						utki::assert(
 							false,
-							[&](auto&o){o << "sockR.Recv() failed: " << e.what();},
+							[&](auto&o){o << "sock_r.Recv() failed: " << e.what();},
 							SL
 						);
 					}
-					utki::assert(numBytesReceived <= buf.size(), SL);
-//					TRACE(<< "send_data_continuously::run(): " << numBytesReceived << " bytes received" << std::endl)
+					utki::assert(num_bytes_received <= buf.size(), SL);
+//					TRACE(<< "send_data_continuously::run(): " << num_bytes_received << " bytes received" << std::endl)
 
-					if(numBytesReceived == 0){
+					if(num_bytes_received == 0){
 						break;//~while(true)
 					}
 
 					auto p = buf.cbegin();
-					for(unsigned i = 0; i < numBytesReceived && p != buf.end(); ++p, ++i){
-						recvBuffer[recvBufBytes] = *p;
-						++recvBufBytes;
+					for(unsigned i = 0; i < num_bytes_received && p != buf.end(); ++p, ++i){
+						recv_buffer[num_recv_buf_bytes] = *p;
+						++num_recv_buf_bytes;
 
-						utki::assert(recvBufBytes <= recvBuffer.size(), SL);
+						utki::assert(num_recv_buf_bytes<= recv_buffer.size(), SL);
 
-						if(recvBufBytes == recvBuffer.size()){
-							recvBufBytes = 0;
-							uint32_t num = utki::deserialize32le(&*recvBuffer.begin());
+						if(num_recv_buf_bytes== recv_buffer.size()){
+							num_recv_buf_bytes= 0;
+							uint32_t num = utki::deserialize32le(&*recv_buffer.begin());
 							utki::assert(
 									rcnt == num,
 									[&](auto&o){o << "num = " << num << " rcnt = " << rcnt
 											<< " rcnt - num = " << (rcnt - num)
-											<< " recvBuffer = "
-											<< unsigned(recvBuffer[0]) << ", "
-											<< unsigned(recvBuffer[1]) << ", "
-											<< unsigned(recvBuffer[2]) << ", "
-											<< unsigned(recvBuffer[3]);
+											<< " recv_buffer = "
+											<< unsigned(recv_buffer[0]) << ", "
+											<< unsigned(recv_buffer[1]) << ", "
+											<< unsigned(recv_buffer[2]) << ", "
+											<< unsigned(recv_buffer[3]);
 									},
 									SL
 								);
@@ -349,8 +349,8 @@ void run(){
 		}//~for(triggered)
 	}//~while
 
-	ws.remove(sockS);
-	ws.remove(sockR);
+	ws.remove(sock_s);
+	ws.remove(sock_r);
 }
 
 }//~namespace
@@ -360,36 +360,36 @@ void run(){
 namespace send_data_continuously{
 
 void run(){
-	setka::tcp_server_socket serverSock(13666);
+	setka::tcp_server_socket server_sock(13666);
 
-	setka::tcp_socket sockS(setka::address("127.0.0.1", 13666));
+	setka::tcp_socket sock_s(setka::address("127.0.0.1", 13666));
 
 	// accept connection
 //	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
-	setka::tcp_socket sockR;
-	for(unsigned i = 0; i < 20 && sockR.is_empty(); ++i){
+	setka::tcp_socket sock_r;
+	for(unsigned i = 0; i < 20 && sock_r.is_empty(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		sockR = serverSock.accept();
+		sock_r = server_sock.accept();
 	}
 
-	utki::assert(!sockS.is_empty(), SL);
-	utki::assert(!sockR.is_empty(), SL);
+	utki::assert(!sock_s.is_empty(), SL);
+	utki::assert(!sock_r.is_empty(), SL);
 
-	// here we have 2 sockets sockS and sockR
+	// here we have 2 sockets sock_s and sock_r
 
 	uint8_t scnt = 0;
 
 	uint8_t rcnt = 0;
 
-	uint32_t startTime = utki::get_ticks_ms();
+	uint32_t start_time = utki::get_ticks_ms();
 
-	while(utki::get_ticks_ms() - startTime < 5000){ // 5 seconds
+	while(utki::get_ticks_ms() - start_time < 5000){ // 5 seconds
 
 		// send
 
 		try{
 			utki::span<uint8_t> buf(&scnt, 1);
-			auto res = sockS.send(buf);
+			auto res = sock_s.send(buf);
 			utki::assert(res <= 1, SL);
 			if(res == 1){
 				++scnt;
@@ -399,7 +399,7 @@ void run(){
 		}catch(std::exception& e){
 			utki::assert(
 				false,
-				[&](auto&o){o << "sockS.Send() failed: " << e.what();},
+				[&](auto&o){o << "sock_s.Send() failed: " << e.what();},
 				SL
 			);
 		}
@@ -409,25 +409,25 @@ void run(){
 
 		while(true){
 			std::array<uint8_t, 0x2000> buf; // 8kb buffer
-			size_t numBytesReceived;
+			size_t num_bytes_received;
 			try{
-				numBytesReceived = sockR.receive(utki::make_span(buf));
+				num_bytes_received = sock_r.receive(utki::make_span(buf));
 			}catch(std::exception& e){
 				utki::assert(
 					false,
-					[&](auto&o){o << "sockR.Recv() failed: " << e.what();},
+					[&](auto&o){o << "sock_r.Recv() failed: " << e.what();},
 					SL
 				);
 			}
-			utki::assert(numBytesReceived <= buf.size(), SL);
-//			TRACE(<< "send_data_continuously::run(): " << numBytesReceived << " bytes received" << std::endl)
+			utki::assert(num_bytes_received <= buf.size(), SL);
+//			TRACE(<< "send_data_continuously::run(): " << num_bytes_received << " bytes received" << std::endl)
 
-			if(numBytesReceived == 0){
+			if(num_bytes_received == 0){
 				break;//~while(true)
 			}
 
 			auto p = buf.cbegin();
-			for(unsigned i = 0; i < numBytesReceived && p != buf.end(); ++p, ++i){
+			for(unsigned i = 0; i < num_bytes_received && p != buf.end(); ++p, ++i){
 				utki::assert(
 					rcnt == *p,
 					[&](auto&o){o << "rcnt = " << unsigned(rcnt) << " *p = " << unsigned(*p) << " diff = " << unsigned(rcnt - *p);},
@@ -491,15 +491,15 @@ namespace basic_udp_sockets_test{
 
 void run(){
 
-	setka::udp_socket recvSock;
+	setka::udp_socket recv_sock;
 
 	try{
-		recvSock = setka::udp_socket(13666);
+		recv_sock = setka::udp_socket(13666);
 	}catch(std::exception &e){
 		utki::assert(false, [&](auto&o){o << e.what();}, SL);
 	}
 
-	utki::assert(recvSock.get_local_port() == 13666, SL);
+	utki::assert(recv_sock.get_local_port() == 13666, SL);
 
 	setka::udp_socket send_sock;
 
@@ -538,7 +538,7 @@ void run(){
 		size_t num_bytes_received = 0;
 		for(unsigned i = 0; i < 10; ++i){
 			setka::address ip;
-			num_bytes_received = recvSock.recieve(utki::make_span(buf), ip);
+			num_bytes_received = recv_sock.recieve(utki::make_span(buf), ip);
 			utki::assert(num_bytes_received == 0 || num_bytes_received == 4, SL); // all or nothing
 			if(num_bytes_received == 4){
 				if(is_ipv6_supported_by_os()){

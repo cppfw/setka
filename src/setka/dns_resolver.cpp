@@ -48,16 +48,16 @@ using namespace setka;
 
 namespace {
 
-const uint16_t D_DNSRecordA = 1;
-const uint16_t D_DNSRecordAAAA = 28;
+const uint16_t dns_record_a_id = 1;
+const uint16_t dns_record_aaaa_id = 28;
 
 namespace dns {
 
-struct Resolver;
+struct resolver;
 
 // After the successful completion the 'p' points to the byte right after the host name.
 // In case of unsuccessful completion 'p' is undefined.
-std::string ParseHostNameFromDNSPacket(const uint8_t*& p, const uint8_t* end)
+std::string parse_host_name_from_dns_packet(const uint8_t*& p, const uint8_t* end)
 {
 	std::string host;
 
@@ -93,19 +93,19 @@ std::string ParseHostNameFromDNSPacket(const uint8_t*& p, const uint8_t* end)
 // this mutex is used to protect the dns::thread access.
 std::mutex mutex;
 
-typedef std::multimap<uint32_t, Resolver*> resolvers_time_map_type;
-typedef resolvers_time_map_type::iterator T_ResolversTimeIter;
+using resolvers_time_map_type = std::multimap<uint32_t, resolver*>;
+using resolvers_time_iter_type = resolvers_time_map_type::iterator;
 
-typedef std::map<uint16_t, Resolver*> id_map_type;
-typedef id_map_type::iterator T_IdIter;
+using id_map_type = std::map<uint16_t, resolver*>;
+using id_iter_type = id_map_type::iterator;
 
-typedef std::list<Resolver*> requests_to_send_list_type; // TODO: use vector
-typedef requests_to_send_list_type::iterator T_RequestsToSendIter;
+using requests_to_send_list_type = std::list<resolver*>; // TODO: use vector
+using requests_to_send_iter_type = requests_to_send_list_type::iterator;
 
-typedef std::map<dns_resolver*, std::unique_ptr<Resolver>> resolvers_map_type;
-typedef resolvers_map_type::iterator T_ResolversIter;
+using resolvers_map_type = std::map<dns_resolver*, std::unique_ptr<resolver>>;
+using resolvers_iter_type = resolvers_map_type::iterator;
 
-struct Resolver {
+struct resolver {
 	dns_resolver* hnr;
 
 	std::string host_name; // host name to resolve
@@ -113,12 +113,12 @@ struct Resolver {
 	uint16_t recordType; // type of DNS record to get
 
 	resolvers_time_map_type* timeMap;
-	T_ResolversTimeIter timeMapIter;
+	resolvers_time_iter_type timeMapIter;
 
 	uint16_t id;
-	T_IdIter idIter;
+	id_iter_type idIter;
 
-	T_RequestsToSendIter sendIter; // TODO: get rid of iter
+	requests_to_send_iter_type sendIter; // TODO: get rid of iter
 
 	setka::address dns;
 };
@@ -196,7 +196,7 @@ public:
 
 	// NOTE: call to this function should be protected by mutex, to make sure the request is not canceled while sending.
 	//       returns true if request is sent, false otherwise.
-	bool send_request_to_dns(const dns::Resolver* r)
+	bool send_request_to_dns(const dns::resolver* r)
 	{
 		std::array<uint8_t, 512> buf; // RFC 1035 limits DNS request UDP packet size to 512 bytes.
 
@@ -294,7 +294,7 @@ public:
 
 	// NOTE: call to this function should be protected by mutex
 	inline void CallCallback(
-		dns::Resolver* r,
+		dns::resolver* r,
 		setka::dns_result result,
 		address::ip ip = address::ip(0, 0, 0, 0)
 	) noexcept
@@ -321,11 +321,11 @@ public:
 	};
 
 	// NOTE: call to this function should be protected by mutex,
-	//       this function will call the Resolver callback
-	ParseResult ParseReplyFromDNS(dns::Resolver* r, const utki::span<uint8_t> buf)
+	//       this function will call the resolver callback
+	ParseResult ParseReplyFromDNS(dns::resolver* r, const utki::span<uint8_t> buf)
 	{
 		LOG([&](auto& o) {
-			o << "dns::Resolver::ParseReplyFromDNS(): enter" << std::endl;
+			o << "dns::resolver::ParseReplyFromDNS(): enter" << std::endl;
 		})
 #ifdef DEBUG
 		for (unsigned i = 0; i < buf.size(); ++i) {
@@ -404,7 +404,7 @@ public:
 
 		// parse host name
 		{
-			std::string host = dns::ParseHostNameFromDNSPacket(p, buf.end());
+			std::string host = dns::parse_host_name_from_dns_packet(p, buf.end());
 			//			TRACE(<< "host = " << host << std::endl)
 
 			if (r->host_name != host) {
@@ -488,14 +488,14 @@ public:
 				address::ip h;
 
 				switch (type) {
-					case D_DNSRecordA: // 'A' type answer
+					case dns_record_a_id: // 'A' type answer
 						if (dataLen < 4) {
 							return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 						}
 
 						h = address::ip(utki::deserialize32be(p));
 						break;
-					case D_DNSRecordAAAA: // 'AAAA' type answer
+					case dns_record_aaaa_id: // 'AAAA' type answer
 						if (dataLen < 2 * 8) {
 							return ParseResult(setka::dns_result::dns_error); // unexpected end of packet
 						}
@@ -544,11 +544,11 @@ public:
 	// returns the removed resolver, returns nullptr if there was
 	// no such resolver object found.
 	// NOTE: call to this function should be protected by mutex.
-	std::unique_ptr<dns::Resolver> RemoveResolver(dns_resolver* resolver) noexcept
+	std::unique_ptr<dns::resolver> remove_resolver(dns_resolver* resolver) noexcept
 	{
-		std::unique_ptr<dns::Resolver> r;
+		std::unique_ptr<dns::resolver> r;
 		{
-			dns::T_ResolversIter i = this->resolvers_map.find(resolver);
+			dns::resolvers_iter_type i = this->resolvers_map.find(resolver);
 			if (i == this->resolvers_map.end()) {
 				return r;
 			}
@@ -575,7 +575,7 @@ private:
 	void RemoveAllResolvers()
 	{
 		while (this->resolvers_map.size() != 0) {
-			std::unique_ptr<dns::Resolver> r = this->RemoveResolver(this->resolvers_map.begin()->first);
+			std::unique_ptr<dns::resolver> r = this->remove_resolver(this->resolvers_map.begin()->first);
 			ASSERT(r)
 
 #if CFG_OS == CFG_OS_WINDOWS && defined(ERROR)
@@ -806,27 +806,27 @@ private:
 										 // received UDP packet
 							uint16_t id = utki::deserialize16be(&*buf.begin());
 
-							T_IdIter i = this->id_map.find(id);
+							id_iter_type i = this->id_map.find(id);
 							if (i != this->id_map.end()) {
 								ASSERT(id == i->second->id)
 
 								// check by host name also
 								const uint8_t* p = &*buf.begin() + 12; // start of the host name
-								std::string host = dns::ParseHostNameFromDNSPacket(p, &*buf.end());
+								std::string host = dns::parse_host_name_from_dns_packet(p, &*buf.end());
 
 								if (host == i->second->host_name) {
 									ParseResult res =
 										this->ParseReplyFromDNS(i->second, utki::span<uint8_t>(&*buf.begin(), ret));
 
 									if (res.result == setka::dns_result::not_found
-										&& i->second->recordType == D_DNSRecordAAAA)
+										&& i->second->recordType == dns_record_aaaa_id)
 									{
 										// try getting record type A
 										LOG([&](auto& o) {
 											o << "no record AAAA found, trying to get record type A" << std::endl;
 										})
 
-										i->second->recordType = D_DNSRecordA;
+										i->second->recordType = dns_record_a_id;
 
 										// add to send list
 										ASSERT(i->second->sendIter == this->send_list.end())
@@ -839,11 +839,11 @@ private:
 											}
 										} catch (...) {
 											// failed adding to sending list, report error
-											std::unique_ptr<dns::Resolver> r = this->RemoveResolver(i->second->hnr);
+											std::unique_ptr<dns::resolver> r = this->remove_resolver(i->second->hnr);
 											this->CallCallback(r.operator->(), setka::dns_result::error);
 										}
 									} else {
-										std::unique_ptr<dns::Resolver> r = this->RemoveResolver(i->second->hnr);
+										std::unique_ptr<dns::resolver> r = this->remove_resolver(i->second->hnr);
 										// call callback
 										this->CallCallback(r.operator->(), res.result, res.host);
 									}
@@ -875,7 +875,7 @@ private:
 
 					try {
 						while (this->send_list.size() != 0) {
-							dns::Resolver* r = this->send_list.front();
+							dns::resolver* r = this->send_list.front();
 							if (r->dns.host.get_v4() == 0) {
 								r->dns = this->dns;
 							}
@@ -894,12 +894,12 @@ private:
 								); // end() value will indicate that the request has already been sent
 								this->send_list.pop_front();
 							} else {
-								std::unique_ptr<dns::Resolver> removedResolver = this->RemoveResolver(r->hnr);
-								ASSERT(removedResolver)
+								std::unique_ptr<dns::resolver> removed_resolver = this->remove_resolver(r->hnr);
+								ASSERT(removed_resolver)
 
 								// Notify about error. OnCompleted_ts() does not throw any exceptions, so no worries
 								// about that.
-								this->CallCallback(removedResolver.operator->(), dns_result::error, 0);
+								this->CallCallback(removed_resolver.operator->(), dns_result::error, 0);
 							}
 						}
 					} catch (std::exception&
@@ -932,8 +932,8 @@ private:
 						// Time wrapped.
 						// Timeout all requests from first time map
 						while (this->time_map_1->size() != 0) {
-							std::unique_ptr<dns::Resolver> r =
-								this->RemoveResolver(this->time_map_1->begin()->second->hnr);
+							std::unique_ptr<dns::resolver> r =
+								this->remove_resolver(this->time_map_1->begin()->second->hnr);
 							ASSERT(r)
 
 							// Notify about timeout.
@@ -952,7 +952,7 @@ private:
 					}
 
 					// timeout
-					std::unique_ptr<dns::Resolver> r = this->RemoveResolver(this->time_map_1->begin()->second->hnr);
+					std::unique_ptr<dns::resolver> r = this->remove_resolver(this->time_map_1->begin()->second->hnr);
 					ASSERT(r)
 
 					// Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
@@ -1026,7 +1026,7 @@ dns_resolver::~dns_resolver()
 	if (dns::thread) {
 		std::lock_guard<decltype(dns::thread->mutex)> mutex_guard(dns::thread->mutex);
 
-		dns::T_ResolversIter i = dns::thread->resolvers_map.find(this);
+		dns::resolvers_iter_type i = dns::thread->resolvers_map.find(this);
 		if (i != dns::thread->resolvers_map.end()) {
 			utki::assert(
 				false,
@@ -1078,7 +1078,7 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 
 	ASSERT(dns::thread)
 
-	auto r = std::make_unique<dns::Resolver>();
+	auto r = std::make_unique<dns::resolver>();
 	r->hnr = this;
 	r->host_name = host_name;
 	r->dns = dns_ip;
@@ -1111,13 +1111,13 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 
 			// Windows version is WinXP or before
 
-			r->recordType = D_DNSRecordA;
+			r->recordType = dns_record_a_id;
 		} else {
-			r->recordType = D_DNSRecordAAAA; // start with IPv6 first
+			r->recordType = dns_record_aaaa_id; // start with IPv6 first
 		}
 	}
 #else
-	r->recordType = D_DNSRecordAAAA; // start with IPv6 first
+	r->recordType = dns_record_aaaa_id; // start with IPv6 first
 #endif
 
 	std::lock_guard<decltype(dns::thread->mutex)> mutex_guard_2(dns::thread->mutex);
@@ -1125,8 +1125,8 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 	// find free ID, it will throw TooMuchRequestsExc if there are no free IDs
 	{
 		r->id = dns::thread->find_free_id();
-		std::pair<dns::T_IdIter, bool> res =
-			dns::thread->id_map.insert(std::pair<uint16_t, dns::Resolver*>(r->id, r.operator->()));
+		std::pair<dns::id_iter_type, bool> res =
+			dns::thread->id_map.insert(std::pair<uint16_t, dns::resolver*>(r->id, r.operator->()));
 		ASSERT(res.second)
 		r->idIter = res.first;
 	}
@@ -1143,7 +1143,7 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 			r->timeMap = dns::thread->time_map_1;
 		}
 		try {
-			r->timeMapIter = r->timeMap->insert(std::pair<uint32_t, dns::Resolver*>(end_time, r.operator->()));
+			r->timeMapIter = r->timeMap->insert(std::pair<uint32_t, dns::resolver*>(end_time, r.operator->()));
 		} catch (...) {
 			dns::thread->id_map.erase(r->idIter);
 			throw;
@@ -1200,7 +1200,7 @@ bool dns_resolver::cancel() noexcept
 
 	std::lock_guard<decltype(dns::thread->mutex)> mutex_guard_2(dns::thread->mutex);
 
-	bool ret = bool(dns::thread->RemoveResolver(this));
+	bool ret = bool(dns::thread->remove_resolver(this));
 
 	if (dns::thread->resolvers_map.size() == 0) {
 		dns::thread->quit_flag = true;
