@@ -102,7 +102,7 @@ public:
 	 * @param timeout_ms - timeout for waiting for DNS server response in milliseconds.
 	 * @param dns_ip - IP-address of the DNS to use for host name resolving. The default value is invalid IP-address
 	 *                in which case the DNS IP-address will be retrieved from underlying OS.
-	 * @throw std::logic_error when supplied for resolution domain name is too long. Must be 253 characters at most.
+	 * @throw std::logic_error when domain name supplied for resolution is too long. Must be 253 characters at most.
 	 * @throw std::logic_error when DNS lookup operation served by this resolver object is already in progress.
 	 * @throw too_many_requests when there are too many active DNS lookup requests in progress, no resources for another
 	 * one.
