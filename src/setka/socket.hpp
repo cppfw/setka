@@ -155,7 +155,7 @@ public:
 #if CFG_OS == CFG_OS_WINDOWS
 
 private:
-	utki::flags<ready> get_readiness_flags() override;
+	utki::flags<opros::ready> get_readiness_flags() override;
 
 protected:
 	void create_event_for_waitable();

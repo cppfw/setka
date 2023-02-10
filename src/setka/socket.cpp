@@ -194,7 +194,7 @@ uint16_t socket::get_local_port()
 }
 
 #if CFG_OS == CFG_OS_WINDOWS
-utki::flags<ready> socket::get_readiness_flags()
+utki::flags<opros::ready> socket::get_readiness_flags()
 {
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
@@ -210,7 +210,7 @@ utki::flags<ready> socket::get_readiness_flags()
 	// NOTE: sometimes no events are reported, don't know why.
 	//	ASSERT(events.lNetworkEvents != 0)
 
-	utki::flags<ready> flags;
+	utki::flags<opros::ready> flags;
 
 	if ((events.lNetworkEvents & FD_CLOSE) != 0) {
 		flags.set(opros::ready::error);
