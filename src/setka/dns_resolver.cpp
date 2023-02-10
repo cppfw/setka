@@ -781,7 +781,7 @@ private:
 
 				utki::flags<opros::ready> flags(false);
 				for (size_t i = 0; i != num_triggered; ++i) {
-					if (triggered[i].w == &this->socket) {
+					if (triggered[i].object == &this->socket) {
 						flags = triggered[i].flags;
 					}
 				}

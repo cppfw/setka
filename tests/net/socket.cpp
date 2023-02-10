@@ -228,15 +228,15 @@ void run(){
 		//If 2 waitables have triggered they should be 2 different waitables.
 		if(num_triggered == 2){
 //			TRACE(<< "send_data_continuously::run(): 2 triggered" << std::endl)
-			utki::assert(triggered[0].w != triggered[1].w, SL);
+			utki::assert(triggered[0].object != triggered[1].object, SL);
 		}else{
 			utki::assert(num_triggered == 1, SL);
 //			TRACE(<< "send_data_continuously::run(): 1 triggered" << std::endl)
 		}
 
 		for(unsigned i = 0; i < num_triggered; ++i){
-			if(triggered[i].w == &sock_s){
-				utki::assert(triggered[i].w != &sock_r, SL);
+			if(triggered[i].object == &sock_s){
+				utki::assert(triggered[i].object != &sock_r, SL);
 
 //				TRACE(<< "send_data_continuously::run(): sock_s triggered" << std::endl)
 				utki::assert(!triggered[i].flags.get(opros::ready::read), SL);
@@ -290,8 +290,8 @@ void run(){
 					);
 				}
 				utki::assert(num_bytes_send <= send_buffer.size(), SL);
-			}else if(triggered[i].w == &sock_r){
-				utki::assert(triggered[i].w != &sock_s, SL);
+			}else if(triggered[i].object == &sock_r){
+				utki::assert(triggered[i].object != &sock_s, SL);
 
 //				TRACE(<< "send_data_continuously::run(): sock_r triggered" << std::endl)
 				utki::assert(triggered[i].flags.get(opros::ready::read), SL);
