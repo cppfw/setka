@@ -106,6 +106,11 @@ using resolvers_map_type = std::map<dns_resolver*, std::unique_ptr<resolver>>;
 using resolvers_iter_type = resolvers_map_type::iterator;
 
 struct resolver {
+	resolver() = default;
+
+	resolver(const resolver&) = default;
+	resolver& operator=(const resolver&) = default;
+
 	dns_resolver* hnr;
 
 	std::string host_name; // host name to resolve
@@ -1237,7 +1242,7 @@ void dns_resolver::clean_up()
 	}
 }
 
-void dns_resolver::on_completed(dns_result res, address::ip address) noexcept
+void dns_resolver::on_completed(dns_result res, address::ip address)
 {
 	if (this->completed_handler) {
 		this->completed_handler(res, address);

@@ -105,7 +105,7 @@ address::ip address::ip::parse_v6(const char* str)
 
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
 	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
-	return address::ip(
+	return {
 		a.s6_addr[0],
 		a.s6_addr[1],
 		a.s6_addr[2],
@@ -121,8 +121,7 @@ address::ip address::ip::parse_v6(const char* str)
 		a.s6_addr[12],
 		a.s6_addr[13],
 		a.s6_addr[14],
-		a.s6_addr[15]
-	);
+		a.s6_addr[15]};
 #else
 	return {
 		a.__in6_u.__u6_addr8[0],

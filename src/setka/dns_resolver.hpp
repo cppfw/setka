@@ -141,7 +141,7 @@ public:
 	 * @param ip - resolved IP-address. This value can later be used to create the
 	 *             address object.
 	 */
-	virtual void on_completed(dns_result r, address::ip ip) noexcept;
+	virtual void on_completed(dns_result r, address::ip ip);
 
 private:
 	friend class setka::init_guard;
