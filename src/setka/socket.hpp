@@ -63,20 +63,20 @@ protected:
 #if CFG_OS == CFG_OS_WINDOWS
 	using socket_type = SOCKET;
 
-	static const socket_type invalid_socket = INVALID_SOCKET;
-	static const int socket_error = SOCKET_ERROR;
-	static const int error_interrupted = WSAEINTR;
-	static const int error_again = WSAEWOULDBLOCK;
-	static const int error_in_progress = WSAEWOULDBLOCK;
+	constexpr static const socket_type invalid_socket = INVALID_SOCKET;
+	constexpr static const int socket_error = SOCKET_ERROR;
+	constexpr static const int error_interrupted = WSAEINTR;
+	constexpr static const int error_again = WSAEWOULDBLOCK;
+	constexpr static const int error_in_progress = WSAEWOULDBLOCK;
 
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	using socket_type = int;
 
-	static const socket_type invalid_socket = -1;
-	static const socket_type socket_error = -1;
-	static const int error_interrupted = EINTR;
-	static const int error_again = EAGAIN;
-	static const int error_in_progress = EINPROGRESS;
+	constexpr static const socket_type invalid_socket = -1;
+	constexpr static const socket_type socket_error = -1;
+	constexpr static const int error_interrupted = EINTR;
+	constexpr static const int error_again = EAGAIN;
+	constexpr static const int error_in_progress = EINPROGRESS;
 
 #else
 #	error "Unsupported OS"

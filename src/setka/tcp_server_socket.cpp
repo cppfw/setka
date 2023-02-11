@@ -176,16 +176,12 @@ tcp_socket tcp_server_socket::accept()
 		throw std::logic_error("tcp_server_socket::accept(): the socket is not opened");
 	}
 
-	sockaddr_storage socket_address;
-
 	tcp_socket s;
 
 #if CFG_OS == CFG_OS_WINDOWS
-	int sock_alen = sizeof(socket_address);
 	socket_type& sock = this->win_sock;
 	socket_type& accepted_sock = s.win_sock;
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
-	socklen_t sock_alen = sizeof(socket_address);
 	int& sock = this->handle;
 	int& accepted_sock = s.handle;
 #else
@@ -196,7 +192,7 @@ tcp_socket tcp_server_socket::accept()
 	s.create_event_for_waitable();
 #endif
 
-	accepted_sock = ::accept(sock, reinterpret_cast<sockaddr*>(&socket_address), &sock_alen);
+	accepted_sock = ::accept(sock, nullptr, nullptr);
 
 	if (accepted_sock == invalid_socket) {
 #if CFG_OS == CFG_OS_WINDOWS

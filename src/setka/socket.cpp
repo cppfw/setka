@@ -274,6 +274,7 @@ void socket::close_event_for_waitable()
 {
 	ASSERT(this->handle != WSA_INVALID_EVENT)
 	WSACloseEvent(this->handle);
+	this->handle = WSA_INVALID_EVENT;
 }
 
 void socket::set_waiting_events_for_windows(long flags)
