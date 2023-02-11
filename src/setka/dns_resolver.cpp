@@ -105,7 +105,8 @@ using requests_to_send_iter_type = requests_to_send_list_type::iterator;
 using resolvers_map_type = std::map<dns_resolver*, std::unique_ptr<resolver>>;
 using resolvers_iter_type = resolvers_map_type::iterator;
 
-class resolver {
+class resolver
+{
 public:
 	resolver() = default;
 
@@ -599,10 +600,10 @@ private:
 	{
 		try {
 #if CFG_OS == CFG_OS_WINDOWS
-			struct WinRegKey {
+			struct win_reg_key {
 				HKEY key;
 
-				WinRegKey()
+				win_reg_key()
 				{
 					if (RegOpenKey(
 							HKEY_LOCAL_MACHINE,
@@ -615,7 +616,7 @@ private:
 					}
 				}
 
-				~WinRegKey()
+				~win_reg_key()
 				{
 					RegCloseKey(this->key);
 				}
@@ -624,60 +625,60 @@ private:
 			std::array<char, 256> subkey; // according to MSDN docs maximum key name length is 255 chars.
 
 			for (unsigned i = 0; RegEnumKey(key.key, i, &*subkey.begin(), DWORD(subkey.size())) == ERROR_SUCCESS; ++i) {
-				HKEY hSub;
-				if (RegOpenKey(key.key, &*subkey.begin(), &hSub) != ERROR_SUCCESS) {
+				HKEY h_sub;
+				if (RegOpenKey(key.key, &*subkey.begin(), &h_sub) != ERROR_SUCCESS) {
 					continue;
 				}
 
 				std::array<BYTE, 1024> value;
 
-				DWORD len = DWORD(value.size());
+				auto len = DWORD(value.size());
 
-				if (RegQueryValueEx(hSub, "NameServer", 0, NULL, &*value.begin(), &len) != ERROR_SUCCESS) {
+				if (RegQueryValueEx(h_sub, "NameServer", nullptr, nullptr, value.data(), &len) != ERROR_SUCCESS) {
 					LOG([&](auto& o) {
 						o << "NameServer reading failed " << std::endl;
 					})
 				} else {
 					try {
 						std::string str(reinterpret_cast<char*>(&*value.begin()));
-						size_t spaceIndex = str.find(' ');
+						size_t space_index = str.find(' ');
 
-						std::string ip = str.substr(0, spaceIndex);
+						std::string ip = str.substr(0, space_index);
 						LOG([&](auto& o) {
 							o << "NameServer ip = " << ip << std::endl;
 						})
 
 						this->dns = setka::address(ip.c_str(), 53);
-						RegCloseKey(hSub);
+						RegCloseKey(h_sub);
 						return;
 					} catch (...) {
 					}
 				}
 
 				len = DWORD(value.size());
-				if (RegQueryValueEx(hSub, "DhcpNameServer", 0, NULL, &*value.begin(), &len) != ERROR_SUCCESS) {
+				if (RegQueryValueEx(h_sub, "DhcpNameServer", nullptr, nullptr, value.data(), &len) != ERROR_SUCCESS) {
 					LOG([&](auto& o) {
 						o << "DhcpNameServer reading failed " << std::endl;
 					})
-					RegCloseKey(hSub);
+					RegCloseKey(h_sub);
 					continue;
 				}
 
 				try {
 					std::string str(reinterpret_cast<char*>(&*value.begin()));
-					size_t spaceIndex = str.find(' ');
+					size_t space_index = str.find(' ');
 
-					std::string ip = str.substr(0, spaceIndex);
+					std::string ip = str.substr(0, space_index);
 					LOG([&](auto& o) {
 						o << "DhcpNameServer ip = " << ip << std::endl;
 					})
 
 					this->dns = setka::address(ip.c_str(), 53);
-					RegCloseKey(hSub);
+					RegCloseKey(h_sub);
 					return;
 				} catch (...) {
 				}
-				RegCloseKey(hSub);
+				RegCloseKey(h_sub);
 			}
 
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
@@ -1114,7 +1115,7 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 		{
 			DWORD last_error = GetLastError();
 			if (last_error != ERROR_OLD_WIN_VERSION) {
-				throw std::system_error(last_error, std::generic_category(), "Win32: VerifyVersionInfo() failed");
+				throw std::system_error(int(last_error), std::generic_category(), "Win32: VerifyVersionInfo() failed");
 			}
 
 			// Windows version is WinXP or before

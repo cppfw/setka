@@ -74,9 +74,9 @@ utki::intrusive_singleton<init_guard>::instance_type init_guard::instance;
 init_guard::init_guard()
 {
 #if CFG_OS == CFG_OS_WINDOWS
-	WORD versionWanted = MAKEWORD(2, 2);
-	WSADATA wsaData;
-	if (int error = WSAStartup(versionWanted, &wsaData)) {
+	WORD version_wanted = MAKEWORD(2, 2);
+	WSADATA wsa_data;
+	if (int error = WSAStartup(version_wanted, &wsa_data)) {
 		std::stringstream ss;
 		ss << "WSAStartup(): Winsock 2.2 initialization failed, error code = " << error;
 		throw std::runtime_error(ss.str());

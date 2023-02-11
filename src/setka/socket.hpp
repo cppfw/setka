@@ -111,7 +111,11 @@ protected:
 protected:
 	// socket is not supposed to be used as polymorphic class,
 	// hence the destructor is protected
-	~socket() noexcept;
+	~socket() noexcept
+#if CFG_OS == CFG_OS_WINDOWS
+		override
+#endif
+		;
 
 	/**
 	 * @brief Closes the socket disconnecting it if necessary.
