@@ -39,7 +39,7 @@ udp_socket::udp_socket(uint16_t port)
 {
 #if CFG_OS == CFG_OS_WINDOWS
 	this->create_event_for_waitable();
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #else
 	int& sock = this->handle;
 #endif
@@ -225,7 +225,7 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destinatio
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len;
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #else
 	ssize_t len;
 	int& sock = this->handle;
@@ -286,7 +286,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 #if CFG_OS == CFG_OS_WINDOWS
 	int socket_address_length = sizeof(socket_address);
 	int len;
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	socklen_t socket_address_length = sizeof(socket_address);
 	ssize_t len;
