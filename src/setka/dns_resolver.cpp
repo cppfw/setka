@@ -53,7 +53,7 @@ const uint16_t dns_record_aaaa_id = 28;
 
 namespace dns {
 
-struct resolver;
+class resolver;
 
 // After the successful completion the 'p' points to the byte right after the host name.
 // In case of unsuccessful completion 'p' is undefined.
