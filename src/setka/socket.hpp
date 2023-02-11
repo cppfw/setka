@@ -89,7 +89,7 @@ protected:
 	socket() :
 		opros::waitable(
 #if CFG_OS == CFG_OS_WINDOWS
-			WSA_INVALID_EVENT,
+			WSA_INVALID_EVENT
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX
 			invalid_socket
 #else
