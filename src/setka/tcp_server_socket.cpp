@@ -39,7 +39,7 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 {
 #if CFG_OS == CFG_OS_WINDOWS
 	this->create_event_for_waitable();
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #else
 	int& sock = this->handle;
 #endif
@@ -182,8 +182,8 @@ tcp_socket tcp_server_socket::accept()
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int sock_alen = sizeof(socket_address);
-	int& sock = this->win_sock;
-	int& accepted_sock = s.win_sock;
+	socket_type& sock = this->win_sock;
+	socket_type& accepted_sock = s.win_sock;
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	socklen_t sock_alen = sizeof(socket_address);
 	int& sock = this->handle;
