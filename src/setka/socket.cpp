@@ -171,7 +171,7 @@ uint16_t socket::get_local_port()
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len = sizeof(addr);
-	int sock = this->win_sock;
+	socket_type sock = this->win_sock;
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	socklen_t len = sizeof(addr);
 	int sock = this->handle;

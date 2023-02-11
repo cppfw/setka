@@ -607,7 +607,7 @@ private:
 				{
 					if (RegOpenKey(
 							HKEY_LOCAL_MACHINE,
-							"SYSTEM\\ControlSet001\\Services\\Tcpip\\Parameters\\Interfaces",
+							R"(SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces)",
 							&this->key
 						)
 						!= ERROR_SUCCESS)
