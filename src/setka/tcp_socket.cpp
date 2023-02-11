@@ -42,7 +42,7 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 
 #if CFG_OS == CFG_OS_WINDOWS
 	this->create_event_for_waitable();
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	int& sock = this->handle;
 #else
@@ -153,7 +153,7 @@ size_t tcp_socket::send(const utki::span<uint8_t> buf)
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len;
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #else
 	ssize_t len;
 	int& sock = this->handle;
@@ -195,7 +195,7 @@ size_t tcp_socket::receive(utki::span<uint8_t> buf)
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len;
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #else
 	ssize_t len;
 	int& sock = this->handle;
@@ -277,7 +277,7 @@ address tcp_socket::get_local_address()
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len = sizeof(addr);
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #else
 	socklen_t len = sizeof(addr);
 	int& sock = this->handle;
@@ -309,7 +309,7 @@ address tcp_socket::get_remote_address()
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len = sizeof(addr);
-	int& sock = this->win_sock;
+	socket_type& sock = this->win_sock;
 #else
 	socklen_t len = sizeof(addr);
 	int& sock = this->handle;
