@@ -105,7 +105,8 @@ using requests_to_send_iter_type = requests_to_send_list_type::iterator;
 using resolvers_map_type = std::map<dns_resolver*, std::unique_ptr<resolver>>;
 using resolvers_iter_type = resolvers_map_type::iterator;
 
-struct resolver {
+class resolver {
+public:
 	resolver() = default;
 
 	resolver(const resolver&) = default;

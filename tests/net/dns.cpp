@@ -80,7 +80,7 @@ void run(){
 	{//test several resolves at a time
 		nitki::semaphore sema;
 
-		typedef std::vector<std::unique_ptr<resolver> > resolver_list_type;
+		using resolver_list_type = std::vector<std::unique_ptr<resolver> >;
 		resolver_list_type r;
 
 		r.push_back(std::make_unique<resolver>(sema, "google.ru"));
