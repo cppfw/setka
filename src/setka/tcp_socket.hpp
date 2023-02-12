@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2015-2022 Ivan Gagis <igagis@gmail.com>
+Copyright (c) 2015-2023 Ivan Gagis <igagis@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,46 +29,46 @@ SOFTWARE.
 #include <utki/config.hpp>
 #include <utki/span.hpp>
 
-#include "socket.hpp"
 #include "address.hpp"
+#include "socket.hpp"
 
-namespace setka{
+namespace setka {
 
 class tcp_server_socket;
 
 /**
  * @brief a class which represents a TCP socket.
  */
-class tcp_socket : public socket{
+class tcp_socket : public socket
+{
 	friend class setka::tcp_server_socket;
-public:
-	
-	/**
-	 * @brief Constructs an invalid TCP socket object.
-	 */
-	tcp_socket(){
-//		TRACE(<< "tcp_socket::tcp_socket(): invoked " << this << std::endl)
-	}
-	
-	tcp_socket(const tcp_socket&) = delete;
-	tcp_socket& operator=(const tcp_socket&) = delete;
-	
-	tcp_socket(tcp_socket&& s) :
-			socket(std::move(s))
-	{}
 
-	tcp_socket& operator=(tcp_socket&& s){
-		this->socket::operator=(std::move(s));
-		return *this;
-	}
-	
+public:
 	/**
-	 * @brief Connects the socket.
-	 * This method connects the socket to remote TCP server socket.
+	 * @brief Constructs an empty TCP socket object.
+	 */
+	tcp_socket() = default;
+
+	/**
+	 * @brief Creates and connects the socket.
+	 * This constructor connects the socket to remote TCP server socket.
 	 * @param address - IP address.
 	 * @param disable_naggle - enable/disable Naggle algorithm.
 	 */
-	void open(const address& address, bool disable_naggle = false);
+	tcp_socket(const address& address, bool disable_naggle = false);
+
+	tcp_socket(const tcp_socket&) = delete;
+	tcp_socket& operator=(const tcp_socket&) = delete;
+
+	tcp_socket(tcp_socket&& s) :
+		socket(std::move(s))
+	{}
+
+	tcp_socket& operator=(tcp_socket&& s)
+	{
+		this->socket::operator=(std::move(s));
+		return *this;
+	}
 
 	/**
 	 * @brief Send data to connected socket.
@@ -103,9 +103,10 @@ public:
 	 */
 	address get_remote_address();
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
+
 private:
-	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
+	void set_waiting_flags(utki::flags<opros::ready> waiting_flags) override;
 #endif
 };
-}
+} // namespace setka

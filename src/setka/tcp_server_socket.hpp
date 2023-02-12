@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2015-2022 Ivan Gagis <igagis@gmail.com>
+Copyright (c) 2015-2023 Ivan Gagis <igagis@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -35,60 +35,66 @@ SOFTWARE.
  * @brief the main namespace of ting library.
  * All the declarations of ting library are made inside this namespace.
  */
-namespace setka{
+namespace setka {
 
 /**
  * @brief a class which represents a TCP server socket.
  * TCP server socket is the socket which can listen for new connections
  * and accept them creating an ordinary TCP socket for it.
  */
-class tcp_server_socket : public socket{
-	bool disable_naggle = false; // this flag indicates if accepted sockets should be created with disabled Naggle
+class tcp_server_socket : public socket
+{
+	bool disable_naggle; // this flag indicates if accepted sockets should be created with disabled Naggle
+
 public:
 	/**
 	 * @brief Creates an invalid (unopened) TCP server socket.
 	 */
-	tcp_server_socket(){}
+	tcp_server_socket() = default;
+
+	/**
+	 * @brief Creates a connected socket and starts listening on it.
+	 * Creates a socket and starts listening on the socket for incoming connections.
+	 * @param port - IP port number to listen on.
+	 * @param disable_naggle - enable/disable Naggle algorithm for all accepted connections.
+	 * @param queue_size - the maximum number of pending connections.
+	 */
+	tcp_server_socket(uint16_t port, bool disable_naggle = false, uint16_t queue_size = 50);
 
 	tcp_server_socket(const tcp_server_socket&) = delete;
 	tcp_server_socket& operator=(const tcp_server_socket&) = delete;
-	
+
 	tcp_server_socket(tcp_server_socket&& s) :
-			socket(std::move(s)),
-			disable_naggle(s.disable_naggle)
+		socket(std::move(s)),
+		disable_naggle(s.disable_naggle)
 	{}
-	
-	tcp_server_socket& operator=(tcp_server_socket&& s){
+
+	tcp_server_socket& operator=(tcp_server_socket&& s)
+	{
 		this->disable_naggle = s.disable_naggle;
 		this->socket::operator=(std::move(s));
 		return *this;
 	}
 
 	/**
-	 * @brief Connects the socket or starts listening on it.
-	 * This method starts listening on the socket for incoming connections.
-	 * @param port - IP port number to listen on.
-	 * @param disable_naggle - enable/disable Naggle algorithm for all accepted connections.
-	 * @param queue_size - the maximum number of pending connections.
-	 */
-	void open(uint16_t port, bool disable_naggle = false, uint16_t queue_size = 50);
-	
-	/**
 	 * @brief Accepts one of the pending connections, non-blocking.
 	 * Accepts one of the pending connections and returns a TCP socket object which represents
-	 * either a valid connected socket or an invalid socket object.
+	 * either a non-empty connected socket or an empty socket object.
 	 * This function does not block if there is no any pending connections, it just returns invalid
 	 * socket object in this case. One can periodically check for incoming connections by calling this method.
+	 * One can also wait on the socket for opros::ready::read to wait for connections.
 	 * @return tcp_socket object. One can later check if the returned socket object
-	 *         is valid or not by calling socket::is_valid() method on that object.
-	 *         - if the socket is valid then it is a newly connected socket, further it can be used to send or receive data.
-	 *         - if the socket is invalid then there was no any connections pending, so no connection was accepted.
+	 *         is empty or not by calling socket::is_empty() method on that object.
+	 *         - if the socket is non-empty then it is a newly connected socket, further it can be used to send or
+	 * receive data.
+	 *         - if the socket is empty then there was no any connections pending, so no connection was accepted.
 	 */
 	tcp_socket accept();
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
+
 private:
-	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
+	void set_waiting_flags(utki::flags<opros::ready> waiting_flags) override;
 #endif
 };
-}
+} // namespace setka

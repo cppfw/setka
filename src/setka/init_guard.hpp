@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2015-2022 Ivan Gagis <igagis@gmail.com>
+Copyright (c) 2015-2023 Ivan Gagis <igagis@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,10 @@ SOFTWARE.
 
 #pragma once
 
-#include <utki/singleton.hpp>
 #include <utki/config.hpp>
+#include <utki/singleton.hpp>
 
-namespace setka{
+namespace setka {
 
 /**
  * @brief Socket library singleton class.
@@ -39,14 +39,15 @@ namespace setka{
  * destructor will be called and the library will be de-initialized automatically.
  * This is what C++ RAII is all about.
  */
-class init_guard : public utki::intrusive_singleton<init_guard>{
+class init_guard : public utki::intrusive_singleton<init_guard>
+{
 	friend class utki::intrusive_singleton<init_guard>;
 	static utki::intrusive_singleton<init_guard>::instance_type instance;
-	
+
 public:
 	init_guard();
 
-	~init_guard()noexcept;
+	~init_guard() override;
 };
 
-}
+} // namespace setka

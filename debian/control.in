@@ -6,7 +6,9 @@ Build-Depends: debhelper (>= 9), libc6-dev, prorab, prorab-extra, myci,
 		libutki-dev (>= 1.1.124),
 		libopros-dev (>= 1.0.46),
 		libnitki-dev (>= 1.0.41),
-		libpapki-dev (>= 1.0.93)
+		libpapki-dev (>= 1.0.93),
+		clang-tidy,
+		clang-format
 Build-Depends-Indep: doxygen
 Standards-Version: 3.9.2
 

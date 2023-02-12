@@ -12,15 +12,15 @@
 #	undef assert
 #endif
 
-namespace TestSimpleDNSLookup{
+namespace test_simple_dns_lookup{
 
-class Resolver : public setka::dns_resolver{
+class resolver : public setka::dns_resolver{
 	
 public:
 	
-	Resolver(nitki::semaphore& sema, const std::string& hostName = std::string()) :
+	resolver(nitki::semaphore& sema, std::string host_name = std::string()) :
 			sema(sema),
-			hostName(hostName)
+			host_name(std::move(host_name))
 	{}
 	
 	setka::address::ip ip;
@@ -29,10 +29,10 @@ public:
 	
 	setka::dns_result res;
 	
-	std::string hostName;
+	std::string host_name;
 	
-	void Resolve(){
-		this->resolve(this->hostName, 10000);
+	void resolve_host(){
+		this->resolve(this->host_name, 10000);
 	}
 	
 	void on_completed(setka::dns_result res, setka::address::ip ip)noexcept override{
@@ -47,15 +47,15 @@ public:
 	}
 };
 
-void Run(){
+void run(){
 	{//test one resolve at a time
 		nitki::semaphore sema;
 
-		Resolver r(sema);
+		resolver r(sema);
 
 		r.resolve("google.com", 10000);
 
-		LOG([&](auto&o){o << "TestSimpleDNSLookup::Run(): waiting on semaphore" << std::endl;})
+		LOG([&](auto&o){o << "test_simple_dns_lookup::run(): waiting on semaphore" << std::endl;})
 		
 		if(!sema.wait(11000)){
 			utki::assert(false, SL);
@@ -80,19 +80,18 @@ void Run(){
 	{//test several resolves at a time
 		nitki::semaphore sema;
 
-		typedef std::vector<std::unique_ptr<Resolver> > T_ResolverList;
-		typedef T_ResolverList::iterator T_ResolverIter;
-		T_ResolverList r;
+		using resolver_list_type = std::vector<std::unique_ptr<resolver> >;
+		resolver_list_type r;
 
-		r.push_back(std::make_unique<Resolver>(sema, "google.ru"));
-		r.push_back(std::make_unique<Resolver>(sema, "ya.ru"));
-		r.push_back(std::make_unique<Resolver>(sema, "mail.ru"));
-		r.push_back(std::make_unique<Resolver>(sema, "vk.com"));
+		r.push_back(std::make_unique<resolver>(sema, "google.ru"));
+		r.push_back(std::make_unique<resolver>(sema, "ya.ru"));
+		r.push_back(std::make_unique<resolver>(sema, "mail.ru"));
+		r.push_back(std::make_unique<resolver>(sema, "vk.com"));
 		
 //		TRACE(<< "starting resolutions" << std::endl)
 		
-		for(T_ResolverIter i = r.begin(); i != r.end(); ++i){
-			(*i)->Resolve();
+		for(auto& rslvr : r){
+			rslvr->resolve_host();
 		}
 		
 		for(unsigned i = 0; i < r.size(); ++i){
@@ -102,14 +101,14 @@ void Run(){
 		}
 //		TRACE(<< "resolutions done" << std::endl)
 		
-		for(T_ResolverIter i = r.begin(); i != r.end(); ++i){
+		for(auto& rslvr: r){
 			utki::assert(
-				(*i)->res == setka::dns_result::ok,
-				[&](auto&o){o << "result = " << unsigned((*i)->res) << " host to resolve = " << (*i)->hostName;},
+				rslvr->res == setka::dns_result::ok,
+				[&](auto&o){o << "result = " << unsigned(rslvr->res) << " host to resolve = " << rslvr->host_name;},
 				SL
 			);
-//			ASSERT_INFO_ALWAYS((*i)->ip == 0x4D581503 || (*i)->ip == 0x57FAFB03, "(*i)->ip = " << (*i)->ip)
-			utki::assert((*i)->ip.is_valid(), SL);
+
+			utki::assert(rslvr->ip.is_valid(), SL);
 		}
 	}
 }
@@ -118,13 +117,13 @@ void Run(){
 
 
 
-namespace TestRequestFromCallback{
+namespace test_request_from_callback{
 
-class Resolver : public setka::dns_resolver{
+class resolver : public setka::dns_resolver{
 	
 public:
 	
-	Resolver(nitki::semaphore& sema) :
+	resolver(nitki::semaphore& sema) :
 			sema(sema)
 	{}
 	
@@ -159,10 +158,10 @@ public:
 	}
 };
 
-void Run(){
+void run(){
 	nitki::semaphore sema;
 	
-	Resolver r(sema);
+	resolver r(sema);
 	
 	r.resolve("rfesfdf.ru", 3000);
 	
@@ -183,13 +182,10 @@ void Run(){
 
 
 
-namespace TestCancelDNSLookup{
-class Resolver : public setka::dns_resolver{
+namespace test_cancel_dns_lookup{
+class resolver : public setka::dns_resolver{
 	
-public:
-	
-	Resolver(){}
-	
+public:	
 	volatile bool called = false;
 	
 	void on_completed(setka::dns_result res, setka::address::ip ip)noexcept override{
@@ -197,9 +193,9 @@ public:
 	}
 };
 
-void Run(){
+void run(){
 	utki::log([&](auto&o){o << "\tRunning 'cacnel DNS lookup' test, it will take about 4 seconds" << std::endl;});
-	Resolver r;
+	resolver r;
 	
 	r.resolve("rfesweefdqfdf.ru", 3000, setka::address("1.2.3.4", 53));
 	

@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2015-2022 Ivan Gagis <igagis@gmail.com>
+Copyright (c) 2015-2023 Ivan Gagis <igagis@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -50,17 +50,18 @@ SOFTWARE.
 
 /* ================ LICENSE END ================ */
 
+#include "init_guard.hpp"
+
 #include <utki/config.hpp>
 
-#include "init_guard.hpp"
 #include "dns_resolver.hpp"
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 #	include <winsock2.h>
 #	include <utki/windows.hpp>
 
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_UNIX || M_OS == M_OS_MACOSX
-#	include <signal.h>
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_UNIX || CFG_OS == CFG_OS_MACOSX
+#	include <csignal>
 
 #else
 #	error "Unsupported OS"
@@ -70,46 +71,48 @@ using namespace setka;
 
 utki::intrusive_singleton<init_guard>::instance_type init_guard::instance;
 
-init_guard::init_guard(){
-#if M_OS == M_OS_WINDOWS
-	WORD versionWanted = MAKEWORD(2,2);
-	WSADATA wsaData;
-	if(int error = WSAStartup(versionWanted, &wsaData)){
+init_guard::init_guard()
+{
+#if CFG_OS == CFG_OS_WINDOWS
+	WORD version_wanted = MAKEWORD(2, 2);
+	WSADATA wsa_data;
+	if (int error = WSAStartup(version_wanted, &wsa_data)) {
 		std::stringstream ss;
 		ss << "WSAStartup(): Winsock 2.2 initialization failed, error code = " << error;
 		throw std::runtime_error(ss.str());
 	}
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_UNIX || M_OS == M_OS_MACOSX
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_UNIX || CFG_OS == CFG_OS_MACOSX
 	// SIGPIPE is generated when a remote socket is closed
 	void (*handler)(int);
 	handler = signal(SIGPIPE, SIG_IGN);
-	if(handler != SIG_DFL){
+	if (handler != SIG_DFL) {
 		signal(SIGPIPE, handler);
 	}
 #else
-	#error "Unknown OS"
+#	error "Unknown OS"
 #endif
 }
 
-init_guard::~init_guard()noexcept{
+init_guard::~init_guard()
+{
 	// check that there are no active dns lookups and finish the DNS request thread
 	dns_resolver::clean_up();
-	
-#if M_OS == M_OS_WINDOWS
+
+#if CFG_OS == CFG_OS_WINDOWS
 	// clean up windows networking
-	if(WSACleanup() == SOCKET_ERROR){
-		if(WSAGetLastError() == WSAEINPROGRESS){
+	if (WSACleanup() == SOCKET_ERROR) {
+		if (WSAGetLastError() == WSAEINPROGRESS) {
 			WSACleanup();
 		}
 	}
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_UNIX || M_OS == M_OS_MACOSX
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_UNIX || CFG_OS == CFG_OS_MACOSX
 	// restore the SIGPIPE handler
 	void (*handler)(int);
 	handler = signal(SIGPIPE, SIG_DFL);
-	if(handler != SIG_IGN){
+	if (handler != SIG_IGN) {
 		signal(SIGPIPE, handler);
 	}
 #else
-	#error "Unknown OS"
+#	error "Unknown OS"
 #endif
 }

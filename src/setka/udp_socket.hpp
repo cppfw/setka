@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2015-2022 Ivan Gagis <igagis@gmail.com>
+Copyright (c) 2015-2023 Ivan Gagis <igagis@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,47 +31,46 @@ SOFTWARE.
 #include <utki/config.hpp>
 #include <utki/span.hpp>
 
-#include "socket.hpp"
 #include "address.hpp"
+#include "socket.hpp"
 
-namespace setka{
+namespace setka {
 
 /**
  * @brief UDP socket class.
  * Socket for User Datagram Protocol.
- * NOTE: Win32 specific: when using UDP socket with wait_set be aware that waiting on UDP socket for writing does not work on Win32 OS.
- *       On other operating systems it works OK.
+ * NOTE: Win32 specific: when using UDP socket with wait_set be aware that waiting on UDP socket for writing does not
+ * work on Win32 OS. On other operating systems it works OK.
  */
-class udp_socket : public socket{
+class udp_socket : public socket
+{
 	bool ipv4;
+
 public:
-	udp_socket(){}
+	udp_socket() = default;
 
-	udp_socket(const udp_socket&) = delete;
-
-	udp_socket(udp_socket&& s) :
-			socket(std::move(s))
-	{}
-
-	udp_socket& operator=(udp_socket&& s){
-		this->socket::operator=(std::move(s));
-		this->ipv4 = s.ipv4;
-		return *this;
-	}
-	
 	/**
-	 * @brief Open the socket.
-	 * This method opens the socket, this socket can further be used to send or receive data.
-	 * After the socket is opened it becomes a valid socket and Socket::IsValid() will return true for such socket.
-	 * After the socket is closed it becomes invalid.
-	 * In other words, a valid socket is an opened socket.
-	 * In case of errors this method throws net::Exc.
+	 * @brief Create and open the socket.
+	 * Creates and opens the socket, this socket can further be used to send or receive data.
 	 * @param port - IP port number on which the socket will listen for incoming datagrams.
 	 *               If 0 is passed then system will assign some free port if any. If there
 	 *               are no free ports, then it is an error and an exception will be thrown.
-	 *               This is useful for server-side sockets, for client-side sockets use udp_socket::Open().
 	 */
-	void open(uint16_t port = 0);
+	udp_socket(uint16_t port);
+
+	udp_socket(const udp_socket&) = delete;
+	udp_socket& operator=(const udp_socket&) = delete;
+
+	udp_socket(udp_socket&& s) :
+		socket(std::move(s))
+	{}
+
+	udp_socket& operator=(udp_socket&& s)
+	{
+		this->ipv4 = s.ipv4;
+		this->socket::operator=(std::move(s));
+		return *this;
+	}
 
 	/**
 	 * @brief Send datagram over UDP socket.
@@ -101,11 +100,12 @@ public:
 	 *                             of the sender will be stored.
 	 * @return number of bytes stored in the output buffer.
 	 */
-	size_t recieve(utki::span<uint8_t> buf, address &out_sender_address);
+	size_t recieve(utki::span<uint8_t> buf, address& out_sender_address);
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
+
 private:
-	void set_waiting_flags(utki::flags<opros::ready> waiting_flags)override;
+	void set_waiting_flags(utki::flags<opros::ready> waiting_flags) override;
 #endif
 };
-}
+} // namespace setka

@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2015-2022 Ivan Gagis <igagis@gmail.com>
+Copyright (c) 2015-2023 Ivan Gagis <igagis@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,34 +26,34 @@ SOFTWARE.
 
 #include "udp_socket.hpp"
 
-#include <limits>
 #include <cstring>
+#include <limits>
 
-#if M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
+#if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 #	include <netinet/in.h>
 #endif
 
 using namespace setka;
 
-void udp_socket::open(uint16_t port){
-	if(this->is_open()){
-		throw std::logic_error("udp_socket::Open(): the socket is already opened");
-	}
-
-#if M_OS == M_OS_WINDOWS
+udp_socket::udp_socket(uint16_t port)
+{
+#if CFG_OS == CFG_OS_WINDOWS
 	this->create_event_for_waitable();
+	socket_type& sock = this->win_sock;
+#else
+	int& sock = this->handle;
 #endif
 
 	this->ipv4 = false;
-	
-	this->sock = ::socket(PF_INET6, SOCK_DGRAM, 0);
-	
-	if(this->sock == invalid_socket){
-		// maybe IPv6 is not supported by OS, try to proceed with IPv4 socket then
-		this->sock = ::socket(PF_INET, SOCK_DGRAM, 0);
 
-		if(this->sock == invalid_socket){
-#if M_OS == M_OS_WINDOWS
+	sock = ::socket(PF_INET6, SOCK_DGRAM, 0);
+
+	if (sock == invalid_socket) {
+		// maybe IPv6 is not supported by OS, try to proceed with IPv4 socket then
+		sock = ::socket(PF_INET, SOCK_DGRAM, 0);
+
+		if (sock == invalid_socket) {
+#if CFG_OS == CFG_OS_WINDOWS
 			int error_code = WSAGetLastError();
 			this->close_event_for_waitable();
 #else
@@ -64,31 +64,31 @@ void udp_socket::open(uint16_t port){
 
 		this->ipv4 = true;
 	}
-	
+
 	// turn off IPv6 only mode to allow also accepting IPv4 connections
-	if(!this->ipv4){
-#if M_OS == M_OS_WINDOWS
+	if (!this->ipv4) {
+#if CFG_OS == CFG_OS_WINDOWS
 		char no = 0;
-		const char* noPtr = &no;
+		const char* no_ptr = &no;
 #else
 		int no = 0;
-		void* noPtr = &no;
+		void* no_ptr = &no;
 #endif
-		if(setsockopt(this->sock, IPPROTO_IPV6, IPV6_V6ONLY, noPtr, sizeof(no)) != 0){
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, no_ptr, sizeof(no)) != 0) {
 			// dual stack is not supported, proceed with IPv4 only
-			
+
 			this->close(); // close IPv6 socket
-			
+
 			// create IPv4 socket
-			
-#if M_OS == M_OS_WINDOWS
+
+#if CFG_OS == CFG_OS_WINDOWS
 			this->create_event_for_waitable();
-#endif			
-			
-			this->sock = ::socket(PF_INET, SOCK_DGRAM, 0);
-	
-			if(this->sock == invalid_socket){
-#if M_OS == M_OS_WINDOWS
+#endif
+
+			sock = ::socket(PF_INET, SOCK_DGRAM, 0);
+
+			if (sock == invalid_socket) {
+#if CFG_OS == CFG_OS_WINDOWS
 				int error_code = WSAGetLastError();
 				this->close_event_for_waitable();
 #else
@@ -96,110 +96,107 @@ void udp_socket::open(uint16_t port){
 #endif
 				throw std::system_error(error_code, std::generic_category(), "couldn't create socket, socket() failed");
 			}
-			
+
 			this->ipv4 = true;
 		}
 	}
-	
-	// bind locally, if appropriate
-	if(port != 0){
-		sockaddr_storage sockAddr;
-		socklen_t sockAddrLen;
 
-		if(this->ipv4){
-			sockaddr_in& sa = reinterpret_cast<sockaddr_in&>(sockAddr);
-			memset(&sa, 0, sizeof(sa));
-			sa.sin_family = AF_INET;
-			sa.sin_addr.s_addr = INADDR_ANY;
-			sa.sin_port = htons(port);
-			sockAddrLen = sizeof(sa);
-		}else{
-			sockaddr_in6& sa = reinterpret_cast<sockaddr_in6&>(sockAddr);
-			memset(&sa, 0, sizeof(sa));
-			sa.sin6_family = AF_INET6;
-			sa.sin6_addr = in6addr_any; // 'in6addr_any' allows accepting both IPv4 and IPv6 connections
-			sa.sin6_port = htons(port);
-			sockAddrLen = sizeof(sa);
-		}
+	try {
+		// bind locally, if appropriate
+		if (port != 0) {
+			sockaddr_storage socket_address;
+			socklen_t socket_address_length;
 
-		// bind the socket for listening
-		if(::bind(
-				this->sock,
-				reinterpret_cast<struct sockaddr*>(&sockAddr),
-				sockAddrLen
-			) == socket_error)
-		{
-			this->close();
-			
-#if M_OS == M_OS_WINDOWS
-			int errorCode = WSAGetLastError();
+			if (this->ipv4) {
+				auto& sa = reinterpret_cast<sockaddr_in&>(socket_address);
+				memset(&sa, 0, sizeof(sa));
+				sa.sin_family = AF_INET;
+				sa.sin_addr.s_addr = INADDR_ANY;
+				sa.sin_port = htons(port);
+				socket_address_length = sizeof(sa);
+			} else {
+				auto& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
+				memset(&sa, 0, sizeof(sa));
+				sa.sin6_family = AF_INET6;
+				sa.sin6_addr = in6addr_any; // 'in6addr_any' allows accepting both IPv4 and IPv6 connections
+				sa.sin6_port = htons(port);
+				socket_address_length = sizeof(sa);
+			}
+
+			// bind the socket for listening
+			if (::bind(sock, reinterpret_cast<struct sockaddr*>(&socket_address), socket_address_length)
+				== socket_error)
+			{
+#if CFG_OS == CFG_OS_WINDOWS
+				int error_code = WSAGetLastError();
 #else
-			int errorCode = errno;
+				int error_code = errno;
 #endif
-			throw std::system_error(errorCode, std::generic_category(), "could not bind socket to network address, bind() failed");
+				throw std::system_error(
+					error_code,
+					std::generic_category(),
+					"could not bind socket to network address, bind() failed"
+				);
+			}
 		}
-	}
 
-	this->set_nonblocking_mode();
+		this->set_nonblocking_mode();
 
-	// allow broadcasting
-#if M_OS == M_OS_WINDOWS || M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-	{
-		int yes = 1;
-		if(setsockopt(
-				this->sock,
-				SOL_SOCKET,
-				SO_BROADCAST,
-				reinterpret_cast<char*>(&yes),
-				sizeof(yes)
-			) == socket_error)
+		// allow broadcasting
+#if CFG_OS == CFG_OS_WINDOWS || CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 		{
-#	if M_OS == M_OS_WINDOWS
-			int error_code = WSAGetLastError();
+			int yes = 1;
+			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&yes), sizeof(yes)) == socket_error)
+			{
+#	if CFG_OS == CFG_OS_WINDOWS
+				int error_code = WSAGetLastError();
 #	else
-			int error_code = errno;
+				int error_code = errno;
 #	endif
-
-			this->close();
-
-			throw std::system_error(error_code, std::generic_category(), "could not set broadcast option, setsockopt() failed");
+				throw std::system_error(
+					error_code,
+					std::generic_category(),
+					"could not set broadcast option, setsockopt() failed"
+				);
+			}
 		}
-	}
 #else
 #	error "Unsupported OS"
 #endif
-
-	this->readiness_flags.clear();
+	} catch (...) {
+		this->close();
+		throw;
+	}
 }
 
-size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destination_address){
-	if(!this->is_open()){
-		throw std::logic_error("udp_socket::send(): socket is not opened");
+size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destination_address)
+{
+	if (this->is_empty()) {
+		throw std::logic_error("udp_socket::send(): socket is empty");
 	}
 
-	this->readiness_flags.clear(opros::ready::write);
+	sockaddr_storage socket_address;
+	socklen_t socket_address_length;
 
-	sockaddr_storage sockAddr;
-	socklen_t sockAddrLen;
-	
 	if(
-#if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS
 			this->ipv4 &&
 #endif
 			destination_address.host.is_v4()
 		)
 	{
-		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(sockAddr);
+		auto& a = reinterpret_cast<sockaddr_in&>(socket_address);
 		memset(&a, 0, sizeof(a));
 		a.sin_family = AF_INET;
 		a.sin_addr.s_addr = htonl(destination_address.host.get_v4());
 		a.sin_port = htons(destination_address.port);
-		sockAddrLen = sizeof(a);
-	}else{
-		sockaddr_in6& a = reinterpret_cast<sockaddr_in6&>(sockAddr);
+		socket_address_length = sizeof(a);
+	} else {
+		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		memset(&a, 0, sizeof(a));
 		a.sin6_family = AF_INET6;
-#if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
+	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
 		a.sin6_addr.s6_addr[0] = destination_address.host.quad[0] >> 24;
 		a.sin6_addr.s6_addr[1] = (destination_address.host.quad[0] >> 16) & 0xff;
 		a.sin6_addr.s6_addr[2] = (destination_address.host.quad[0] >> 8) & 0xff;
@@ -223,149 +220,161 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destinatio
 		a.sin6_addr.__in6_u.__u6_addr32[3] = htonl(destination_address.host.quad[3]);
 #endif
 		a.sin6_port = htons(destination_address.port);
-		sockAddrLen = sizeof(a);
+		socket_address_length = sizeof(a);
 	}
 
-#if M_OS == M_OS_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 	int len;
+	socket_type& sock = this->win_sock;
 #else
 	ssize_t len;
+	int& sock = this->handle;
 #endif
 
-	while(true){
+	while (true) {
 		len = ::sendto(
-				this->sock,
-				reinterpret_cast<const char*>(buf.begin()),
-				int(buf.size()),
-				0,
-				reinterpret_cast<struct sockaddr*>(&sockAddr),
-				sockAddrLen
-			);
+			sock,
+			reinterpret_cast<const char*>(buf.begin()),
+			int(buf.size()),
+			0,
+			reinterpret_cast<struct sockaddr*>(&socket_address),
+			socket_address_length
+		);
 
-		if(len == socket_error){
-#if M_OS == M_OS_WINDOWS
-			int errorCode = WSAGetLastError();
+		if (len == socket_error) {
+#if CFG_OS == CFG_OS_WINDOWS
+			int error_code = WSAGetLastError();
 #else
-			int errorCode = errno;
+			int error_code = errno;
 #endif
-			if(errorCode == error_interrupted){
+			if (error_code == error_interrupted) {
 				continue;
-			}else if(errorCode == error_again){
+			} else if (error_code == error_again) {
 				// can't send more bytes, return 0 bytes sent
 				len = 0;
-			}else{
-				throw std::system_error(errorCode, std::generic_category(), "could not send data over UDP, sendto() failed");
+			} else {
+				throw std::system_error(
+					error_code,
+					std::generic_category(),
+					"could not send data over UDP, sendto() failed"
+				);
 			}
 		}
 		break;
 	}
 
 	ASSERT(buf.size() <= size_t(std::numeric_limits<int>::max()))
-	ASSERT(len <= int(buf.size()), [&](auto&o){o << "res = " << len;})
-	ASSERT((len == int(buf.size())) || (len == 0), [&](auto&o){o << "res = " << len;})
+	ASSERT(len <= int(buf.size()), [&](auto& o) {
+		o << "res = " << len;
+	})
+	ASSERT((len == int(buf.size())) || (len == 0), [&](auto& o) {
+		o << "res = " << len;
+	})
 
 	ASSERT(len >= 0)
 	return size_t(len);
 }
 
-size_t udp_socket::recieve(utki::span<uint8_t> buf, address &out_sender_address){
-	if(!this->is_open()){
-		throw std::logic_error("udp_socket::recieve(): socket is not opened");
+size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
+{
+	if (this->is_empty()) {
+		throw std::logic_error("udp_socket::recieve(): socket is empty");
 	}
 
-	// The "can read" flag shall be cleared even if this function fails.
-	// This is to avoid subsequent calls to Recv() because of it indicating
-	// that there's an activity.
-	// So, do it at the beginning of the function.
-	this->readiness_flags.clear(opros::ready::read);
+	sockaddr_storage socket_address;
 
-	sockaddr_storage sockAddr;
-
-#if M_OS == M_OS_WINDOWS
-	int sockLen = sizeof(sockAddr);
-#elif M_OS == M_OS_LINUX || M_OS == M_OS_MACOSX || M_OS == M_OS_UNIX
-	socklen_t sockLen = sizeof(sockAddr);
+#if CFG_OS == CFG_OS_WINDOWS
+	int socket_address_length = sizeof(socket_address);
+	int len;
+	socket_type& sock = this->win_sock;
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
+	socklen_t socket_address_length = sizeof(socket_address);
+	ssize_t len;
+	int& sock = this->handle;
 #else
 #	error "Unsupported OS"
 #endif
 
-#if M_OS == M_OS_WINDOWS
-	int len;
-#else
-	ssize_t len;
-#endif
-
-	while(true){
+	while (true) {
 		len = ::recvfrom(
-				this->sock,
-				reinterpret_cast<char*>(buf.data()),
-				int(buf.size()),
-				0,
-				reinterpret_cast<sockaddr*>(&sockAddr),
-				&sockLen
-			);
+			sock,
+			reinterpret_cast<char*>(buf.data()),
+			int(buf.size()),
+			0,
+			reinterpret_cast<sockaddr*>(&socket_address),
+			&socket_address_length
+		);
 
-		if(len == socket_error){
-#if M_OS == M_OS_WINDOWS
-			int errorCode = WSAGetLastError();
+		if (len == socket_error) {
+#if CFG_OS == CFG_OS_WINDOWS
+			int error_code = WSAGetLastError();
 #else
-			int errorCode = errno;
+			int error_code = errno;
 #endif
-			if(errorCode == error_interrupted){
+			if (error_code == error_interrupted) {
 				continue;
-			}else if(errorCode == error_again){
+			} else if (error_code == error_again) {
 				return 0; // no data available, return 0 bytes received
-			}else{
-				throw std::system_error(errorCode, std::generic_category(), "could not receive data over UDP, recvfrom() failed");
+			} else {
+				throw std::system_error(
+					error_code,
+					std::generic_category(),
+					"could not receive data over UDP, recvfrom() failed"
+				);
 			}
 		}
 		break;
 	}
 
 	ASSERT(buf.size() <= size_t(std::numeric_limits<int>::max()))
-	ASSERT(len <= int(buf.size()), [&](auto&o){o << "len = " << len;})
+	ASSERT(len <= int(buf.size()), [&](auto& o) {
+		o << "len = " << len;
+	})
 
-	if(sockAddr.ss_family == AF_INET){
-		sockaddr_in& a = reinterpret_cast<sockaddr_in&>(sockAddr);
+	if (socket_address.ss_family == AF_INET) {
+		auto& a = reinterpret_cast<sockaddr_in&>(socket_address);
+		out_sender_address = address(ntohl(a.sin_addr.s_addr), uint16_t(ntohs(a.sin_port)));
+	} else {
+		ASSERT(socket_address.ss_family == AF_INET6, [&](auto& o) {
+			o << "socket_address.ss_family = " << unsigned(socket_address.ss_family) << " AF_INET = " << AF_INET
+			  << " AF_INET6 = " << AF_INET6;
+		})
+		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		out_sender_address = address(
-				ntohl(a.sin_addr.s_addr),
-				uint16_t(ntohs(a.sin_port))
-			);
-	}else{
-		ASSERT(
-			sockAddr.ss_family == AF_INET6,
-			[&](auto&o){o << "sockAddr.ss_family = " << unsigned(sockAddr.ss_family) << " AF_INET = " << AF_INET << " AF_INET6 = " << AF_INET6;}
-		)
-		sockaddr_in6& a = reinterpret_cast<sockaddr_in6&>(sockAddr);
-		out_sender_address = address(
-				address::ip(
-#if M_OS == M_OS_MACOSX || M_OS == M_OS_WINDOWS || (M_OS == M_OS_LINUX && M_OS_NAME == M_OS_NAME_ANDROID)
-						(uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (uint32_t(a.sin6_addr.s6_addr[1]) << 16) | (uint32_t(a.sin6_addr.s6_addr[2]) << 8) | uint32_t(a.sin6_addr.s6_addr[3]),
-						(uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (uint32_t(a.sin6_addr.s6_addr[5]) << 16) | (uint32_t(a.sin6_addr.s6_addr[6]) << 8) | uint32_t(a.sin6_addr.s6_addr[7]),
-						(uint32_t(a.sin6_addr.s6_addr[8]) << 24) | (uint32_t(a.sin6_addr.s6_addr[9]) << 16) | (uint32_t(a.sin6_addr.s6_addr[10]) << 8) | uint32_t(a.sin6_addr.s6_addr[11]),
-						(uint32_t(a.sin6_addr.s6_addr[12]) << 24) | (uint32_t(a.sin6_addr.s6_addr[13]) << 16) | (uint32_t(a.sin6_addr.s6_addr[14]) << 8) | uint32_t(a.sin6_addr.s6_addr[15])
+			address::ip(
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
+	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
+				(uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (uint32_t(a.sin6_addr.s6_addr[1]) << 16)
+					| (uint32_t(a.sin6_addr.s6_addr[2]) << 8) | uint32_t(a.sin6_addr.s6_addr[3]),
+				(uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (uint32_t(a.sin6_addr.s6_addr[5]) << 16)
+					| (uint32_t(a.sin6_addr.s6_addr[6]) << 8) | uint32_t(a.sin6_addr.s6_addr[7]),
+				(uint32_t(a.sin6_addr.s6_addr[8]) << 24) | (uint32_t(a.sin6_addr.s6_addr[9]) << 16)
+					| (uint32_t(a.sin6_addr.s6_addr[10]) << 8) | uint32_t(a.sin6_addr.s6_addr[11]),
+				(uint32_t(a.sin6_addr.s6_addr[12]) << 24) | (uint32_t(a.sin6_addr.s6_addr[13]) << 16)
+					| (uint32_t(a.sin6_addr.s6_addr[14]) << 8) | uint32_t(a.sin6_addr.s6_addr[15])
 #else
-						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])),
-						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])),
-						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[2])),
-						uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])),
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])),
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[2])),
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
 #endif
-					),
-				uint16_t(ntohs(a.sin6_port))
-			);
+			),
+			uint16_t(ntohs(a.sin6_port))
+		);
 	}
-	
+
 	ASSERT(len >= 0)
 	return size_t(len);
 }
 
-#if M_OS == M_OS_WINDOWS
-void udp_socket::set_waiting_flags(utki::flags<opros::ready> waiting_flags){
+#if CFG_OS == CFG_OS_WINDOWS
+void udp_socket::set_waiting_flags(utki::flags<opros::ready> waiting_flags)
+{
 	long flags = FD_CLOSE;
-	if(waiting_flags.get(opros::ready::read)){
+	if (waiting_flags.get(opros::ready::read)) {
 		flags |= FD_READ;
 	}
-	if(waiting_flags.get(opros::ready::write)){
+	if (waiting_flags.get(opros::ready::write)) {
 		flags |= FD_WRITE;
 	}
 	this->set_waiting_events_for_windows(flags);

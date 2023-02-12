@@ -42,6 +42,7 @@ makedepends=(
 		'prorab-extra'
 		'doxygen'
 		'pkg-config'
+		"${pkgPrefix}clang-tools-extra" # for clang-tidy
 	)
 checkdepends=('myci')
 optdepends=()

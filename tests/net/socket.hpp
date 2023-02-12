@@ -1,51 +1,51 @@
 #pragma once
 
-namespace Testip_address{
-void Run();
+namespace test_ip_address{
+void run();
 }//~namespace
 
-namespace BasicClientServerTest{
+namespace basic_client_server_test{
 
-void Run();
-
-}//~namespace
-
-
-
-namespace SendDataContinuouslyWithWaitSet{
-
-void Run();
+void run();
 
 }//~namespace
 
 
 
-namespace SendDataContinuously{
+namespace send_data_continuously_with_wait_set{
 
-void Run();
-
-}//~namespace
-
-
-
-namespace Basicip_addressTest{
-
-void Run();
+void run();
 
 }//~namespace
 
 
 
-namespace BasicUDPSocketsTest{
+namespace send_data_continuously{
 
-void Run();
+void run();
 
 }//~namespace
 
 
 
-namespace TestUDPSocketWaitForWriting{
+namespace basic_ip_address_test{
 
-void Run();
+void run();
+
+}//~namespace
+
+
+
+namespace basic_udp_sockets_test{
+
+void run();
+
+}//~namespace
+
+
+
+namespace test_udp_socket_wait_for_writing{
+
+void run();
 
 }//~namespace
