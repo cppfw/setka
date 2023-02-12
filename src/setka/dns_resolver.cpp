@@ -108,6 +108,8 @@ using resolvers_iter_type = resolvers_map_type::iterator;
 class resolver
 {
 public:
+	// TODO: figure out why on MacOS it caomplains about this line
+	// NOLINTNEXTLINE(bugprone-exception-escape, "for some reason clang-tidy complains about this line only on MacOS")
 	resolver() = default;
 
 	resolver(const resolver&) = default;
