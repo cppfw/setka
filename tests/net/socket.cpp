@@ -175,6 +175,8 @@ void run(){
 
 	setka::tcp_socket sock_s(setka::address("127.0.0.1", 13666));
 
+	utki::assert(!sock_s.is_empty(), SL);
+
 	//Accept connection
 //	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
 	setka::tcp_socket sock_r;
@@ -183,7 +185,6 @@ void run(){
 		sock_r = server_sock.accept();
 	}
 
-	utki::assert(!sock_s.is_empty(), SL);
 	utki::assert(!sock_r.is_empty(), SL);
 
 	//Here we have 2 sockets sock_s and sock_r
@@ -260,16 +261,16 @@ void run(){
 					);
 
 					uint8_t* p = &send_buffer[0];
-					for(; p != (&send_buffer[0]) + send_buffer.size(); p += sizeof(uint32_t)){
+					for(; p != send_buffer.data() + send_buffer.size(); p += sizeof(uint32_t)){
 						utki::assert(
-							p < (((&send_buffer[0]) + send_buffer.size()) - (sizeof(uint32_t) - 1)),
+							p < ((send_buffer.data() + send_buffer.size()) - (sizeof(uint32_t) - 1)),
 							[&](auto&o){o << "p = " << p << " send_buffer.End() = " << &*send_buffer.end();},
 							SL
 						);
 						utki::serialize32le(scnt, p);
 						++scnt;
 					}
-					utki::assert(p == (&send_buffer[0]) + send_buffer.size(), SL);
+					utki::assert(p == send_buffer.data() + send_buffer.size(), SL);
 				}
 
 				utki::assert(send_buffer.size() > 0, SL);
@@ -294,8 +295,8 @@ void run(){
 				utki::assert(triggered[i].object != &sock_s, SL);
 
 //				TRACE(<< "send_data_continuously::run(): sock_r triggered" << std::endl)
-				utki::assert(triggered[i].flags.get(opros::ready::read), SL);
 				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
+				utki::assert(triggered[i].flags.get(opros::ready::read), SL);
 				utki::assert(!triggered[i].flags.get(opros::ready::write), SL);
 
 				while(true){

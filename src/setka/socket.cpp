@@ -260,7 +260,7 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 
 void socket::create_event_for_waitable()
 {
-	ASSERT(this->handle== WSA_INVALID_EVENT)
+	ASSERT(this->handle == WSA_INVALID_EVENT)
 	this->handle = WSACreateEvent();
 	if (this->handle == WSA_INVALID_EVENT) {
 		throw std::system_error(
