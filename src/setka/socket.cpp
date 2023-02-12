@@ -111,7 +111,7 @@ void socket::disable_naggle()
 #	endif
 			IPPROTO_TCP,
 			TCP_NODELAY,
-			(char*)&yes,
+			reinterpret_cast<char*>(&yes),
 			sizeof(yes)
 		);
 	}

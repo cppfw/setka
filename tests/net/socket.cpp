@@ -275,7 +275,7 @@ void run(){
 				utki::assert(send_buffer.size() > 0, SL);
 
 				try{
-					auto res = sock_s.send(utki::span<uint8_t>(&*send_buffer.begin() + num_bytes_send, send_buffer.size() - num_bytes_send));
+					auto res = sock_s.send(utki::span<uint8_t>(send_buffer.data() + num_bytes_send, send_buffer.size() - num_bytes_send));
 					num_bytes_send += res;
 					if(res == 0){
 						utki::assert(res > 0, SL); // since it was CanWrite() we should be able to write at least something
