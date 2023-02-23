@@ -202,7 +202,7 @@ size_t tcp_socket::receive(utki::span<uint8_t> buf)
 #endif
 
 	while (true) {
-		len = ::recv(sock, reinterpret_cast<char*>(&*buf.begin()), int(buf.size()), 0);
+		len = ::recv(sock, reinterpret_cast<char*>(buf.data()), int(buf.size()), 0);
 		if (len == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
 			int error_code = WSAGetLastError();
