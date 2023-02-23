@@ -84,8 +84,8 @@ public:
 	 * Receives data available on the socket.
 	 * If there is no data available this function does not block, instead it returns 0,
 	 * indicating that 0 bytes were received.
-	 * If previous WaitSet::Wait() indicated that socket is ready for reading
-	 * and tcp_socket::Recv() returns 0, then connection was closed by peer.
+	 * If previous wait_set::wait() indicated that socket is ready for reading
+	 * and tcp_socket::receive() returns 0, then connection was closed by peer.
 	 * @param buf - pointer to the buffer where to put received data.
 	 * @return the number of bytes written to the buffer.
 	 */
