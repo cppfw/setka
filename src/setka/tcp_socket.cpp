@@ -160,7 +160,7 @@ size_t tcp_socket::send(const utki::span<uint8_t> buf)
 #endif
 
 	while (true) {
-		len = ::send(sock, reinterpret_cast<const char*>(&*buf.begin()), int(buf.size()), 0);
+		len = ::send(sock, reinterpret_cast<const char*>(buf.data()), int(buf.size()), 0);
 		if (len == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
 			int error_code = WSAGetLastError();
