@@ -12,4 +12,6 @@ override_dh_auto_install:
 
 .PHONY: override_dh_auto_test
 override_dh_auto_test:
-#do nothing
+# turn off tests due to lack of IPv6 support on github actions hosted runners,
+# tests are failing there
+# TODO: enable tests when github actions hosted runners support IPv6

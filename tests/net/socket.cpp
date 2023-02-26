@@ -199,8 +199,8 @@ void run(){
 	}
 
 	opros::wait_set ws(2);
-	ws.add(sock_r, utki::make_flags({opros::ready::read}));
-	ws.add(sock_s, utki::make_flags({opros::ready::write}));
+	ws.add(sock_r, utki::make_flags({opros::ready::read}), &sock_r);
+	ws.add(sock_s, utki::make_flags({opros::ready::write}), &sock_s);
 
 
 	uint32_t scnt = 0;
@@ -215,34 +215,38 @@ void run(){
 	uint32_t start_time = utki::get_ticks_ms();
 	
 	while(utki::get_ticks_ms() - start_time < 5000){ // 5 seconds
-		std::array<opros::event_info, 2> triggered;
+		bool is_triggered = ws.wait(1000);
 
-		unsigned num_triggered = ws.wait(1000, utki::make_span(triggered));
+		utki::assert(ws.get_triggered().size() <= ws.size(), SL);
 
-		utki::assert(num_triggered <= 2, SL);
+		auto triggered = ws.get_triggered();
 
-		if(num_triggered == 0){
+		if(!is_triggered
+#if CFG_OS == CFG_OS_WINDOWS
+		|| triggered.empty()
+#endif
+		){
 //			TRACE(<< "send_data_continuously::run(): 0 triggered" << std::endl)
 			continue;
 		}
 
 		//If 2 waitables have triggered they should be 2 different waitables.
-		if(num_triggered == 2){
+		if(triggered.size() == 2){
 //			TRACE(<< "send_data_continuously::run(): 2 triggered" << std::endl)
-			utki::assert(triggered[0].object != triggered[1].object, SL);
+			utki::assert(triggered[0].user_data != triggered[1].user_data, SL);
 		}else{
-			utki::assert(num_triggered == 1, SL);
+			utki::assert(triggered.size() == 1, SL);
 //			TRACE(<< "send_data_continuously::run(): 1 triggered" << std::endl)
 		}
 
-		for(unsigned i = 0; i < num_triggered; ++i){
-			if(triggered[i].object == &sock_s){
-				utki::assert(triggered[i].object != &sock_r, SL);
+		for(const auto& t : triggered){
+			if(t.user_data == &sock_s){
+				utki::assert(t.user_data != &sock_r, SL);
 
 //				TRACE(<< "send_data_continuously::run(): sock_s triggered" << std::endl)
-				utki::assert(!triggered[i].flags.get(opros::ready::read), SL);
-				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
-				utki::assert(triggered[i].flags.get(opros::ready::write), SL);
+				utki::assert(!t.flags.get(opros::ready::read), SL);
+				utki::assert(!t.flags.get(opros::ready::error), SL);
+				utki::assert(t.flags.get(opros::ready::write), SL);
 
 				utki::assert(num_bytes_send <= send_buffer.size(), SL);
 
@@ -291,13 +295,13 @@ void run(){
 					);
 				}
 				utki::assert(num_bytes_send <= send_buffer.size(), SL);
-			}else if(triggered[i].object == &sock_r){
-				utki::assert(triggered[i].object != &sock_s, SL);
+			}else if(t.user_data == &sock_r){
+				utki::assert(t.user_data != &sock_s, SL);
 
 //				TRACE(<< "send_data_continuously::run(): sock_r triggered" << std::endl)
-				utki::assert(!triggered[i].flags.get(opros::ready::error), SL);
-				utki::assert(triggered[i].flags.get(opros::ready::read), SL);
-				utki::assert(!triggered[i].flags.get(opros::ready::write), SL);
+				utki::assert(!t.flags.get(opros::ready::error), SL);
+				utki::assert(t.flags.get(opros::ready::read), SL);
+				utki::assert(!t.flags.get(opros::ready::write), SL);
 
 				while(true){
 					std::array<uint8_t, 0x2000> buf; // 8kb buffer
@@ -530,6 +534,7 @@ void run(){
 		}
 		utki::assert(num_bytes_send == 4, SL);
 	}catch(std::exception &e){
+		std::cout << "is_ipv6_supported_by_os() = " << is_ipv6_supported_by_os() << std::endl;
 		utki::assert(false, [&](auto&o){o << e.what();}, SL);
 	}
 
@@ -582,17 +587,16 @@ void run(){
 
 		opros::wait_set ws(1);
 
-		ws.add(send_sock, utki::make_flags({opros::ready::read, opros::ready::write}));
+		ws.add(send_sock, utki::make_flags({opros::ready::read, opros::ready::write}), &send_sock);
 
-		std::array<opros::event_info, 1> triggered;
-
-		if(ws.wait(3000, triggered) == 0){
+		if(!ws.wait(3000)){
 			// if timeout was hit
 			// NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
 #if CFG_OS == CFG_OS_WINDOWS
 			utki::log([](auto&o){o << "WARNING: Waiting for writing to UDP socket does not work on Win32";});
 #endif
 		}else{
+			auto triggered = ws.get_triggered();
 			utki::assert(triggered[0].flags.get(opros::ready::write), SL);
 			utki::assert(!triggered[0].flags.get(opros::ready::read), SL);
 		}

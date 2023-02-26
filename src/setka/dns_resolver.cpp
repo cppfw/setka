@@ -173,7 +173,7 @@ public:
 
 	void start_sending()
 	{
-		this->wait_set.change(this->socket, utki::make_flags({opros::ready::read, opros::ready::write}));
+		this->wait_set.change(this->socket, utki::make_flags({opros::ready::read, opros::ready::write}), &this->socket);
 	}
 
 	// NOTE: call to this function should be protected by mutex.
@@ -776,12 +776,10 @@ private:
 			}
 		}
 
-		this->wait_set.add(this->queue, utki::make_flags({opros::ready::read}));
-		this->wait_set.add(this->socket, utki::make_flags({opros::ready::read}));
+		this->wait_set.add(this->queue, utki::make_flags({opros::ready::read}), &this->queue);
+		this->wait_set.add(this->socket, utki::make_flags({opros::ready::read}), &this->socket);
 
-		std::array<opros::event_info, 2> triggered;
-		size_t num_triggered = 0;
-
+		// TODO: rewrite using nitki::loop_thread
 		while (!this->quit_flag) {
 			uint32_t timeout;
 
@@ -789,9 +787,12 @@ private:
 				std::lock_guard<decltype(this->mutex)> mutex_guard(this->mutex);
 
 				utki::flags<opros::ready> flags(false);
-				for (size_t i = 0; i != num_triggered; ++i) {
-					if (triggered[i].object == &this->socket) {
-						flags = triggered[i].flags;
+				for (const auto& t : this->wait_set.get_triggered()) {
+					if (t.user_data == &this->socket) {
+						flags = t.flags;
+						LOG([&](auto& o) {
+							o << "socket flags = " << flags << std::endl;
+						})
 					}
 				}
 
@@ -929,7 +930,7 @@ private:
 
 					if (this->send_list.size() == 0) {
 						// move socket to waiting for READ condition only
-						this->wait_set.change(this->socket, utki::make_flags({opros::ready::read}));
+						this->wait_set.change(this->socket, utki::make_flags({opros::ready::read}), &this->socket);
 						LOG([&](auto& o) {
 							o << "socket wait mode changed to read only" << std::endl;
 						})
@@ -986,7 +987,7 @@ private:
 				timeout = this->time_map_1->begin()->first - cur_time;
 			}
 
-			// Make sure that ting::GetTicks is called at least 4 times per full time warp around cycle.
+			// Make sure that utki::get_ticks_ms() is called at least 4 times per full time warp around cycle.
 			timeout = std::min(timeout, uint32_t(-1) / 4); // clamp top
 
 // Workaround for strange bug on Win32 (reproduced on WinXP at least).
@@ -1001,10 +1002,12 @@ private:
 			LOG([&](auto& o) {
 				o << "DNS thread: waiting with timeout = " << timeout << std::endl;
 			})
-			num_triggered = this->wait_set.wait(timeout, triggered);
-			if (num_triggered == 0) {
+			bool is_triggered = this->wait_set.wait(timeout);
+			if (!is_triggered) {
 				// no waitables triggered
-				//				TRACE(<< "timeout hit" << std::endl)
+				LOG([](auto& o) {
+					o << "timeout hit" << std::endl;
+				})
 				continue;
 			}
 

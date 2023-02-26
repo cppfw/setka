@@ -234,7 +234,7 @@ size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destinatio
 	while (true) {
 		len = ::sendto(
 			sock,
-			reinterpret_cast<const char*>(buf.begin()),
+			reinterpret_cast<const char*>(buf.data()),
 			int(buf.size()),
 			0,
 			reinterpret_cast<struct sockaddr*>(&socket_address),
