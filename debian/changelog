@@ -1,3 +1,9 @@
+libsetka (1.0.29) unstable; urgency=medium
+
+  * update to latest opros
+
+ -- Ivan Gagis <igagis@gmail.com>  Mon, 27 Feb 2023 15:17:10 +0200
+
 libsetka (1.0.28) unstable; urgency=medium
 
   * lint off in homebrew recipe
