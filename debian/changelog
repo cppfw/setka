@@ -1,3 +1,9 @@
+libsetka (1.0.30) unstable; urgency=medium
+
+  * correct send() methods arguments const modifier
+
+ -- Ivan Gagis <igagis@gmail.com>  Thu, 13 Apr 2023 11:04:41 +0300
+
 libsetka (1.0.29) unstable; urgency=medium
 
   * update to latest opros
