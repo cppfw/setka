@@ -83,7 +83,7 @@ public:
 	 * @return number of bytes actually sent. Actually it is either 0 or the size of the
 	 *         datagram passed in as argument.
 	 */
-	size_t send(const utki::span<uint8_t> buf, const address& destination_address);
+	size_t send(utki::span<const uint8_t> buf, const address& destination_address);
 
 	/**
 	 * @brief Receive datagram.

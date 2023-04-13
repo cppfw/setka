@@ -169,7 +169,7 @@ udp_socket::udp_socket(uint16_t port)
 	}
 }
 
-size_t udp_socket::send(const utki::span<uint8_t> buf, const address& destination_address)
+size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destination_address)
 {
 	if (this->is_empty()) {
 		throw std::logic_error("udp_socket::send(): socket is empty");

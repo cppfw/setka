@@ -145,7 +145,7 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 	}
 }
 
-size_t tcp_socket::send(const utki::span<uint8_t> buf)
+size_t tcp_socket::send(utki::span<const uint8_t> buf)
 {
 	if (this->is_empty()) {
 		throw std::logic_error("tcp_socket::send(): socket is empty");
