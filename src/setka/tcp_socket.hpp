@@ -91,6 +91,8 @@ public:
 	 */
 	size_t receive(utki::span<uint8_t> buf);
 
+	void disconnect();
+
 	/**
 	 * @brief Get local IP address and port.
 	 * @return IP address and port of the local socket.

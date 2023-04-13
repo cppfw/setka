@@ -52,13 +52,9 @@ void socket::close() noexcept
 	}
 
 #if CFG_OS == CFG_OS_WINDOWS
-	// Closing socket in Win32.
-	// refer to http://tangentsoft.net/wskfaq/newbie.html#howclose for details
-	shutdown(this->win_sock, SD_BOTH);
 	closesocket(this->win_sock);
-
-	this->close_event_for_waitable();
 	this->win_sock = invalid_socket;
+	this->close_event_for_waitable();
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	::close(this->handle);
 	this->handle = invalid_socket;

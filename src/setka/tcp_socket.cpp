@@ -230,6 +230,21 @@ size_t tcp_socket::receive(utki::span<uint8_t> buf)
 	return size_t(len);
 }
 
+void tcp_socket::disconnect()
+{
+	if (this->is_empty()) {
+		return;
+	}
+
+#if CFG_OS == CFG_OS_WINDOWS
+	shutdown(this->win_sock, SD_BOTH);
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
+	shutdown(this->handle, SHUT_RDWR);
+#else
+#	error "Unsupported OS"
+#endif
+}
+
 namespace {
 address make_ip_address(const sockaddr_storage& addr)
 {
