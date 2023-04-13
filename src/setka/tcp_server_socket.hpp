@@ -65,7 +65,7 @@ public:
 	tcp_server_socket& operator=(const tcp_server_socket&) = delete;
 
 	tcp_server_socket(tcp_server_socket&& s) :
-		socket(std::move(s)),
+		socket(std::move(static_cast<socket&&>(s))),
 		disable_naggle(s.disable_naggle)
 	{}
 

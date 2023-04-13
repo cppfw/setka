@@ -51,7 +51,7 @@ bool is_ipv6_supported_by_os(){
 }
 
 namespace basic_client_server_test{
-void send_all(setka::tcp_socket& s, utki::span<uint8_t> buf){
+void send_all(setka::tcp_socket& s, utki::span<const uint8_t> buf){
 	if(s.is_empty()){
 		throw std::logic_error("send_all(): socket is not opened");
 	}
@@ -62,7 +62,7 @@ void send_all(setka::tcp_socket& s, utki::span<uint8_t> buf){
 	size_t offset = 0;
 
 	while(true){
-		size_t res = s.send(decltype(buf)(&*buf.begin() + offset, buf.size() - offset));
+		size_t res = s.send(decltype(buf)(buf.data() + offset, buf.size() - offset));
 		left -= res;
 		utki::assert(left >= 0, SL);
 		offset += res;
@@ -280,7 +280,7 @@ void run(){
 				utki::assert(send_buffer.size() > 0, SL);
 
 				try{
-					auto res = sock_s.send(utki::span<uint8_t>(send_buffer.data() + num_bytes_send, send_buffer.size() - num_bytes_send));
+					auto res = sock_s.send(utki::make_span(send_buffer.data() + num_bytes_send, send_buffer.size() - num_bytes_send));
 					num_bytes_send += res;
 					if(res == 0){
 						utki::assert(res > 0, SL); // since it was CanWrite() we should be able to write at least something
@@ -393,7 +393,7 @@ void run(){
 		// send
 
 		try{
-			utki::span<uint8_t> buf(&scnt, 1);
+			utki::span<const uint8_t> buf(&scnt, 1);
 			auto res = sock_s.send(buf);
 			utki::assert(res <= 1, SL);
 			if(res == 1){
@@ -511,11 +511,12 @@ void run(){
 	try{
 		send_sock = setka::udp_socket(0);
 
-		std::array<uint8_t, 4> data;
-		data[0] = '0';
-		data[1] = '1';
-		data[2] = '2';
-		data[3] = '4';
+		const std::array<uint8_t, 4> data = {
+			'0',
+			'1',
+			'2',
+			'4',
+		};
 		size_t num_bytes_send = 0;
 
 		setka::address addr(
