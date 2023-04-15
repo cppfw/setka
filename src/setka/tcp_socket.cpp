@@ -164,7 +164,11 @@ size_t tcp_socket::send(utki::span<const uint8_t> buf)
 			sock,
 			reinterpret_cast<const char*>(buf.data()),
 			int(buf.size()),
+#if CFG_OS == CFG_OS_WINDOWS
+			0
+#else
 			MSG_DONTWAIT | MSG_NOSIGNAL // don't block and don't generate SIGPIPE
+#endif
 		);
 		if (len == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
@@ -211,7 +215,11 @@ size_t tcp_socket::receive(utki::span<uint8_t> buf)
 			sock,
 			reinterpret_cast<char*>(buf.data()),
 			int(buf.size()),
+#if CFG_OS == CFG_OS_WINDOWS
+			0
+#else
 			MSG_DONTWAIT // don't block
+#endif
 		);
 		if (len == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
