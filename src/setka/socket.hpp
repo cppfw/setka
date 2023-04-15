@@ -68,6 +68,7 @@ protected:
 	constexpr static const int error_interrupted = WSAEINTR;
 	constexpr static const int error_again = WSAEWOULDBLOCK;
 	constexpr static const int error_in_progress = WSAEWOULDBLOCK;
+	constexpr static const int error_not_connected = WSAENOTCONN;
 
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	using socket_type = int;
@@ -77,6 +78,7 @@ protected:
 	constexpr static const int error_interrupted = EINTR;
 	constexpr static const int error_again = EAGAIN;
 	constexpr static const int error_in_progress = EINPROGRESS;
+	constexpr static const int error_not_connected = ENOTCONN;
 
 #else
 #	error "Unsupported OS"

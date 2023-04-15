@@ -174,7 +174,7 @@ size_t tcp_socket::send(utki::span<const uint8_t> buf)
 #endif
 			if (error_code == error_interrupted) {
 				continue;
-			} else if (error_code == error_again) {
+			} else if (error_code == error_again || error_code == error_not_connected) {
 				// can't send more bytes, return 0 bytes sent
 				len = 0;
 			} else {
@@ -222,7 +222,7 @@ size_t tcp_socket::receive(utki::span<uint8_t> buf)
 
 			if (error_code == error_interrupted) {
 				continue;
-			} else if (error_code == error_again) {
+			} else if (error_code == error_again || error_code == error_not_connected) {
 				// no data available, return 0 bytes received
 				len = 0;
 			} else {

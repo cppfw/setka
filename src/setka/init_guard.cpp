@@ -33,6 +33,7 @@ SOFTWARE.
 #include "dns_resolver.hpp"
 
 #if CFG_OS == CFG_OS_WINDOWS
+#	include <sstream>
 #	include <winsock2.h>
 #	include <utki/windows.hpp>
 
