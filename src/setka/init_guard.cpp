@@ -102,6 +102,8 @@ std::shared_ptr<utki::destructable> setka::get_init_guard_reference()
 	static std::mutex mutex;
 	static std::weak_ptr<utki::destructable> ptr;
 
+	// protect by mutex in case several users try to obtain the reference
+	// simultaneously from different threads
 	std::lock_guard<decltype(mutex)> lock_guard(mutex);
 
 	auto ret = ptr.lock();
