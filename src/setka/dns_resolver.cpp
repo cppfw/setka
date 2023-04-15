@@ -541,9 +541,10 @@ public:
 		time_map_1(&resolvers_by_time_1),
 		time_map_2(&resolvers_by_time_2)
 	{
-		ASSERT(setka::init_guard::is_created(), [&](auto& o) {
-			o << "setka::init_guard is not created before doing the DNS request";
-		})
+		// TODO: get init guard?
+		// ASSERT(setka::init_guard::is_created(), [&](auto& o) {
+		// 	o << "setka::init_guard is not created before doing the DNS request";
+		// })
 	}
 
 	// NOLINTNEXTLINE(modernize-use-equals-default, "destructor is not trivial in DEBUG build")
@@ -1058,7 +1059,8 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 {
 	//	TRACE(<< "dns_resolver::Resolve_ts(): enter" << std::endl)
 
-	ASSERT(setka::init_guard::is_created())
+	// TODO: get init guard?
+	// ASSERT(setka::init_guard::is_created())
 
 	if (host_name.size() > 253) {
 		throw std::logic_error("Too long domain name, it should not exceed 253 characters according to RFC 2181");

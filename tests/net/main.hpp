@@ -6,7 +6,7 @@
 
 
 inline void test_setka_socket(){
-	setka::init_guard net_lib;
+	auto guard = setka::get_init_guard_reference();
 	
 	basic_ip_address_test::run();
 	test_ip_address::run();

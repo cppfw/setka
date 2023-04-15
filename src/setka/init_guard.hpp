@@ -26,28 +26,17 @@ SOFTWARE.
 
 #pragma once
 
-#include <utki/config.hpp>
-#include <utki/singleton.hpp>
+#include <memory>
+
+#include <utki/destructable.hpp>
 
 namespace setka {
 
 /**
- * @brief Socket library singleton class.
- * This is a Socket library singleton class. Creating an object of this class initializes the library
- * while destroying this object de-initializes it. So, the convenient way of initializing the library
- * is to create an object of this class on the stack. Thus, when the object goes out of scope its
- * destructor will be called and the library will be de-initialized automatically.
- * This is what C++ RAII is all about.
+ * @brief Get socket library initialization guard reference.
+ * Application must obtain a reference to the initialization guard before using the socket library.
+ * When all references to the initialization guard are destroyed, the socket library will be de-initialized.
  */
-class init_guard : public utki::intrusive_singleton<init_guard>
-{
-	friend class utki::intrusive_singleton<init_guard>;
-	static utki::intrusive_singleton<init_guard>::instance_type instance;
-
-public:
-	init_guard();
-
-	~init_guard() override;
-};
+std::shared_ptr<utki::destructable> get_init_guard_reference();
 
 } // namespace setka
