@@ -74,6 +74,8 @@ public:
 	 * @brief Send data to connected socket.
 	 * Sends data on connected socket. This method does not guarantee that the whole
 	 * buffer will be sent completely, it will return the number of bytes actually sent.
+	 * If previous wait_set::wait() indicated that socket is ready for writing
+	 * and tcp_socket::send() returns 0, then connection was disconnected by peer.
 	 * @param buf - pointer to the buffer with data to send.
 	 * @return the number of bytes actually sent.
 	 */
@@ -85,7 +87,7 @@ public:
 	 * If there is no data available this function does not block, instead it returns 0,
 	 * indicating that 0 bytes were received.
 	 * If previous wait_set::wait() indicated that socket is ready for reading
-	 * and tcp_socket::receive() returns 0, then connection was closed by peer.
+	 * and tcp_socket::receive() returns 0, then connection was disconnected by peer.
 	 * @param buf - pointer to the buffer where to put received data.
 	 * @return the number of bytes written to the buffer.
 	 */
