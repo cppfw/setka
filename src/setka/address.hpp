@@ -27,6 +27,7 @@ SOFTWARE.
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <string>
 
 #include <utki/config.hpp>
