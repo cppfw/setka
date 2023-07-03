@@ -60,11 +60,11 @@ public:
 	tcp_socket(const tcp_socket&) = delete;
 	tcp_socket& operator=(const tcp_socket&) = delete;
 
-	tcp_socket(tcp_socket&& s) :
+	tcp_socket(tcp_socket&& s) noexcept :
 		socket(std::move(s))
 	{}
 
-	tcp_socket& operator=(tcp_socket&& s)
+	tcp_socket& operator=(tcp_socket&& s) noexcept
 	{
 		this->socket::operator=(std::move(s));
 		return *this;

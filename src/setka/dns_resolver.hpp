@@ -81,6 +81,9 @@ public:
 	dns_resolver(const dns_resolver&) = delete;
 	dns_resolver& operator=(const dns_resolver&) = delete;
 
+	dns_resolver(dns_resolver&&) = delete;
+	dns_resolver& operator=(dns_resolver&&) = delete;
+
 	dns_resolver() = default;
 
 	virtual ~dns_resolver();
@@ -94,6 +97,8 @@ public:
 			)
 		{}
 	};
+
+	constexpr static const auto default_timeout_ms = 20000;
 
 	/**
 	 * @brief Start asynchronous IP-address resolving.
@@ -109,7 +114,7 @@ public:
 	 */
 	void resolve(
 		const std::string& host_name,
-		uint32_t timeout_ms = 20000,
+		uint32_t timeout_ms = default_timeout_ms,
 		const setka::address& dns_ip = setka::address(setka::address::ip(0), 0)
 	);
 

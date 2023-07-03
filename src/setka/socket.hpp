@@ -125,6 +125,9 @@ protected:
 	void close() noexcept;
 
 public:
+	socket(const socket&) = delete;
+	socket& operator=(const socket&) = delete;
+
 	// TODO: remove lint suppression when https://github.com/llvm/llvm-project/issues/55143 is fixed
 	// NOLINTNEXTLINE(bugprone-exception-escape)
 	socket(socket&& s) noexcept(false) :

@@ -31,14 +31,14 @@ SOFTWARE.
 #include <string>
 
 #include <utki/config.hpp>
+#include <utki/types.hpp>
 
 namespace setka {
 
 /**
- * @brief a structure which holds IP address.
- * IP address consists of IP host address and an IP port.
+ * @brief a structure which holds network address.
+ * Network address consists of IP address and an IP port.
  */
-// TODO: rename to just 'address'
 class address
 {
 public:
@@ -82,6 +82,7 @@ public:
 		 * @param h - IPv4 host to use for initialization.
 		 */
 		ip(uint32_t h) :
+			// NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
 			ip(0, 0, 0xffff, h)
 		{}
 
@@ -98,10 +99,10 @@ public:
 		 * @param a7 - sevens number.
 		 */
 		ip(uint16_t a0, uint16_t a1, uint16_t a2, uint16_t a3, uint16_t a4, uint16_t a5, uint16_t a6, uint16_t a7) :
-			ip((uint32_t(a0) << 16) | uint32_t(a1),
-			   (uint32_t(a2) << 16) | uint32_t(a3),
-			   (uint32_t(a4) << 16) | uint32_t(a5),
-			   (uint32_t(a6) << 16) | uint32_t(a7))
+			ip((uint32_t(a0) << (utki::num_bits_in_byte * 2)) | uint32_t(a1),
+			   (uint32_t(a2) << (utki::num_bits_in_byte * 2)) | uint32_t(a3),
+			   (uint32_t(a4) << (utki::num_bits_in_byte * 2)) | uint32_t(a5),
+			   (uint32_t(a6) << (utki::num_bits_in_byte * 2)) | uint32_t(a7))
 		{}
 
 		/**
@@ -140,14 +141,14 @@ public:
 		   uint8_t a13,
 		   uint8_t a14,
 		   uint8_t a15) :
-			ip((uint16_t(a0) << 8) | uint16_t(a1),
-			   (uint16_t(a2) << 8) | uint16_t(a3),
-			   (uint16_t(a4) << 8) | uint16_t(a5),
-			   (uint16_t(a6) << 8) | uint16_t(a7),
-			   (uint16_t(a8) << 8) | uint16_t(a9),
-			   (uint16_t(a10) << 8) | uint16_t(a11),
-			   (uint16_t(a12) << 8) | uint16_t(a13),
-			   (uint16_t(a14) << 8) | uint16_t(a15))
+			ip((uint16_t(a0) << utki::num_bits_in_byte) | uint16_t(a1),
+			   (uint16_t(a2) << utki::num_bits_in_byte) | uint16_t(a3),
+			   (uint16_t(a4) << utki::num_bits_in_byte) | uint16_t(a5),
+			   (uint16_t(a6) << utki::num_bits_in_byte) | uint16_t(a7),
+			   (uint16_t(a8) << utki::num_bits_in_byte) | uint16_t(a9),
+			   (uint16_t(a10) << utki::num_bits_in_byte) | uint16_t(a11),
+			   (uint16_t(a12) << utki::num_bits_in_byte) | uint16_t(a13),
+			   (uint16_t(a14) << utki::num_bits_in_byte) | uint16_t(a15))
 		{}
 
 		/**
@@ -184,6 +185,7 @@ public:
 		 */
 		bool is_v4() const noexcept
 		{
+			// NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
 			return this->quad[2] == 0xffff && this->quad[1] == 0 && this->quad[0] == 0;
 		}
 
@@ -230,7 +232,7 @@ public:
 		std::string to_string() const;
 	};
 
-	ip host; ///< IPv6 address
+	ip host{}; ///< IPv6 address
 	uint16_t port = 0; ///< IP port number
 
 	/**
@@ -261,7 +263,10 @@ public:
 	 * @param p - IP port number.
 	 */
 	address(uint8_t h1, uint8_t h2, uint8_t h3, uint8_t h4, uint16_t p) noexcept :
-		host((uint32_t(h1) << 24) | (uint32_t(h2) << 16) | (uint32_t(h3) << 8) | uint32_t(h4)),
+		host(
+			(uint32_t(h1) << (utki::num_bits_in_byte * 3)) | (uint32_t(h2) << (utki::num_bits_in_byte * 2))
+			| (uint32_t(h3) << utki::num_bits_in_byte) | uint32_t(h4)
+		),
 		port(p)
 	{}
 

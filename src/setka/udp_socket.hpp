@@ -44,7 +44,7 @@ namespace setka {
  */
 class udp_socket : public socket
 {
-	bool ipv4;
+	bool ipv4 = true;
 
 public:
 	udp_socket() = default;
@@ -61,16 +61,18 @@ public:
 	udp_socket(const udp_socket&) = delete;
 	udp_socket& operator=(const udp_socket&) = delete;
 
-	udp_socket(udp_socket&& s) :
+	udp_socket(udp_socket&& s) noexcept :
 		socket(std::move(s))
 	{}
 
-	udp_socket& operator=(udp_socket&& s)
+	udp_socket& operator=(udp_socket&& s) noexcept
 	{
 		this->ipv4 = s.ipv4;
 		this->socket::operator=(std::move(s));
 		return *this;
 	}
+
+	~udp_socket() = default;
 
 	/**
 	 * @brief Send datagram over UDP socket.

@@ -23,7 +23,7 @@ public:
 			host_name(std::move(host_name))
 	{}
 	
-	setka::address::ip ip;
+	setka::address::ip ip{};
 	
 	nitki::semaphore& sema;
 	
@@ -129,11 +129,11 @@ public:
 	
 	std::string host;
 	
-	setka::address::ip ip;
+	setka::address::ip ip{};
 	
 	nitki::semaphore& sema;
 	
-	setka::dns_result res;
+	setka::dns_result res = setka::dns_result::error;
 	
 
 	void on_completed(setka::dns_result res, setka::address::ip ip)noexcept override{

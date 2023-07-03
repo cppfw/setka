@@ -68,7 +68,7 @@ std::string parse_host_name_from_dns_packet(const uint8_t*& p, const uint8_t* en
 		}
 
 		uint8_t len = *p;
-		++p;
+		++p; // NOLINT
 
 		if (len == 0) {
 			break;
@@ -82,8 +82,8 @@ std::string parse_host_name_from_dns_packet(const uint8_t*& p, const uint8_t* en
 			return "";
 		}
 
-		host += std::string(reinterpret_cast<const char*>(p), size_t(len));
-		p += len;
+		host += std::string(reinterpret_cast<const char*>(p), size_t(len)); // NOLINT
+		p += len; // NOLINT
 		ASSERT(p <= end - 1 || p == end)
 	}
 	//			TRACE(<< "host = " << host << std::endl)
@@ -92,7 +92,7 @@ std::string parse_host_name_from_dns_packet(const uint8_t*& p, const uint8_t* en
 }
 
 // this mutex is used to protect the dns::thread access.
-std::mutex mutex;
+std::mutex mutex; // NOLINT
 
 using resolvers_time_map_type = std::multimap<uint32_t, resolver*>;
 using resolvers_time_iter_type = resolvers_time_map_type::iterator;
@@ -116,16 +116,21 @@ public:
 	resolver(const resolver&) = default;
 	resolver& operator=(const resolver&) = default;
 
-	dns_resolver* hnr;
+	resolver(resolver&&) = delete;
+	resolver& operator=(resolver&&) = delete;
+
+	~resolver() = default;
+
+	dns_resolver* hnr = nullptr;
 
 	std::string host_name; // host name to resolve
 
-	uint16_t recordType; // type of DNS record to get
+	uint16_t recordType = 0; // type of DNS record to get
 
-	resolvers_time_map_type* timeMap;
+	resolvers_time_map_type* timeMap = nullptr;
 	resolvers_time_iter_type timeMapIter;
 
-	uint16_t id;
+	uint16_t id = 0;
 	id_iter_type idIter;
 
 	requests_to_send_iter_type sendIter; // TODO: get rid of iter
@@ -160,7 +165,7 @@ public:
 	// This variable is for detecting system clock ticks warp around.
 	// True if last call to ting::GetTicks() returned value in first half.
 	// False otherwise.
-	bool last_ticks_in_first_half;
+	bool last_ticks_in_first_half = false;
 
 	resolvers_time_map_type* time_map_1;
 	resolvers_time_map_type* time_map_2;
@@ -208,7 +213,8 @@ public:
 	//       returns true if request is sent, false otherwise.
 	bool send_request_to_dns(const dns::resolver* r)
 	{
-		std::array<uint8_t, 512> buf; // RFC 1035 limits DNS request UDP packet size to 512 bytes.
+		// RFC 1035 limits DNS request UDP packet size to 512 bytes.
+		std::array<uint8_t, utki::kilobyte / 2> buf; // NOLINT
 
 		size_t packet_size = 2 + // ID
 			2 + // flags
@@ -227,27 +233,27 @@ public:
 
 		// ID
 		utki::serialize16be(r->id, p);
-		p += 2;
+		p += 2; // NOLINT
 
 		// flags
-		utki::serialize16be(0x100, p);
-		p += 2;
+		utki::serialize16be(0x100, p); // NOLINT
+		p += 2; // NOLINT
 
 		// Number of questions
 		utki::serialize16be(1, p);
-		p += 2;
+		p += 2; // NOLINT
 
 		// Number of answers
 		utki::serialize16be(0, p);
-		p += 2;
+		p += 2; // NOLINT
 
 		// Number of authority records
 		utki::serialize16be(0, p);
-		p += 2;
+		p += 2; // NOLINT
 
 		// Number of other records
 		utki::serialize16be(0, p);
-		p += 2;
+		p += 2; // NOLINT
 
 		// domain name
 		for (size_t dot_pos = 0; dot_pos < r->host_name.size();) {
@@ -262,10 +268,10 @@ public:
 			ASSERT(label_length <= 0xff)
 
 			*p = uint8_t(label_length); // save label length
-			++p;
+			++p; // NOLINT
 			// copy the label bytes
-			memcpy(p, r->host_name.c_str() + old_dot_pos, label_length);
-			p += label_length;
+			memcpy(p, r->host_name.c_str() + old_dot_pos, label_length); // NOLINT
+			p += label_length; // NOLINT
 
 			++dot_pos;
 
@@ -273,14 +279,14 @@ public:
 		}
 
 		*p = 0; // terminate labels sequence
-		++p;
+		++p; // NOLINT
 
 		utki::serialize16be(r->recordType, p);
-		p += 2;
+		p += 2; // NOLINT
 
 		// Question class (1 means inet)
 		utki::serialize16be(1, p);
-		p += 2; // NOLINT(clang-analyzer-deadcode.DeadStores, "p is read in DEBUG build")
+		p += 2; // NOLINT
 
 		ASSERT(&*buf.begin() <= p && p <= &*buf.end());
 		ASSERT(size_t(p - &*buf.begin()) == packet_size);
@@ -357,22 +363,25 @@ public:
 		}
 
 		const uint8_t* p = buf.begin();
-		p += 2; // skip ID
+		// skip ID
+		p += 2; // NOLINT
 
 		{
 			uint16_t flags = utki::deserialize16be(p);
-			p += 2;
+			p += 2; // NOLINT
 
-			if ((flags & 0x8000) == 0) { // we expect it to be a response, not query.
+			constexpr auto response_flag_mask = 0x8000;
+			if ((flags & response_flag_mask) == 0) { // we expect it to be a response, not query.
 				LOG([&](auto& o) {
-					o << "parse_reply_from_dns(): (flags & 0x8000) = " << (flags & 0x8000) << std::endl;
+					o << "parse_reply_from_dns(): (flags & response_flag_mask) = " << (flags & response_flag_mask)
+					  << std::endl;
 				})
 				return {setka::dns_result::dns_error};
 			}
 
 			// Check response code
-			if ((flags & 0xf) != 0) { // 0 means no error condition
-				if ((flags & 0xf) == 3) { // name does not exist
+			if ((flags & utki::lower_nibble_mask) != 0) { // 0 means no error condition
+				if ((flags & utki::lower_nibble_mask) == 3) { // name does not exist
 					return {setka::dns_result::not_found};
 				} else {
 					LOG([&](auto& o) {
@@ -386,7 +395,7 @@ public:
 		// check number of questions
 		{
 			uint16_t num_questions = utki::deserialize16be(p);
-			p += 2;
+			p += 2; // NOLINT
 
 			if (num_questions != 1) {
 				return {setka::dns_result::dns_error};
@@ -394,7 +403,7 @@ public:
 		}
 
 		uint16_t num_answers = utki::deserialize16be(p);
-		p += 2;
+		p += 2; // NOLINT
 		ASSERT(buf.begin() <= p)
 		ASSERT(p <= (buf.end() - 1) || p == buf.end())
 
@@ -404,12 +413,12 @@ public:
 
 		{
 			//			uint16_t nscount = utki::deserialize16be(p);
-			p += 2;
+			p += 2; // NOLINT
 		}
 
 		{
 			//			uint16_t arcount = utki::deserialize16be(p);
-			p += 2;
+			p += 2; // NOLINT
 		}
 
 		// parse host name
@@ -426,7 +435,7 @@ public:
 		// check query type, we sent question type 1 (A query).
 		{
 			uint16_t type = utki::deserialize16be(p);
-			p += 2;
+			p += 2; // NOLINT
 
 			if (type != r->recordType) {
 				return {setka::dns_result::dns_error}; // wrong question type
@@ -436,7 +445,7 @@ public:
 		// check query class, we sent question class 1 (inet).
 		{
 			uint16_t cls = utki::deserialize16be(p);
-			p += 2;
+			p += 2; // NOLINT
 
 			if (cls != 1) {
 				return {setka::dns_result::dns_error}; // wrong question class
@@ -452,50 +461,52 @@ public:
 			}
 
 			// check if there is a domain name or a reference to the domain name
-			if (((*p) >> 6) == 0) { // check if two high bits are set
+
+			// check if two high bits are set
+			if (((*p) >> 6) == 0) { // NOLINT
 				// skip possible domain name
-				for (; p != buf.end() && *p != 0; ++p) {
+				for (; p != buf.end() && *p != 0; ++p) { // NOLINT
 					ASSERT(buf.overlaps(p))
 				}
 				if (p == buf.end()) {
 					return {setka::dns_result::dns_error}; // unexpected end of packet
 				}
-				++p;
+				++p; // NOLINT
 			} else {
 				// it is a reference to the domain name.
 				// skip it
-				p += 2;
+				p += 2; // NOLINT
 			}
 
 			if (buf.end() - p < 2) {
 				return {setka::dns_result::dns_error}; // unexpected end of packet
 			}
 			uint16_t type = utki::deserialize16be(p);
-			p += 2;
+			p += 2; // NOLINT
 
 			if (buf.end() - p < 2) {
 				return {setka::dns_result::dns_error}; // unexpected end of packet
 			}
 			//			uint16_t cls = ting::util::Deserialize16(p);
-			p += 2;
+			p += 2; // NOLINT
 
 			if (buf.end() - p < 4) {
 				return {setka::dns_result::dns_error}; // unexpected end of packet
 			}
 			//			uint32_t ttl = ting::util::Deserialize32(p);//time till the returned value can be cached.
-			p += 4;
+			p += 4; // NOLINT
 
 			if (buf.end() - p < 2) {
 				return {setka::dns_result::dns_error}; // unexpected end of packet
 			}
 			uint16_t data_len = utki::deserialize16be(p);
-			p += 2;
+			p += 2; // NOLINT
 
 			if (buf.end() - p < data_len) {
 				return {setka::dns_result::dns_error}; // unexpected end of packet
 			}
 			if (type == r->recordType) {
-				address::ip h;
+				address::ip h{};
 
 				switch (type) {
 					case dns_record_a_id: // 'A' type answer
@@ -506,15 +517,15 @@ public:
 						h = address::ip(utki::deserialize32be(p));
 						break;
 					case dns_record_aaaa_id: // 'AAAA' type answer
-						if (data_len < 2 * 8) {
+						if (data_len < 2 * 8) { // NOLINT
 							return {setka::dns_result::dns_error}; // unexpected end of packet
 						}
 
 						h = address::ip(
 							utki::deserialize32be(p),
-							utki::deserialize32be(p + 4),
-							utki::deserialize32be(p + 8),
-							utki::deserialize32be(p + 12)
+							utki::deserialize32be(p + 4), // NOLINT
+							utki::deserialize32be(p + 4 * 2), // NOLINT
+							utki::deserialize32be(p + 4 * 3) // NOLINT
 						);
 						break;
 					default:
@@ -530,7 +541,7 @@ public:
 				})
 				return {setka::dns_result::ok, h};
 			}
-			p += data_len;
+			p += data_len; // NOLINT
 		}
 
 		return {setka::dns_result::dns_error}; // no answer found
@@ -553,6 +564,12 @@ public:
 										   ASSERT(this->resolvers_by_time_1.size() == 0)
 											   ASSERT(this->resolvers_by_time_2.size() == 0)
 												   ASSERT(this->id_map.size() == 0)}
+
+	lookup_thread(const lookup_thread&) = delete;
+	lookup_thread& operator=(const lookup_thread&) = delete;
+
+	lookup_thread(lookup_thread&&) = delete;
+	lookup_thread& operator=(lookup_thread&&) = delete;
 
 	// returns the removed resolver, returns nullptr if there was
 	// no such resolver object found.
@@ -688,19 +705,19 @@ private:
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 			papki::fs_file f("/etc/resolv.conf");
 
-			std::vector<uint8_t> buf = f.load(0xfff); // 4kb max
+			std::vector<uint8_t> buf = f.load(size_t(utki::kilobyte) * 4); // 4kb max
 
-			for (uint8_t* p = &*buf.begin(); p != &*buf.end(); ++p) {
+			for (uint8_t* p = &*buf.begin(); p != &*buf.end(); ++p) { // NOLINT
 				uint8_t* start = p;
 
 				while (p != &*buf.end() && *p != '\n') {
-					++p;
+					++p; // NOLINT
 				}
 
 				ASSERT(p >= start)
-				std::string line(reinterpret_cast<const char*>(start), size_t(p - start));
+				std::string line(reinterpret_cast<const char*>(start), size_t(p - start)); // NOLINT
 				if (p == &*buf.end()) {
-					--p;
+					--p; // NOLINT
 				}
 
 				const std::string ns("nameserver ");
@@ -721,7 +738,8 @@ private:
 				})
 
 				try {
-					this->dns = setka::address(ipstr.c_str(), 53);
+					constexpr auto dns_port = 53;
+					this->dns = setka::address(ipstr.c_str(), dns_port);
 					return;
 				} catch (...) {
 				}
@@ -783,7 +801,7 @@ private:
 
 		// TODO: rewrite using nitki::loop_thread
 		while (!this->quit_flag) {
-			uint32_t timeout;
+			uint32_t timeout = 0;
 
 			{
 				std::lock_guard<decltype(this->mutex)> mutex_guard(this->mutex);
@@ -809,23 +827,27 @@ private:
 						o << "can read" << std::endl;
 					})
 					try {
-						std::array<uint8_t, 512> buf; // RFC 1035 limits DNS request UDP packet size to 512 bytes. So,
-													  // no need to allocate bigger buffer.
+						// RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger
+						// buffer.
+						// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+						std::array<uint8_t, utki::kilobyte / 2> buf;
 						setka::address address;
 						size_t ret = this->socket.recieve(utki::make_span(buf), address);
 
+						constexpr auto host_name_start_offset = 12;
+
 						ASSERT(ret != 0)
 						ASSERT(ret <= buf.size())
-						if (ret >= 13) { // at least there should be standard header and host name, otherwise ignore
-										 // received UDP packet
-							uint16_t id = utki::deserialize16be(&*buf.begin());
+						// at least there should be standard header and host name, otherwise ignore received UDP packet
+						if (ret > host_name_start_offset) {
+							uint16_t id = utki::deserialize16be(buf.data());
 
 							auto i = this->id_map.find(id);
 							if (i != this->id_map.end()) {
 								ASSERT(id == i->second->id)
 
 								// check by host name also
-								const uint8_t* p = &*buf.begin() + 12; // start of the host name
+								const uint8_t* p = buf.data() + host_name_start_offset;
 								std::string host = dns::parse_host_name_from_dns_packet(p, &*buf.end());
 
 								if (host == i->second->host_name) {
@@ -1027,6 +1049,7 @@ private:
 };
 
 // accessing this variable must be protected by dnsMutex
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::unique_ptr<lookup_thread> thread;
 
 } // namespace dns
@@ -1063,7 +1086,9 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 	// TODO: get init guard?
 	// ASSERT(setka::init_guard::is_created())
 
-	if (host_name.size() > 253) {
+	constexpr auto max_host_name_size = 253;
+
+	if (host_name.size() > max_host_name_size) {
 		throw std::logic_error("Too long domain name, it should not exceed 253 characters according to RFC 2181");
 	}
 
