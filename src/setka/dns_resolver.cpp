@@ -619,10 +619,12 @@ private:
 
 	void init_dns()
 	{
+		constexpr auto dns_port = 53;
+
 		try {
 #if CFG_OS == CFG_OS_WINDOWS
 			struct win_reg_key {
-				HKEY key;
+				HKEY key = nullptr;
 
 				win_reg_key()
 				{
@@ -637,21 +639,28 @@ private:
 					}
 				}
 
-				~win_reg_key()
+				win_reg_key(const win_reg_key&) = delete win_reg_key & operator=(const win_reg_key&) = delete
+
+					win_reg_key(win_reg_key&&) = delete win_reg_key & operator=(win_reg_key&&) = delete
+
+					~win_reg_key()
 				{
 					RegCloseKey(this->key);
 				}
 			} key;
 
-			std::array<char, 256> subkey; // according to MSDN docs maximum key name length is 255 chars.
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+			std::array<char, std::numeric_limits<uint8_t>::max() + 1>
+				subkey; // according to MSDN docs maximum key name length is 255 chars.
 
-			for (unsigned i = 0; RegEnumKey(key.key, i, &*subkey.begin(), DWORD(subkey.size())) == ERROR_SUCCESS; ++i) {
-				HKEY h_sub;
-				if (RegOpenKey(key.key, &*subkey.begin(), &h_sub) != ERROR_SUCCESS) {
+			for (unsigned i = 0; RegEnumKey(key.key, i, subkey.data(), DWORD(subkey.size())) == ERROR_SUCCESS; ++i) {
+				HKEY h_sub = nullptr;
+				if (RegOpenKey(key.key, subkey.data(), &h_sub) != ERROR_SUCCESS) {
 					continue;
 				}
 
-				std::array<BYTE, 1024> value;
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+				std::array<BYTE, utki::kilobyte> value;
 
 				auto len = DWORD(value.size());
 
@@ -661,7 +670,8 @@ private:
 					})
 				} else {
 					try {
-						std::string str(reinterpret_cast<char*>(&*value.begin()));
+						// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+						std::string str(reinterpret_cast<char*>(value.data()));
 						size_t space_index = str.find(' ');
 
 						std::string ip = str.substr(0, space_index);
@@ -669,7 +679,7 @@ private:
 							o << "NameServer ip = " << ip << std::endl;
 						})
 
-						this->dns = setka::address(ip.c_str(), 53);
+						this->dns = setka::address(ip.c_str(), dns_port);
 						RegCloseKey(h_sub);
 						return;
 					} catch (...) {
@@ -686,7 +696,8 @@ private:
 				}
 
 				try {
-					std::string str(reinterpret_cast<char*>(&*value.begin()));
+					// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+					std::string str(reinterpret_cast<char*>(value.data()));
 					size_t space_index = str.find(' ');
 
 					std::string ip = str.substr(0, space_index);
@@ -694,7 +705,7 @@ private:
 						o << "DhcpNameServer ip = " << ip << std::endl;
 					})
 
-					this->dns = setka::address(ip.c_str(), 53);
+					this->dns = setka::address(ip.c_str(), dns_port);
 					RegCloseKey(h_sub);
 					return;
 				} catch (...) {
@@ -738,7 +749,6 @@ private:
 				})
 
 				try {
-					constexpr auto dns_port = 53;
 					this->dns = setka::address(ipstr.c_str(), dns_port);
 					return;
 				} catch (...) {
@@ -1016,10 +1026,11 @@ private:
 
 // Workaround for strange bug on Win32 (reproduced on WinXP at least).
 // For some reason waiting for WRITE on UDP socket does not work. It hangs in the
-// Wait() method until timeout is hit. So, just check every 100ms if it is OK to write to UDP socket.
+// wait() method until timeout is hit. So, just check every 100ms if it is OK to write to UDP socket.
 #if CFG_OS == CFG_OS_WINDOWS
 			if (this->send_list.size() > 0) {
-				timeout = std::min(timeout, uint32_t(100)); // clamp top
+				constexpr auto max_timeout_ms = 100;
+				timeout = std::min(timeout, uint32_t(max_timeout_ms)); // clamp top
 			}
 #endif
 
@@ -1132,7 +1143,9 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 		memset(&osvi, 0, sizeof(osvi));
 		osvi.dwOSVersionInfoSize = sizeof(osvi);
 
-		osvi.dwMajorVersion = 5; // version 5 is WinXP
+		constexpr auto winxp_major_version = 5;
+
+		osvi.dwMajorVersion = winxp_major_version;
 		osvi.dwMinorVersion = 0;
 		osvi.wServicePackMajor = 0;
 		osvi.wServicePackMinor = 0;

@@ -92,7 +92,7 @@ address::ip address::ip::parse_v4(const char* str)
 address::ip address::ip::parse_v6(const char* str)
 {
 #if CFG_OS == CFG_OS_WINDOWS
-	sockaddr_in6 aa;
+	sockaddr_in6 aa{};
 	in6_addr& a = aa.sin6_addr;
 #else
 	in6_addr a{};
@@ -117,17 +117,18 @@ address::ip address::ip::parse_v6(const char* str)
 		a.s6_addr[2],
 		a.s6_addr[3],
 		a.s6_addr[4],
-		a.s6_addr[5],
-		a.s6_addr[6],
-		a.s6_addr[7],
-		a.s6_addr[8],
-		a.s6_addr[9],
-		a.s6_addr[10],
-		a.s6_addr[11],
-		a.s6_addr[12],
-		a.s6_addr[13],
-		a.s6_addr[14],
-		a.s6_addr[15]};
+		a.s6_addr[5], // NOLINT
+		a.s6_addr[6], // NOLINT
+		a.s6_addr[7], // NOLINT
+		a.s6_addr[8], // NOLINT
+		a.s6_addr[9], // NOLINT
+		a.s6_addr[10], // NOLINT
+		a.s6_addr[11], // NOLINT
+		a.s6_addr[12], // NOLINT
+		a.s6_addr[13], // NOLINT
+		a.s6_addr[14], // NOLINT
+		a.s6_addr[15] // NOLINT
+	};
 #else
 	return {
 		a.__in6_u.__u6_addr8[0], // NOLINT
