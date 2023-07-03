@@ -72,7 +72,11 @@ public:
 		return *this;
 	}
 
-	~udp_socket() = default;
+	~udp_socket()
+#if CFG_OS == CFG_WINDOWS
+		override
+#endif
+		= default;
 
 	/**
 	 * @brief Send datagram over UDP socket.

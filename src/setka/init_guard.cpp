@@ -68,6 +68,7 @@ public:
 		}
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_UNIX || CFG_OS == CFG_OS_MACOSX
 		// SIGPIPE is generated when a remote socket is closed
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
 		auto handler = signal(SIGPIPE, SIG_IGN);
 		if (handler != SIG_DFL) {
 			signal(SIGPIPE, handler);
@@ -92,6 +93,7 @@ public:
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_UNIX || CFG_OS == CFG_OS_MACOSX
 		// restore the SIGPIPE handler
 		auto handler = signal(SIGPIPE, SIG_DFL);
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
 		if (handler != SIG_IGN) {
 			signal(SIGPIPE, handler);
 		}

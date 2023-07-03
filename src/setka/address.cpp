@@ -40,6 +40,10 @@ SOFTWARE.
 #	error "Unknown OS"
 #endif
 
+#ifdef max
+#	undef max
+#endif
+
 using namespace setka;
 
 namespace {
@@ -164,6 +168,7 @@ address::address(const char* str)
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 		++str;
 
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
 		char* dst = nullptr;
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 		for (dst = buf.data(); *str != ']'; ++dst, ++str) {
@@ -189,6 +194,7 @@ address::address(const char* str)
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 			std::array<char, (3 * 4 + 3 + 1)> buf;
 
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
 			char* dst = nullptr;
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 			for (dst = buf.data(); *str != ':' && *str != 0; ++dst, ++str) {
