@@ -639,11 +639,13 @@ private:
 					}
 				}
 
-				win_reg_key(const win_reg_key&) = delete win_reg_key & operator=(const win_reg_key&) = delete
+				win_reg_key(const win_reg_key&) = delete;
+				win_reg_key& operator=(const win_reg_key&) = delete;
 
-					win_reg_key(win_reg_key&&) = delete win_reg_key & operator=(win_reg_key&&) = delete
+				win_reg_key(win_reg_key&&) = delete;
+				win_reg_key& operator=(win_reg_key&&) = delete;
 
-					~win_reg_key()
+				~win_reg_key()
 				{
 					RegCloseKey(this->key);
 				}
