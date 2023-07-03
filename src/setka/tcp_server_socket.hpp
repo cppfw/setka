@@ -44,13 +44,16 @@ namespace setka {
  */
 class tcp_server_socket : public socket
 {
-	bool disable_naggle; // this flag indicates if accepted sockets should be created with disabled Naggle
+	// this flag indicates if accepted sockets should be created with disabled Naggle
+	bool disable_naggle = false;
 
 public:
 	/**
 	 * @brief Creates an invalid (unopened) TCP server socket.
 	 */
 	tcp_server_socket() = default;
+
+	constexpr static const auto max_pending_connections = 50;
 
 	/**
 	 * @brief Creates a connected socket and starts listening on it.
@@ -59,22 +62,24 @@ public:
 	 * @param disable_naggle - enable/disable Naggle algorithm for all accepted connections.
 	 * @param queue_size - the maximum number of pending connections.
 	 */
-	tcp_server_socket(uint16_t port, bool disable_naggle = false, uint16_t queue_size = 50);
+	tcp_server_socket(uint16_t port, bool disable_naggle = false, uint16_t queue_size = max_pending_connections);
 
 	tcp_server_socket(const tcp_server_socket&) = delete;
 	tcp_server_socket& operator=(const tcp_server_socket&) = delete;
 
-	tcp_server_socket(tcp_server_socket&& s) :
+	tcp_server_socket(tcp_server_socket&& s) noexcept :
 		socket(std::move(static_cast<socket&&>(s))),
 		disable_naggle(s.disable_naggle)
 	{}
 
-	tcp_server_socket& operator=(tcp_server_socket&& s)
+	tcp_server_socket& operator=(tcp_server_socket&& s) noexcept
 	{
 		this->disable_naggle = s.disable_naggle;
 		this->socket::operator=(std::move(s));
 		return *this;
 	}
+
+	~tcp_server_socket() = default;
 
 	/**
 	 * @brief Accepts one of the pending connections, non-blocking.

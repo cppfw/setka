@@ -70,6 +70,8 @@ public:
 		return *this;
 	}
 
+	~tcp_socket() = default;
+
 	/**
 	 * @brief Send data to connected socket.
 	 * Sends data on connected socket. This method does not guarantee that the whole

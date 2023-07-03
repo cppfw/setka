@@ -107,6 +107,7 @@ void socket::disable_naggle()
 #	endif
 			IPPROTO_TCP,
 			TCP_NODELAY,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			reinterpret_cast<char*>(&yes),
 			sizeof(yes)
 		);
@@ -144,6 +145,7 @@ void socket::set_nonblocking_mode()
 				"could not set socket non-blocking mode, fcntl(F_GETFL) failed"
 			);
 		}
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
 		if (fcntl(this->handle, F_SETFL, flags | O_NONBLOCK) != 0) {
 			throw std::system_error(
 				errno,
@@ -163,7 +165,7 @@ uint16_t socket::get_local_port()
 		throw std::logic_error("socket::GetLocalPort(): socket is not valid");
 	}
 
-	sockaddr_storage addr;
+	sockaddr_storage addr{};
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len = sizeof(addr);
@@ -175,15 +177,18 @@ uint16_t socket::get_local_port()
 #	error "Unsupported OS"
 #endif
 
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 	if (getsockname(sock, reinterpret_cast<sockaddr*>(&addr), &len) < 0) {
 		throw std::system_error(errno, std::generic_category(), "could not get local port, getsockname() failed");
 	}
 
 	if (addr.ss_family == AF_INET) {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in&>(addr);
 		return uint16_t(ntohs(a.sin_port));
 	} else {
 		ASSERT(addr.ss_family == AF_INET6)
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in6&>(addr);
 		return uint16_t(ntohs(a.sin6_port));
 	}

@@ -27,7 +27,7 @@ public:
 	
 	nitki::semaphore& sema;
 	
-	setka::dns_result res;
+	setka::dns_result res = setka::dns_result::error;
 	
 	std::string host_name;
 	

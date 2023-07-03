@@ -103,11 +103,12 @@ public:
 			utki::assert(sock.get_local_address().host.get_v4() == 0x7f000001, SL);
 			utki::assert(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
 
-			std::array<uint8_t, 4> data;
-			data[0] = '0';
-			data[1] = '1';
-			data[2] = '2';
-			data[3] = '4';
+			std::array<uint8_t, 4> data = {
+				'0',
+				'1',
+				'2',
+				'4'
+			};
 			send_all(sock, utki::make_span(data));
 		}catch(std::exception &e){
 			utki::assert(false, [&](auto&o){o << "Network error: " << e.what();}, SL);
@@ -136,10 +137,11 @@ void run(){
 		
 		utki::assert(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
 
-		std::array<uint8_t, 4> data;
+		std::array<uint8_t, 4> data; // NOLINT
 		size_t num_bytes_received = 0;
 		for(unsigned i = 0; i < 30; ++i){
 			utki::assert(num_bytes_received < 4, SL);
+			// NOLINTNEXTLINE
 			num_bytes_received += sock.receive(utki::span<uint8_t>(&*data.begin() + num_bytes_received, data.size() - num_bytes_received));
 			utki::assert(num_bytes_received <= 4, SL);
 			if(num_bytes_received == 4){
@@ -203,15 +205,13 @@ void run(){
 	ws.add(sock_r, utki::make_flags({opros::ready::read}), &sock_r);
 	ws.add(sock_s, utki::make_flags({opros::ready::write}), &sock_s);
 
-
 	uint32_t scnt = 0;
 	std::vector<uint8_t> send_buffer;
 	size_t num_bytes_send = 0;
 
 	uint32_t rcnt = 0;
-	std::array<uint8_t, sizeof(uint32_t)> recv_buffer;
+	std::array<uint8_t, sizeof(uint32_t)> recv_buffer;  // NOLINT
 	unsigned num_recv_buf_bytes= 0;
-
 
 	uint32_t start_time = utki::get_ticks_ms();
 	
@@ -266,21 +266,22 @@ void run(){
 					);
 
 					uint8_t* p = &send_buffer[0];
-					for(; p != send_buffer.data() + send_buffer.size(); p += sizeof(uint32_t)){
+					for(; p != send_buffer.data() + send_buffer.size(); p += sizeof(uint32_t)){ // NOLINT
 						utki::assert(
-							p < ((send_buffer.data() + send_buffer.size()) - (sizeof(uint32_t) - 1)),
+							p < ((send_buffer.data() + send_buffer.size()) - (sizeof(uint32_t) - 1)), // NOLINT
 							[&](auto&o){o << "p = " << p << " send_buffer.End() = " << &*send_buffer.end();},
 							SL
 						);
 						utki::serialize32le(scnt, p);
 						++scnt;
 					}
-					utki::assert(p == send_buffer.data() + send_buffer.size(), SL);
+					utki::assert(p == send_buffer.data() + send_buffer.size(), SL); // NOLINT
 				}
 
 				utki::assert(send_buffer.size() > 0, SL);
 
 				try{
+					// NOLINTNEXTLINE
 					auto res = sock_s.send(utki::make_span(send_buffer.data() + num_bytes_send, send_buffer.size() - num_bytes_send));
 					num_bytes_send += res;
 					if(res == 0){
@@ -305,8 +306,9 @@ void run(){
 				utki::assert(!t.flags.get(opros::ready::write), SL);
 
 				while(true){
-					std::array<uint8_t, 0x2000> buf; // 8kb buffer
-					size_t num_bytes_received;
+					constexpr auto receive_buffer_size = utki::kilobyte * 8;
+					std::array<uint8_t, receive_buffer_size> buf; // NOLINT
+					size_t num_bytes_received = 0;
 					try{
 						num_bytes_received = sock_r.receive(utki::make_span(buf));
 					}catch(std::exception& e){
@@ -325,7 +327,7 @@ void run(){
 
 					auto p = buf.cbegin();
 					for(unsigned i = 0; i < num_bytes_received && p != buf.end(); ++p, ++i){
-						recv_buffer[num_recv_buf_bytes] = *p;
+						recv_buffer[num_recv_buf_bytes] = *p; // NOLINT
 						++num_recv_buf_bytes;
 
 						utki::assert(num_recv_buf_bytes<= recv_buffer.size(), SL);
@@ -414,8 +416,9 @@ void run(){
 		// read
 
 		while(true){
-			std::array<uint8_t, 0x2000> buf; // 8kb buffer
-			size_t num_bytes_received;
+			constexpr auto receive_buffer_size = utki::kilobyte * 8;
+			std::array<uint8_t, receive_buffer_size> buf; // NOLINT
+			size_t num_bytes_received = 0;
 			try{
 				num_bytes_received = sock_r.receive(utki::make_span(buf));
 			}catch(std::exception& e){

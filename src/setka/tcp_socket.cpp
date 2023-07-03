@@ -69,15 +69,17 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 		this->set_nonblocking_mode();
 
 		// connecting to remote host
-		sockaddr_storage socket_address;
+		sockaddr_storage socket_address{};
 
 		if (ip.host.is_v4()) {
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			auto& sa = reinterpret_cast<sockaddr_in&>(socket_address);
 			memset(&sa, 0, sizeof(sa));
 			sa.sin_family = AF_INET;
 			sa.sin_addr.s_addr = htonl(ip.host.get_v4());
 			sa.sin_port = htons(ip.port);
 		} else {
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			auto& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
 			memset(&sa, 0, sizeof(sa));
 			sa.sin6_family = AF_INET6;
@@ -101,10 +103,10 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 			sa.sin6_addr.s6_addr[15] = ip.host.quad[3] & 0xff;
 
 #else
-			sa.sin6_addr.__in6_u.__u6_addr32[0] = htonl(ip.host.quad[0]);
-			sa.sin6_addr.__in6_u.__u6_addr32[1] = htonl(ip.host.quad[1]);
-			sa.sin6_addr.__in6_u.__u6_addr32[2] = htonl(ip.host.quad[2]);
-			sa.sin6_addr.__in6_u.__u6_addr32[3] = htonl(ip.host.quad[3]);
+			sa.sin6_addr.__in6_u.__u6_addr32[0] = htonl(ip.host.quad[0]); // NOLINT
+			sa.sin6_addr.__in6_u.__u6_addr32[1] = htonl(ip.host.quad[1]); // NOLINT
+			sa.sin6_addr.__in6_u.__u6_addr32[2] = htonl(ip.host.quad[2]); // NOLINT
+			sa.sin6_addr.__in6_u.__u6_addr32[3] = htonl(ip.host.quad[3]); // NOLINT
 #endif
 			sa.sin6_port = htons(ip.port);
 		}
@@ -112,6 +114,7 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 		// connect to the remote host
 		if (connect(
 				sock,
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 				reinterpret_cast<sockaddr*>(&socket_address),
 				ip.host.is_v4()
 					? sizeof(sockaddr_in)
@@ -155,13 +158,14 @@ size_t tcp_socket::send(utki::span<const uint8_t> buf)
 	int len;
 	socket_type& sock = this->win_sock;
 #else
-	ssize_t len;
+	ssize_t len = 0;
 	int& sock = this->handle;
 #endif
 
 	while (true) {
 		len = ::send(
 			sock,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			reinterpret_cast<const char*>(buf.data()),
 			int(buf.size()),
 #if CFG_OS == CFG_OS_WINDOWS
@@ -206,13 +210,14 @@ size_t tcp_socket::receive(utki::span<uint8_t> buf)
 	int len;
 	socket_type& sock = this->win_sock;
 #else
-	ssize_t len;
+	ssize_t len = 0;
 	int& sock = this->handle;
 #endif
 
 	while (true) {
 		len = ::recv(
 			sock,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			reinterpret_cast<char*>(buf.data()),
 			int(buf.size()),
 #if CFG_OS == CFG_OS_WINDOWS
@@ -267,11 +272,13 @@ namespace {
 address make_ip_address(const sockaddr_storage& addr)
 {
 	if (addr.ss_family == AF_INET) {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		const auto& a = reinterpret_cast<const sockaddr_in&>(addr);
 		return {uint32_t(ntohl(a.sin_addr.s_addr)), uint16_t(ntohs(a.sin_port))};
 	} else {
 		ASSERT(addr.ss_family == AF_INET6)
 
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		const auto& a = reinterpret_cast<const sockaddr_in6&>(addr);
 
 		return
@@ -288,10 +295,10 @@ address make_ip_address(const sockaddr_storage& addr)
 				(uint32_t(a.sin6_addr.s6_addr[12]) << 24) | (uint32_t(a.sin6_addr.s6_addr[13]) << 16)
 					| (uint32_t(a.sin6_addr.s6_addr[14]) << 8) | uint32_t(a.sin6_addr.s6_addr[15])
 #else
-				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])),
-				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])),
-				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[2])),
-				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])), // NOLINT
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])), // NOLINT
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[2])), // NOLINT
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3])) // NOLINT
 #endif
 			),
 				uint16_t(ntohs(a.sin6_port))
@@ -306,7 +313,7 @@ address tcp_socket::get_local_address()
 		throw std::logic_error("tcp_socket::get_local_address(): socket is empty");
 	}
 
-	sockaddr_storage addr;
+	sockaddr_storage addr{};
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len = sizeof(addr);
@@ -316,6 +323,7 @@ address tcp_socket::get_local_address()
 	int& sock = this->handle;
 #endif
 
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 	if (getsockname(sock, reinterpret_cast<sockaddr*>(&addr), &len) == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
 		int error_code = WSAGetLastError();
@@ -338,7 +346,7 @@ address tcp_socket::get_remote_address()
 		throw std::logic_error("tcp_socket::get_remote_address(): socket is empty");
 	}
 
-	sockaddr_storage addr;
+	sockaddr_storage addr{};
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int len = sizeof(addr);
@@ -348,6 +356,7 @@ address tcp_socket::get_remote_address()
 	int& sock = this->handle;
 #endif
 
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 	if (getpeername(sock, reinterpret_cast<sockaddr*>(&addr), &len) == socket_error) {
 #if CFG_OS == CFG_OS_WINDOWS
 		int error_code = WSAGetLastError();

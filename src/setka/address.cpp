@@ -30,6 +30,7 @@ SOFTWARE.
 
 #include <utki/config.hpp>
 #include <utki/span.hpp>
+#include <utki/string.hpp>
 
 #if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX
 #	include <arpa/inet.h>
@@ -44,6 +45,7 @@ using namespace setka;
 namespace {
 bool is_ip_v4_string(const char* str)
 {
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	for (const char* p = str; *p != 0; ++p) {
 		if (*p == '.') {
 			return true;
@@ -67,7 +69,7 @@ address::ip address::ip::parse(const char* str)
 
 address::ip address::ip::parse_v4(const char* str)
 {
-	sockaddr_in a;
+	sockaddr_in a{};
 
 #if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS
 	int res = inet_pton(AF_INET, str, &a.sin_addr);
@@ -89,7 +91,7 @@ address::ip address::ip::parse_v6(const char* str)
 	sockaddr_in6 aa;
 	in6_addr& a = aa.sin6_addr;
 #else
-	in6_addr a;
+	in6_addr a{};
 #endif
 
 #if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS
@@ -124,22 +126,23 @@ address::ip address::ip::parse_v6(const char* str)
 		a.s6_addr[15]};
 #else
 	return {
-		a.__in6_u.__u6_addr8[0],
-		a.__in6_u.__u6_addr8[1],
-		a.__in6_u.__u6_addr8[2],
-		a.__in6_u.__u6_addr8[3],
-		a.__in6_u.__u6_addr8[4],
-		a.__in6_u.__u6_addr8[5],
-		a.__in6_u.__u6_addr8[6],
-		a.__in6_u.__u6_addr8[7],
-		a.__in6_u.__u6_addr8[8],
-		a.__in6_u.__u6_addr8[9],
-		a.__in6_u.__u6_addr8[10],
-		a.__in6_u.__u6_addr8[11],
-		a.__in6_u.__u6_addr8[12],
-		a.__in6_u.__u6_addr8[13],
-		a.__in6_u.__u6_addr8[14],
-		a.__in6_u.__u6_addr8[15]};
+		a.__in6_u.__u6_addr8[0], // NOLINT
+		a.__in6_u.__u6_addr8[1], // NOLINT
+		a.__in6_u.__u6_addr8[2], // NOLINT
+		a.__in6_u.__u6_addr8[3], // NOLINT
+		a.__in6_u.__u6_addr8[4], // NOLINT
+		a.__in6_u.__u6_addr8[5], // NOLINT
+		a.__in6_u.__u6_addr8[6], // NOLINT
+		a.__in6_u.__u6_addr8[7], // NOLINT
+		a.__in6_u.__u6_addr8[8], // NOLINT
+		a.__in6_u.__u6_addr8[9], // NOLINT
+		a.__in6_u.__u6_addr8[10], // NOLINT
+		a.__in6_u.__u6_addr8[11], // NOLINT
+		a.__in6_u.__u6_addr8[12], // NOLINT
+		a.__in6_u.__u6_addr8[13], // NOLINT
+		a.__in6_u.__u6_addr8[14], // NOLINT
+		a.__in6_u.__u6_addr8[15] // NOLINT
+	};
 #endif
 }
 
@@ -155,12 +158,16 @@ address::address(const char* str)
 	}
 
 	if (*str == '[') { // IPv6 with port
+		// NOLINTNEXTLINE
 		std::array<char, (4 * 6 + 6 + (3 * 4 + 3) + 1)> buf;
 
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 		++str;
 
-		char* dst;
-		for (dst = &*buf.begin(); *str != ']'; ++dst, ++str) {
+		char* dst = nullptr;
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		for (dst = buf.data(); *str != ']'; ++dst, ++str) {
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 			if (*str == 0 || !utki::make_span(buf).overlaps(dst + 1)) {
 				throw std::runtime_error("bad IP address format");
 			}
@@ -171,17 +178,21 @@ address::address(const char* str)
 		ASSERT(utki::make_span(buf).overlaps(dst))
 		*dst = 0; // null-terminate
 
-		this->host = ip::parse_v6(&*buf.begin());
+		this->host = ip::parse_v6(buf.data());
 
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 		++str; // move to port ':' separator
 	} else {
 		// IPv4 or IPv6 without port
 
 		if (is_ip_v4_string(str)) {
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 			std::array<char, (3 * 4 + 3 + 1)> buf;
 
-			char* dst;
-			for (dst = &*buf.begin(); *str != ':' && *str != 0; ++dst, ++str) {
+			char* dst = nullptr;
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+			for (dst = buf.data(); *str != ':' && *str != 0; ++dst, ++str) {
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 				if (!utki::make_span(buf).overlaps(dst + 1)) {
 					throw std::runtime_error("bad IP address format");
 				}
@@ -192,7 +203,7 @@ address::address(const char* str)
 			ASSERT(utki::make_span(buf).overlaps(dst))
 			*dst = 0; // null-terminate
 
-			this->host = ip::parse_v4(&*buf.begin());
+			this->host = ip::parse_v4(buf.data());
 		} else {
 			// IPv6 without port
 			this->host = ip::parse_v6(str);
@@ -213,24 +224,30 @@ address::address(const char* str)
 		}
 	}
 
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	++str;
 
+	constexpr auto max_port_digits = 5;
+
 	// move to the end of port number, maximum 5 digits.
-	for (unsigned i = 0; '0' <= *str && *str <= '9' && i < 5; ++i, ++str) {
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+	for (unsigned i = 0; '0' <= *str && *str <= '9' && i < max_port_digits; ++i, ++str) {
 	}
 	if ('0' <= *str && *str <= '9') { // if still have one more digit
 		//		TRACE(<< "still have one more digit" << std::endl)
 		throw std::runtime_error("bad IP address format");
 	}
 
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	--str;
 
 	uint32_t port = 0;
 
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	for (unsigned i = 0; *str != ':'; ++i, --str) {
 		uint32_t pow = 1;
 		for (unsigned j = 0; j < i; ++j) {
-			pow *= 10;
+			pow *= utki::to_int(utki::integer_base::dec);
 		}
 
 		ASSERT('0' <= *str && *str <= '9')
@@ -238,7 +255,7 @@ address::address(const char* str)
 		port += (*str - '0') * pow;
 	}
 
-	if (port > 0xffff) {
+	if (port > std::numeric_limits<uint16_t>::max()) {
 		//		TRACE(<< "port number is bigger than 0xffff" << std::endl)
 		throw std::runtime_error("bad IP address format");
 	}
@@ -252,16 +269,19 @@ std::string address::ip::to_string() const
 	if (this->is_v4()) {
 		for (unsigned i = 4;;) {
 			--i;
-			ss << (((this->get_v4()) >> (8 * i)) & 0xff);
+			ss << (((this->get_v4()) >> (utki::num_bits_in_byte * i)) & utki::byte_mask);
 			if (i == 0) {
 				break;
 			}
 			ss << '.';
 		}
 	} else {
+		constexpr auto num_ip_v6_parts = 8;
+
 		ss << std::hex;
-		for (unsigned i = 8;;) {
+		for (unsigned i = num_ip_v6_parts;;) {
 			--i;
+			// NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers, cppcoreguidelines-pro-bounds-constant-array-index)
 			ss << ((this->quad[(i * 2) / 4] >> (16 * (i % 2))) & 0xffff);
 			if (i == 0) {
 				break;

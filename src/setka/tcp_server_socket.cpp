@@ -107,13 +107,21 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 	// allow local address reuse
 	{
 		int yes = 1;
-		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes));
+		setsockopt(
+			sock,
+			SOL_SOCKET,
+			SO_REUSEADDR,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			reinterpret_cast<char*>(&yes),
+			sizeof(yes)
+		);
 	}
 
-	sockaddr_storage socket_address;
-	socklen_t socket_address_length;
+	sockaddr_storage socket_address{};
+	socklen_t socket_address_length = 0;
 
 	if (ipv4) {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& sa = reinterpret_cast<sockaddr_in&>(socket_address);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin_family = AF_INET;
@@ -121,6 +129,7 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 		sa.sin_port = htons(port);
 		socket_address_length = sizeof(sa);
 	} else {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
 		memset(&sa, 0, sizeof(sa));
 		sa.sin6_family = AF_INET6;
@@ -130,7 +139,14 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 	}
 
 	// Bind the socket for listening
-	if (bind(sock, reinterpret_cast<sockaddr*>(&socket_address), socket_address_length) == socket_error) {
+	if (bind(
+			sock,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+			reinterpret_cast<sockaddr*>(&socket_address),
+			socket_address_length
+		)
+		== socket_error)
+	{
 #if CFG_OS == CFG_OS_WINDOWS
 		int error_code = WSAGetLastError();
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX

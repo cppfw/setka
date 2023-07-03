@@ -50,6 +50,12 @@ namespace setka {
 class init_guard : public utki::destructable
 {
 public:
+	init_guard(const init_guard&) = delete;
+	init_guard& operator=(const init_guard&) = delete;
+
+	init_guard(init_guard&&) = delete;
+	init_guard& operator=(init_guard&&) = delete;
+
 	init_guard()
 	{
 #if CFG_OS == CFG_OS_WINDOWS
@@ -62,8 +68,7 @@ public:
 		}
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_UNIX || CFG_OS == CFG_OS_MACOSX
 		// SIGPIPE is generated when a remote socket is closed
-		void (*handler)(int);
-		handler = signal(SIGPIPE, SIG_IGN);
+		auto handler = signal(SIGPIPE, SIG_IGN);
 		if (handler != SIG_DFL) {
 			signal(SIGPIPE, handler);
 		}
@@ -86,8 +91,7 @@ public:
 		}
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_UNIX || CFG_OS == CFG_OS_MACOSX
 		// restore the SIGPIPE handler
-		void (*handler)(int);
-		handler = signal(SIGPIPE, SIG_DFL);
+		auto handler = signal(SIGPIPE, SIG_DFL);
 		if (handler != SIG_IGN) {
 			signal(SIGPIPE, handler);
 		}

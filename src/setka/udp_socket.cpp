@@ -35,7 +35,8 @@ SOFTWARE.
 
 using namespace setka;
 
-udp_socket::udp_socket(uint16_t port)
+udp_socket::udp_socket(uint16_t port) :
+	ipv4(false)
 {
 #if CFG_OS == CFG_OS_WINDOWS
 	this->create_event_for_waitable();
@@ -43,8 +44,6 @@ udp_socket::udp_socket(uint16_t port)
 #else
 	int& sock = this->handle;
 #endif
-
-	this->ipv4 = false;
 
 	sock = ::socket(PF_INET6, SOCK_DGRAM, 0);
 
@@ -104,10 +103,11 @@ udp_socket::udp_socket(uint16_t port)
 	try {
 		// bind locally, if appropriate
 		if (port != 0) {
-			sockaddr_storage socket_address;
-			socklen_t socket_address_length;
+			sockaddr_storage socket_address{};
+			socklen_t socket_address_length = 0;
 
 			if (this->ipv4) {
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 				auto& sa = reinterpret_cast<sockaddr_in&>(socket_address);
 				memset(&sa, 0, sizeof(sa));
 				sa.sin_family = AF_INET;
@@ -115,6 +115,7 @@ udp_socket::udp_socket(uint16_t port)
 				sa.sin_port = htons(port);
 				socket_address_length = sizeof(sa);
 			} else {
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 				auto& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
 				memset(&sa, 0, sizeof(sa));
 				sa.sin6_family = AF_INET6;
@@ -124,7 +125,12 @@ udp_socket::udp_socket(uint16_t port)
 			}
 
 			// bind the socket for listening
-			if (::bind(sock, reinterpret_cast<struct sockaddr*>(&socket_address), socket_address_length)
+			if (::bind(
+					sock,
+					// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+					reinterpret_cast<struct sockaddr*>(&socket_address),
+					socket_address_length
+				)
 				== socket_error)
 			{
 #if CFG_OS == CFG_OS_WINDOWS
@@ -146,7 +152,15 @@ udp_socket::udp_socket(uint16_t port)
 #if CFG_OS == CFG_OS_WINDOWS || CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 		{
 			int yes = 1;
-			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&yes), sizeof(yes)) == socket_error)
+			if (setsockopt(
+					sock,
+					SOL_SOCKET,
+					SO_BROADCAST,
+					// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+					reinterpret_cast<char*>(&yes),
+					sizeof(yes)
+				)
+				== socket_error)
 			{
 #	if CFG_OS == CFG_OS_WINDOWS
 				int error_code = WSAGetLastError();
@@ -175,8 +189,8 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 		throw std::logic_error("udp_socket::send(): socket is empty");
 	}
 
-	sockaddr_storage socket_address;
-	socklen_t socket_address_length;
+	sockaddr_storage socket_address{};
+	socklen_t socket_address_length = 0;
 
 	if(
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS
@@ -185,6 +199,7 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 			destination_address.host.is_v4()
 		)
 	{
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in&>(socket_address);
 		memset(&a, 0, sizeof(a));
 		a.sin_family = AF_INET;
@@ -192,6 +207,7 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 		a.sin_port = htons(destination_address.port);
 		socket_address_length = sizeof(a);
 	} else {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		memset(&a, 0, sizeof(a));
 		a.sin6_family = AF_INET6;
@@ -214,10 +230,10 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 		a.sin6_addr.s6_addr[14] = (destination_address.host.quad[3] >> 8) & 0xff;
 		a.sin6_addr.s6_addr[15] = destination_address.host.quad[3] & 0xff;
 #else
-		a.sin6_addr.__in6_u.__u6_addr32[0] = htonl(destination_address.host.quad[0]);
-		a.sin6_addr.__in6_u.__u6_addr32[1] = htonl(destination_address.host.quad[1]);
-		a.sin6_addr.__in6_u.__u6_addr32[2] = htonl(destination_address.host.quad[2]);
-		a.sin6_addr.__in6_u.__u6_addr32[3] = htonl(destination_address.host.quad[3]);
+		a.sin6_addr.__in6_u.__u6_addr32[0] = htonl(destination_address.host.quad[0]); // NOLINT
+		a.sin6_addr.__in6_u.__u6_addr32[1] = htonl(destination_address.host.quad[1]); // NOLINT
+		a.sin6_addr.__in6_u.__u6_addr32[2] = htonl(destination_address.host.quad[2]); // NOLINT
+		a.sin6_addr.__in6_u.__u6_addr32[3] = htonl(destination_address.host.quad[3]); // NOLINT
 #endif
 		a.sin6_port = htons(destination_address.port);
 		socket_address_length = sizeof(a);
@@ -227,16 +243,18 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 	int len;
 	socket_type& sock = this->win_sock;
 #else
-	ssize_t len;
+	ssize_t len = 0;
 	int& sock = this->handle;
 #endif
 
 	while (true) {
 		len = ::sendto(
 			sock,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			reinterpret_cast<const char*>(buf.data()),
 			int(buf.size()),
 			0,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			reinterpret_cast<struct sockaddr*>(&socket_address),
 			socket_address_length
 		);
@@ -281,7 +299,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 		throw std::logic_error("udp_socket::recieve(): socket is empty");
 	}
 
-	sockaddr_storage socket_address;
+	sockaddr_storage socket_address{};
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int socket_address_length = sizeof(socket_address);
@@ -289,7 +307,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 	socket_type& sock = this->win_sock;
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	socklen_t socket_address_length = sizeof(socket_address);
-	ssize_t len;
+	ssize_t len = 0;
 	int& sock = this->handle;
 #else
 #	error "Unsupported OS"
@@ -298,9 +316,11 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 	while (true) {
 		len = ::recvfrom(
 			sock,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			reinterpret_cast<char*>(buf.data()),
 			int(buf.size()),
 			0,
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			reinterpret_cast<sockaddr*>(&socket_address),
 			&socket_address_length
 		);
@@ -332,6 +352,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 	})
 
 	if (socket_address.ss_family == AF_INET) {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in&>(socket_address);
 		out_sender_address = address(ntohl(a.sin_addr.s_addr), uint16_t(ntohs(a.sin_port)));
 	} else {
@@ -339,6 +360,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 			o << "socket_address.ss_family = " << unsigned(socket_address.ss_family) << " AF_INET = " << AF_INET
 			  << " AF_INET6 = " << AF_INET6;
 		})
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		out_sender_address = address(
 			address::ip(
@@ -353,10 +375,10 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 				(uint32_t(a.sin6_addr.s6_addr[12]) << 24) | (uint32_t(a.sin6_addr.s6_addr[13]) << 16)
 					| (uint32_t(a.sin6_addr.s6_addr[14]) << 8) | uint32_t(a.sin6_addr.s6_addr[15])
 #else
-				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])),
-				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])),
-				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[2])),
-				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3]))
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])), // NOLINT
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])), // NOLINT
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[2])), // NOLINT
+				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3])) // NOLINT
 #endif
 			),
 			uint16_t(ntohs(a.sin6_port))
