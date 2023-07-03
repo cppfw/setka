@@ -73,7 +73,7 @@ public:
 	}
 
 	~udp_socket()
-#if CFG_OS == CFG_WINDOWS
+#if CFG_OS == CFG_OS_WINDOWS
 		override
 #endif
 		= default;

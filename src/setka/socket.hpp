@@ -57,6 +57,9 @@ namespace setka {
  * @brief Basic socket class.
  * This is a base class for all socket types such as TCP sockets or UDP sockets.
  */
+// TODO: this lint suppression is only for WINDOWS,
+//       consider making opros::waitable destructor non-virtual
+// NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
 class socket : public opros::waitable
 {
 protected:
