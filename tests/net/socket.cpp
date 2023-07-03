@@ -9,6 +9,7 @@
 #include <utki/config.hpp>
 #include <utki/time.hpp>
 #include <utki/debug.hpp>
+#include <utki/util.hpp>
 
 #include "socket.hpp"
 
@@ -540,11 +541,12 @@ void run(){
 	}
 
 	try{
-		std::array<uint8_t, 1024> buf;
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+		std::array<uint8_t, utki::kilobyte> buf;
 		
 		size_t num_bytes_received = 0;
 		for(unsigned i = 0; i < 10; ++i){
-			setka::address ip;
+			setka::address ip{};
 			num_bytes_received = recv_sock.recieve(utki::make_span(buf), ip);
 			utki::assert(num_bytes_received == 0 || num_bytes_received == 4, SL); // all or nothing
 			if(num_bytes_received == 4){

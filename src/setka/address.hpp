@@ -231,7 +231,7 @@ public:
 	};
 
 	ip host; ///< IPv6 address
-	uint16_t port; ///< IP port number
+	uint16_t port = 0; ///< IP port number
 
 	/**
 	 * @brief Construct IP address with undefined host and port.

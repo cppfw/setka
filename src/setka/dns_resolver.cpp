@@ -35,6 +35,7 @@ SOFTWARE.
 #include <utki/config.hpp>
 #include <utki/time.hpp>
 #include <utki/types.hpp>
+#include <utki/util.hpp>
 
 #if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 #	include <papki/fs_file.hpp>
