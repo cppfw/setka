@@ -79,7 +79,11 @@ public:
 		return *this;
 	}
 
-	~tcp_server_socket() = default;
+	~tcp_server_socket()
+#if CFG_OS == CFG_OS_WINDOWS
+		override
+#endif
+		= default;
 
 	/**
 	 * @brief Accepts one of the pending connections, non-blocking.
