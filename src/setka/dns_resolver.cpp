@@ -859,6 +859,7 @@ private:
 								ASSERT(id == i->second->id)
 
 								// check by host name also
+								// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 								const uint8_t* p = buf.data() + host_name_start_offset;
 								std::string host = dns::parse_host_name_from_dns_packet(p, &*buf.end());
 
