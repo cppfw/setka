@@ -213,22 +213,38 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 		a.sin6_family = AF_INET6;
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
 	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
-		a.sin6_addr.s6_addr[0] = destination_address.host.quad[0] >> 24;
-		a.sin6_addr.s6_addr[1] = (destination_address.host.quad[0] >> 16) & 0xff;
-		a.sin6_addr.s6_addr[2] = (destination_address.host.quad[0] >> 8) & 0xff;
-		a.sin6_addr.s6_addr[3] = destination_address.host.quad[0] & 0xff;
-		a.sin6_addr.s6_addr[4] = destination_address.host.quad[1] >> 24;
-		a.sin6_addr.s6_addr[5] = (destination_address.host.quad[1] >> 16) & 0xff;
-		a.sin6_addr.s6_addr[6] = (destination_address.host.quad[1] >> 8) & 0xff;
-		a.sin6_addr.s6_addr[7] = destination_address.host.quad[1] & 0xff;
-		a.sin6_addr.s6_addr[8] = destination_address.host.quad[2] >> 24;
-		a.sin6_addr.s6_addr[9] = (destination_address.host.quad[2] >> 16) & 0xff;
-		a.sin6_addr.s6_addr[10] = (destination_address.host.quad[2] >> 8) & 0xff;
-		a.sin6_addr.s6_addr[11] = destination_address.host.quad[2] & 0xff;
-		a.sin6_addr.s6_addr[12] = destination_address.host.quad[3] >> 24;
-		a.sin6_addr.s6_addr[13] = (destination_address.host.quad[3] >> 16) & 0xff;
-		a.sin6_addr.s6_addr[14] = (destination_address.host.quad[3] >> 8) & 0xff;
-		a.sin6_addr.s6_addr[15] = destination_address.host.quad[3] & 0xff;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[0] = destination_address.host.quad[0] >> (utki::num_bits_in_byte * 3);
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[1] = (destination_address.host.quad[0] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[2] = (destination_address.host.quad[0] >> utki::num_bits_in_byte) & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[3] = destination_address.host.quad[0] & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[4] = destination_address.host.quad[1] >> (utki::num_bits_in_byte * 3);
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[5] = (destination_address.host.quad[1] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[6] = (destination_address.host.quad[1] >> utki::num_bits_in_byte) & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[7] = destination_address.host.quad[1] & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[8] = destination_address.host.quad[2] >> (utki::num_bits_in_byte * 3);
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[9] = (destination_address.host.quad[2] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[10] = (destination_address.host.quad[2] >> utki::num_bits_in_byte) & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[11] = destination_address.host.quad[2] & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[12] = destination_address.host.quad[3] >> (utki::num_bits_in_byte * 3);
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[13] = (destination_address.host.quad[3] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[14] = (destination_address.host.quad[3] >> utki::num_bits_in_byte) & utki::byte_mask;
+		// NOLINTNEXTLINE
+		a.sin6_addr.s6_addr[15] = destination_address.host.quad[3] & utki::byte_mask;
 #else
 		a.sin6_addr.__in6_u.__u6_addr32[0] = htonl(destination_address.host.quad[0]); // NOLINT
 		a.sin6_addr.__in6_u.__u6_addr32[1] = htonl(destination_address.host.quad[1]); // NOLINT
@@ -240,7 +256,7 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 	}
 
 #if CFG_OS == CFG_OS_WINDOWS
-	int len;
+	int len = 0;
 	socket_type& sock = this->win_sock;
 #else
 	ssize_t len = 0;
@@ -303,7 +319,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 
 #if CFG_OS == CFG_OS_WINDOWS
 	int socket_address_length = sizeof(socket_address);
-	int len;
+	int len = 0;
 	socket_type& sock = this->win_sock;
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 	socklen_t socket_address_length = sizeof(socket_address);
@@ -366,14 +382,22 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 			address::ip(
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
 	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
-				(uint32_t(a.sin6_addr.s6_addr[0]) << 24) | (uint32_t(a.sin6_addr.s6_addr[1]) << 16)
-					| (uint32_t(a.sin6_addr.s6_addr[2]) << 8) | uint32_t(a.sin6_addr.s6_addr[3]),
-				(uint32_t(a.sin6_addr.s6_addr[4]) << 24) | (uint32_t(a.sin6_addr.s6_addr[5]) << 16)
-					| (uint32_t(a.sin6_addr.s6_addr[6]) << 8) | uint32_t(a.sin6_addr.s6_addr[7]),
-				(uint32_t(a.sin6_addr.s6_addr[8]) << 24) | (uint32_t(a.sin6_addr.s6_addr[9]) << 16)
-					| (uint32_t(a.sin6_addr.s6_addr[10]) << 8) | uint32_t(a.sin6_addr.s6_addr[11]),
-				(uint32_t(a.sin6_addr.s6_addr[12]) << 24) | (uint32_t(a.sin6_addr.s6_addr[13]) << 16)
-					| (uint32_t(a.sin6_addr.s6_addr[14]) << 8) | uint32_t(a.sin6_addr.s6_addr[15])
+				(uint32_t(a.sin6_addr.s6_addr[0]) << (utki::num_bits_in_byte * 3)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[1]) << (utki::num_bits_in_byte * 2)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[2]) << utki::num_bits_in_byte) // NOLINT
+					| uint32_t(a.sin6_addr.s6_addr[3]), // NOLINT
+				(uint32_t(a.sin6_addr.s6_addr[4]) << (utki::num_bits_in_byte * 3)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[5]) << (utki::num_bits_in_byte * 2)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[6]) << utki::num_bits_in_byte) // NOLINT
+					| uint32_t(a.sin6_addr.s6_addr[7]), // NOLINT
+				(uint32_t(a.sin6_addr.s6_addr[8]) << (utki::num_bits_in_byte * 3)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[9]) << (utki::num_bits_in_byte * 2)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[10]) << utki::num_bits_in_byte) // NOLINT
+					| uint32_t(a.sin6_addr.s6_addr[11]), // NOLINT
+				(uint32_t(a.sin6_addr.s6_addr[12]) << (utki::num_bits_in_byte * 3)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[13]) << (utki::num_bits_in_byte * 2)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[14]) << utki::num_bits_in_byte) // NOLINT
+					| uint32_t(a.sin6_addr.s6_addr[15]) // NOLINT
 #else
 				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])), // NOLINT
 				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[1])), // NOLINT
