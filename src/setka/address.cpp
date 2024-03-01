@@ -276,7 +276,7 @@ std::string address::ip::to_string() const
 	if (this->is_v4()) {
 		for (unsigned i = 4;;) {
 			--i;
-			ss << (((this->get_v4()) >> (utki::num_bits_in_byte * i)) & utki::byte_mask);
+			ss << (((this->get_v4()) >> (utki::byte_bits * i)) & utki::byte_mask);
 			if (i == 0) {
 				break;
 			}

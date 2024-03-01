@@ -85,21 +85,21 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 			sa.sin6_family = AF_INET6;
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || \
 	(CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
-			sa.sin6_addr.s6_addr[0] = ip.host.quad[0] >> (utki::num_bits_in_byte * 3); // NOLINT
-			sa.sin6_addr.s6_addr[1] = (ip.host.quad[0] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask; // NOLINT
-			sa.sin6_addr.s6_addr[2] = (ip.host.quad[0] >> utki::num_bits_in_byte) & utki::byte_mask; // NOLINT
+			sa.sin6_addr.s6_addr[0] = ip.host.quad[0] >> (utki::byte_bits * 3); // NOLINT
+			sa.sin6_addr.s6_addr[1] = (ip.host.quad[0] >> (utki::byte_bits * 2)) & utki::byte_mask; // NOLINT
+			sa.sin6_addr.s6_addr[2] = (ip.host.quad[0] >> utki::byte_bits) & utki::byte_mask; // NOLINT
 			sa.sin6_addr.s6_addr[3] = ip.host.quad[0] & utki::byte_mask; // NOLINT
-			sa.sin6_addr.s6_addr[4] = ip.host.quad[1] >> (utki::num_bits_in_byte * 3); // NOLINT
-			sa.sin6_addr.s6_addr[5] = (ip.host.quad[1] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask; // NOLINT
-			sa.sin6_addr.s6_addr[6] = (ip.host.quad[1] >> utki::num_bits_in_byte) & utki::byte_mask; // NOLINT
+			sa.sin6_addr.s6_addr[4] = ip.host.quad[1] >> (utki::byte_bits * 3); // NOLINT
+			sa.sin6_addr.s6_addr[5] = (ip.host.quad[1] >> (utki::byte_bits * 2)) & utki::byte_mask; // NOLINT
+			sa.sin6_addr.s6_addr[6] = (ip.host.quad[1] >> utki::byte_bits) & utki::byte_mask; // NOLINT
 			sa.sin6_addr.s6_addr[7] = ip.host.quad[1] & utki::byte_mask; // NOLINT
-			sa.sin6_addr.s6_addr[8] = ip.host.quad[2] >> (utki::num_bits_in_byte * 3); // NOLINT
-			sa.sin6_addr.s6_addr[9] = (ip.host.quad[2] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask; // NOLINT
-			sa.sin6_addr.s6_addr[10] = (ip.host.quad[2] >> utki::num_bits_in_byte) & utki::byte_mask; // NOLINT
+			sa.sin6_addr.s6_addr[8] = ip.host.quad[2] >> (utki::byte_bits * 3); // NOLINT
+			sa.sin6_addr.s6_addr[9] = (ip.host.quad[2] >> (utki::byte_bits * 2)) & utki::byte_mask; // NOLINT
+			sa.sin6_addr.s6_addr[10] = (ip.host.quad[2] >> utki::byte_bits) & utki::byte_mask; // NOLINT
 			sa.sin6_addr.s6_addr[11] = ip.host.quad[2] & utki::byte_mask; // NOLINT
-			sa.sin6_addr.s6_addr[12] = ip.host.quad[3] >> (utki::num_bits_in_byte * 3); // NOLINT
-			sa.sin6_addr.s6_addr[13] = (ip.host.quad[3] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask; // NOLINT
-			sa.sin6_addr.s6_addr[14] = (ip.host.quad[3] >> utki::num_bits_in_byte) & utki::byte_mask; // NOLINT
+			sa.sin6_addr.s6_addr[12] = ip.host.quad[3] >> (utki::byte_bits * 3); // NOLINT
+			sa.sin6_addr.s6_addr[13] = (ip.host.quad[3] >> (utki::byte_bits * 2)) & utki::byte_mask; // NOLINT
+			sa.sin6_addr.s6_addr[14] = (ip.host.quad[3] >> utki::byte_bits) & utki::byte_mask; // NOLINT
 			sa.sin6_addr.s6_addr[15] = ip.host.quad[3] & utki::byte_mask; // NOLINT
 
 #else
@@ -284,21 +284,21 @@ address make_ip_address(const sockaddr_storage& addr)
 			address::ip(
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || \
 	(CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
-				(uint32_t(a.sin6_addr.s6_addr[0]) << (utki::num_bits_in_byte * 3)) // NOLINT
-					| (uint32_t(a.sin6_addr.s6_addr[1]) << (utki::num_bits_in_byte * 2)) // NOLINT
-					| (uint32_t(a.sin6_addr.s6_addr[2]) << utki::num_bits_in_byte) // NOLINT
+				(uint32_t(a.sin6_addr.s6_addr[0]) << (utki::byte_bits * 3)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[1]) << (utki::byte_bits * 2)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[2]) << utki::byte_bits) // NOLINT
 					| uint32_t(a.sin6_addr.s6_addr[3]), // NOLINT
-				(uint32_t(a.sin6_addr.s6_addr[4]) << (utki::num_bits_in_byte * 3)) // NOLINT
-					| (uint32_t(a.sin6_addr.s6_addr[5]) << (utki::num_bits_in_byte * 2)) // NOLINT
-					| (uint32_t(a.sin6_addr.s6_addr[6]) << utki::num_bits_in_byte) // NOLINT
+				(uint32_t(a.sin6_addr.s6_addr[4]) << (utki::byte_bits * 3)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[5]) << (utki::byte_bits * 2)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[6]) << utki::byte_bits) // NOLINT
 					| uint32_t(a.sin6_addr.s6_addr[7]), // NOLINT
-				(uint32_t(a.sin6_addr.s6_addr[8]) << (utki::num_bits_in_byte * 3)) // NOLINT
-					| (uint32_t(a.sin6_addr.s6_addr[9]) << (utki::num_bits_in_byte * 2)) // NOLINT
-					| (uint32_t(a.sin6_addr.s6_addr[10]) << utki::num_bits_in_byte) // NOLINT
+				(uint32_t(a.sin6_addr.s6_addr[8]) << (utki::byte_bits * 3)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[9]) << (utki::byte_bits * 2)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[10]) << utki::byte_bits) // NOLINT
 					| uint32_t(a.sin6_addr.s6_addr[11]), // NOLINT
-				(uint32_t(a.sin6_addr.s6_addr[12]) << (utki::num_bits_in_byte * 3)) // NOLINT
-					| (uint32_t(a.sin6_addr.s6_addr[13]) << (utki::num_bits_in_byte * 2)) // NOLINT
-					| (uint32_t(a.sin6_addr.s6_addr[14]) << utki::num_bits_in_byte) // NOLINT
+				(uint32_t(a.sin6_addr.s6_addr[12]) << (utki::byte_bits * 3)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[13]) << (utki::byte_bits * 2)) // NOLINT
+					| (uint32_t(a.sin6_addr.s6_addr[14]) << utki::byte_bits) // NOLINT
 					| uint32_t(a.sin6_addr.s6_addr[15]) // NOLINT
 #else
 				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[0])), // NOLINT

@@ -99,10 +99,10 @@ public:
 		 * @param a7 - sevens number.
 		 */
 		ip(uint16_t a0, uint16_t a1, uint16_t a2, uint16_t a3, uint16_t a4, uint16_t a5, uint16_t a6, uint16_t a7) :
-			ip((uint32_t(a0) << (utki::num_bits_in_byte * 2)) | uint32_t(a1),
-			   (uint32_t(a2) << (utki::num_bits_in_byte * 2)) | uint32_t(a3),
-			   (uint32_t(a4) << (utki::num_bits_in_byte * 2)) | uint32_t(a5),
-			   (uint32_t(a6) << (utki::num_bits_in_byte * 2)) | uint32_t(a7))
+			ip((uint32_t(a0) << (utki::byte_bits * 2)) | uint32_t(a1),
+			   (uint32_t(a2) << (utki::byte_bits * 2)) | uint32_t(a3),
+			   (uint32_t(a4) << (utki::byte_bits * 2)) | uint32_t(a5),
+			   (uint32_t(a6) << (utki::byte_bits * 2)) | uint32_t(a7))
 		{}
 
 		/**
@@ -141,14 +141,14 @@ public:
 		   uint8_t a13,
 		   uint8_t a14,
 		   uint8_t a15) :
-			ip((uint16_t(a0) << utki::num_bits_in_byte) | uint16_t(a1),
-			   (uint16_t(a2) << utki::num_bits_in_byte) | uint16_t(a3),
-			   (uint16_t(a4) << utki::num_bits_in_byte) | uint16_t(a5),
-			   (uint16_t(a6) << utki::num_bits_in_byte) | uint16_t(a7),
-			   (uint16_t(a8) << utki::num_bits_in_byte) | uint16_t(a9),
-			   (uint16_t(a10) << utki::num_bits_in_byte) | uint16_t(a11),
-			   (uint16_t(a12) << utki::num_bits_in_byte) | uint16_t(a13),
-			   (uint16_t(a14) << utki::num_bits_in_byte) | uint16_t(a15))
+			ip((uint16_t(a0) << utki::byte_bits) | uint16_t(a1),
+			   (uint16_t(a2) << utki::byte_bits) | uint16_t(a3),
+			   (uint16_t(a4) << utki::byte_bits) | uint16_t(a5),
+			   (uint16_t(a6) << utki::byte_bits) | uint16_t(a7),
+			   (uint16_t(a8) << utki::byte_bits) | uint16_t(a9),
+			   (uint16_t(a10) << utki::byte_bits) | uint16_t(a11),
+			   (uint16_t(a12) << utki::byte_bits) | uint16_t(a13),
+			   (uint16_t(a14) << utki::byte_bits) | uint16_t(a15))
 		{}
 
 		/**
@@ -264,8 +264,8 @@ public:
 	 */
 	address(uint8_t h1, uint8_t h2, uint8_t h3, uint8_t h4, uint16_t p) noexcept :
 		host(
-			(uint32_t(h1) << (utki::num_bits_in_byte * 3)) | (uint32_t(h2) << (utki::num_bits_in_byte * 2)) |
-			(uint32_t(h3) << utki::num_bits_in_byte) | uint32_t(h4)
+			(uint32_t(h1) << (utki::byte_bits * 3)) | (uint32_t(h2) << (utki::byte_bits * 2)) |
+			(uint32_t(h3) << utki::byte_bits) | uint32_t(h4)
 		),
 		port(p)
 	{}
