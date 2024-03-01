@@ -27,7 +27,7 @@ Description: debugging symbols for libsetka$(soname) package.
 
 Package: libsetka-dev
 Section: devel
-Architecture: all
+Architecture: any
 Depends: libsetka$(soname) (= ${binary:Version}), libsetka$(soname)-dbg (= ${binary:Version}), ${misc:Depends},
 		libutki-dev, libopros-dev
 Suggests: libsetka-doc

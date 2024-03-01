@@ -144,8 +144,7 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			reinterpret_cast<sockaddr*>(&socket_address),
 			socket_address_length
-		)
-		== socket_error)
+		) == socket_error)
 	{
 #if CFG_OS == CFG_OS_WINDOWS
 		int error_code = WSAGetLastError();

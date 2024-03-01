@@ -130,8 +130,7 @@ udp_socket::udp_socket(uint16_t port) :
 					// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 					reinterpret_cast<struct sockaddr*>(&socket_address),
 					socket_address_length
-				)
-				== socket_error)
+				) == socket_error)
 			{
 #if CFG_OS == CFG_OS_WINDOWS
 				int error_code = WSAGetLastError();
@@ -159,8 +158,7 @@ udp_socket::udp_socket(uint16_t port) :
 					// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 					reinterpret_cast<char*>(&yes),
 					sizeof(yes)
-				)
-				== socket_error)
+				) == socket_error)
 			{
 #	if CFG_OS == CFG_OS_WINDOWS
 				int error_code = WSAGetLastError();
@@ -211,8 +209,8 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		memset(&a, 0, sizeof(a));
 		a.sin6_family = AF_INET6;
-#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
-	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || \
+	(CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
 		// NOLINTNEXTLINE
 		a.sin6_addr.s6_addr[0] = destination_address.host.quad[0] >> (utki::num_bits_in_byte * 3);
 		// NOLINTNEXTLINE
@@ -380,8 +378,8 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		out_sender_address = address(
 			address::ip(
-#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
-	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || \
+	(CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
 				(uint32_t(a.sin6_addr.s6_addr[0]) << (utki::num_bits_in_byte * 3)) // NOLINT
 					| (uint32_t(a.sin6_addr.s6_addr[1]) << (utki::num_bits_in_byte * 2)) // NOLINT
 					| (uint32_t(a.sin6_addr.s6_addr[2]) << utki::num_bits_in_byte) // NOLINT

@@ -109,8 +109,8 @@ address::ip address::ip::parse_v6(const char* str)
 #	error "Unknown OS"
 #endif
 
-#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
-	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || \
+	(CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
 	return {
 		a.s6_addr[0],
 		a.s6_addr[1],

@@ -632,8 +632,7 @@ private:
 							HKEY_LOCAL_MACHINE,
 							R"(SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces)",
 							&this->key
-						)
-						!= ERROR_SUCCESS)
+						) != ERROR_SUCCESS)
 					{
 						throw std::runtime_error("init_dns(): RegOpenKey() failed");
 					}
@@ -867,8 +866,8 @@ private:
 									parse_result res =
 										this->parse_reply_from_dns(i->second, utki::span<uint8_t>(&*buf.begin(), ret));
 
-									if (res.result == setka::dns_result::not_found
-										&& i->second->recordType == dns_record_aaaa_id)
+									if (res.result == setka::dns_result::not_found &&
+										i->second->recordType == dns_record_aaaa_id)
 									{
 										// try getting record type A
 										LOG([&](auto& o) {
@@ -1159,8 +1158,7 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 				&osvi,
 				mask,
 				VerSetConditionMask(0, mask, VER_GREATER) // we check if current Windows version is greater than WinXP
-			)
-			== 0)
+			) == 0)
 		{
 			DWORD last_error = GetLastError();
 			if (last_error != ERROR_OLD_WIN_VERSION) {

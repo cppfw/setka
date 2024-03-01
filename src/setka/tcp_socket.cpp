@@ -83,8 +83,8 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 			auto& sa = reinterpret_cast<sockaddr_in6&>(socket_address);
 			memset(&sa, 0, sizeof(sa));
 			sa.sin6_family = AF_INET6;
-#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
-	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || \
+	(CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
 			sa.sin6_addr.s6_addr[0] = ip.host.quad[0] >> (utki::num_bits_in_byte * 3); // NOLINT
 			sa.sin6_addr.s6_addr[1] = (ip.host.quad[0] >> (utki::num_bits_in_byte * 2)) & utki::byte_mask; // NOLINT
 			sa.sin6_addr.s6_addr[2] = (ip.host.quad[0] >> utki::num_bits_in_byte) & utki::byte_mask; // NOLINT
@@ -119,9 +119,8 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 				ip.host.is_v4()
 					? sizeof(sockaddr_in)
 					: sizeof(sockaddr_in6
-					) // NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
-			)
-			== socket_error)
+					  ) // NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
+			) == socket_error)
 		{
 #if CFG_OS == CFG_OS_WINDOWS
 			int error_code = WSAGetLastError();
@@ -281,11 +280,10 @@ address make_ip_address(const sockaddr_storage& addr)
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		const auto& a = reinterpret_cast<const sockaddr_in6&>(addr);
 
-		return
-		{
+		return {
 			address::ip(
-#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS \
-	|| (CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
+#if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || \
+	(CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
 				(uint32_t(a.sin6_addr.s6_addr[0]) << (utki::num_bits_in_byte * 3)) // NOLINT
 					| (uint32_t(a.sin6_addr.s6_addr[1]) << (utki::num_bits_in_byte * 2)) // NOLINT
 					| (uint32_t(a.sin6_addr.s6_addr[2]) << utki::num_bits_in_byte) // NOLINT
@@ -309,7 +307,7 @@ address make_ip_address(const sockaddr_storage& addr)
 				uint32_t(ntohl(a.sin6_addr.__in6_u.__u6_addr32[3])) // NOLINT
 #endif
 			),
-				uint16_t(ntohs(a.sin6_port))
+			uint16_t(ntohs(a.sin6_port))
 		};
 	}
 }

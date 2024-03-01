@@ -264,8 +264,8 @@ public:
 	 */
 	address(uint8_t h1, uint8_t h2, uint8_t h3, uint8_t h4, uint16_t p) noexcept :
 		host(
-			(uint32_t(h1) << (utki::num_bits_in_byte * 3)) | (uint32_t(h2) << (utki::num_bits_in_byte * 2))
-			| (uint32_t(h3) << utki::num_bits_in_byte) | uint32_t(h4)
+			(uint32_t(h1) << (utki::num_bits_in_byte * 3)) | (uint32_t(h2) << (utki::num_bits_in_byte * 2)) |
+			(uint32_t(h3) << utki::num_bits_in_byte) | uint32_t(h4)
 		),
 		port(p)
 	{}
