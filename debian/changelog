@@ -1,3 +1,9 @@
+libsetka (1.0.37) unstable; urgency=medium
+
+  * aptian
+
+ -- Ivan Gagis <igagis@gmail.com>  Fri, 01 Mar 2024 16:05:45 +0200
+
 libsetka (1.0.36) unstable; urgency=medium
 
   * fix lint
