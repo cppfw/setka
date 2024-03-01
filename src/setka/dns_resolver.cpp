@@ -319,6 +319,8 @@ public:
 		this->mutex.unlock();
 		try {
 			r->hnr->on_completed(result, ip);
+
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		} catch (...) {
 			// ignore
 		}
@@ -683,6 +685,8 @@ private:
 						this->dns = setka::address(ip.c_str(), dns_port);
 						RegCloseKey(h_sub);
 						return;
+
+						// NOLINTNEXTLINE(bugprone-empty-catch)
 					} catch (...) {
 					}
 				}
@@ -709,6 +713,8 @@ private:
 					this->dns = setka::address(ip.c_str(), dns_port);
 					RegCloseKey(h_sub);
 					return;
+
+					// NOLINTNEXTLINE(bugprone-empty-catch)
 				} catch (...) {
 				}
 				RegCloseKey(h_sub);
@@ -752,6 +758,7 @@ private:
 				try {
 					this->dns = setka::address(ipstr.c_str(), dns_port);
 					return;
+					// NOLINTNEXTLINE(bugprone-empty-catch)
 				} catch (...) {
 				}
 			}
@@ -760,6 +767,7 @@ private:
 				o << "init_dns(): don't know how to get DNS IP on this OS" << std::endl;
 			})
 #endif
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		} catch (...) {
 		}
 		this->dns = setka::address(uint32_t(0), 0);

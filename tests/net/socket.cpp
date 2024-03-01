@@ -643,6 +643,8 @@ void run(){
 		try{//test incorrect string
 			setka::address ip("127.0.1803:65536");
 			utki::assert(false, SL);
+
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
@@ -652,6 +654,8 @@ void run(){
 		try{//test incorrect string
 			setka::address ip("127.0.270.1:65536");
 			utki::assert(false, SL);
+
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
@@ -673,6 +677,8 @@ void run(){
 		try{//test incorrect string
 			setka::address ip("127.0.0.1803:43");
 			utki::assert(false, SL);
+
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
@@ -682,6 +688,8 @@ void run(){
 		try{//test incorrect string
 			setka::address ip("127.0.0.180p43");
 			utki::assert(false, SL);
+
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
@@ -691,31 +699,37 @@ void run(){
 		try{//test incorrect string
 			setka::address ip("127.0.0.180:123456");
 			utki::assert(false, SL);
+
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		}catch(std::exception&){
 			//should get here
 		}catch(...){
 			utki::assert(false, SL);
 		}
 		
-		try{//test incorrect string
+		try{// test incorrect string
 			setka::address ip("127.0.0.180:72345");
 			utki::assert(false, SL);
+
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		}catch(std::exception&){
-			//should get here
+			// should get here
 		}catch(...){
 			utki::assert(false, SL);
 		}
 		
-		try{//test incorrect string
+		try{// test incorrect string
 			setka::address ip("127.0.0.1803:65536");
 			utki::assert(false, SL);
+
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		}catch(std::exception&){
-			//should get here
+			// should get here
 		}catch(...){
 			utki::assert(false, SL);
 		}
 		
-		try{//test correct string
+		try{// test correct string
 			setka::address ip("127.0.0.1:65535");
 			utki::assert(ip.host.get_v4() == 0x7f000001, SL);
 			utki::assert(ip.port == 0xffff, SL);
