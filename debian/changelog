@@ -1,3 +1,9 @@
+libsetka (1.0.38) unstable; urgency=medium
+
+  * fix homebrew packaging
+
+ -- Ivan Gagis <igagis@gmail.com>  Mon, 06 May 2024 14:53:00 +0300
+
 libsetka (1.0.37) unstable; urgency=medium
 
   * aptian
