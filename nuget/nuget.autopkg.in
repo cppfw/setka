@@ -18,9 +18,9 @@ nuget{
 		title: C++ network library;
 		authors: {Ivan Gagis};
 		owners: {Ivan Gagis};
-		licenseUrl: "https://raw.githubusercontent.com/cppfw/setka/master/LICENSE";
+		licenseUrl: "https://raw.githubusercontent.com/cppfw/setka/main/LICENSE";
 		projectUrl: "https://github.com/cppfw/setka";
-		iconUrl: "https://github.com/cppfw/setka/blob/master/logo.svg";
+		iconUrl: "https://github.com/cppfw/setka/blob/main/logo.svg";
 		requireLicenseAcceptance:false;
 		summary: C++ network library;
 
