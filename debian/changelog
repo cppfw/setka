@@ -1,3 +1,9 @@
+libsetka (1.0.39) unstable; urgency=medium
+
+  * ubuntu noble build
+
+ -- Ivan Gagis <igagis@gmail.com>  Tue, 19 Nov 2024 22:52:27 +0200
+
 libsetka (1.0.38) unstable; urgency=medium
 
   * fix homebrew packaging
