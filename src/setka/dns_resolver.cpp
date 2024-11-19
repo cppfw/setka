@@ -454,7 +454,7 @@ public:
 			}
 		}
 
-		ASSERT(buf.overlaps(p) || p == buf.end())
+		ASSERT(utki::overlaps(buf, p) || p == buf.end())
 
 		// loop through the answers
 		for (uint16_t n = 0; n != num_answers; ++n) {
@@ -468,7 +468,7 @@ public:
 			if (((*p) >> 6) == 0) { // NOLINT
 				// skip possible domain name
 				for (; p != buf.end() && *p != 0; ++p) { // NOLINT
-					ASSERT(buf.overlaps(p))
+					ASSERT(utki::overlaps(buf, p))
 				}
 				if (p == buf.end()) {
 					return {setka::dns_result::dns_error}; // unexpected end of packet
@@ -802,7 +802,8 @@ private:
 		})
 
 		{
-			std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex
+			std::lock_guard<decltype(dns::mutex)> mutex_guard(
+				dns::mutex
 			); // mutex is needed because socket opening may fail and we will have to set is_exiting flag which should
 			   // be protected by mutex
 

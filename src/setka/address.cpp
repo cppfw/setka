@@ -174,14 +174,14 @@ address::address(const char* str)
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 		for (dst = buf.data(); *str != ']'; ++dst, ++str) {
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-			if (*str == 0 || !utki::make_span(buf).overlaps(dst + 1)) {
+			if (*str == 0 || !utki::overlaps(utki::make_span(buf), dst + 1)) {
 				throw std::runtime_error("bad IP address format");
 			}
 
 			*dst = *str;
 		}
 
-		ASSERT(utki::make_span(buf).overlaps(dst))
+		ASSERT(utki::overlaps(utki::make_span(buf), dst))
 		*dst = 0; // null-terminate
 
 		this->host = ip::parse_v6(buf.data());
@@ -200,14 +200,14 @@ address::address(const char* str)
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 			for (dst = buf.data(); *str != ':' && *str != 0; ++dst, ++str) {
 				// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-				if (!utki::make_span(buf).overlaps(dst + 1)) {
+				if (!utki::overlaps(utki::make_span(buf), dst + 1)) {
 					throw std::runtime_error("bad IP address format");
 				}
 
 				*dst = *str;
 			}
 
-			ASSERT(utki::make_span(buf).overlaps(dst))
+			ASSERT(utki::overlaps(utki::make_span(buf), dst))
 			*dst = 0; // null-terminate
 
 			this->host = ip::parse_v4(buf.data());
