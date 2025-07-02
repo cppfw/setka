@@ -118,7 +118,8 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 				reinterpret_cast<sockaddr*>(&socket_address),
 				ip.host.is_v4()
 					? sizeof(sockaddr_in)
-					: sizeof(sockaddr_in6
+					: sizeof(
+						  sockaddr_in6
 					  ) // NOTE: on Mac OS for some reason the size should be exactly according to AF_INET/AF_INET6
 			) == socket_error)
 		{

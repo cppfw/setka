@@ -353,7 +353,8 @@ public:
 		}
 #endif
 
-		if (buf.size() < 2 + // ID
+		if (
+			buf.size() < 2 + // ID
 				2 + // flags
 				2 + // Number of questions
 				2 + // Number of answers
@@ -805,7 +806,7 @@ private:
 			std::lock_guard<decltype(dns::mutex)> mutex_guard(
 				dns::mutex
 			); // mutex is needed because socket opening may fail and we will have to set is_exiting flag which should
-			   // be protected by mutex
+			// be protected by mutex
 
 			try {
 				this->socket = setka::udp_socket(0);
@@ -890,8 +891,8 @@ private:
 										try {
 											this->send_list.push_back(i->second);
 											i->second->sendIter = --this->send_list.end();
-											if (this->send_list.size() == 1)
-											{ // if need to switch to wait for writing mode
+											if (this->send_list.size() ==
+												1) { // if need to switch to wait for writing mode
 												this->start_sending();
 											}
 										} catch (...) {
@@ -947,8 +948,9 @@ private:
 								LOG([&](auto& o) {
 									o << "request sent" << std::endl;
 								})
-								r->sendIter = this->send_list.end(
-								); // end() value will indicate that the request has already been sent
+								r->sendIter =
+									this->send_list
+										.end(); // end() value will indicate that the request has already been sent
 								this->send_list.pop_front();
 							} else {
 								std::unique_ptr<dns::resolver> removed_resolver = this->remove_resolver(r->hnr);
@@ -959,9 +961,10 @@ private:
 								this->call_callback(removed_resolver.operator->(), dns_result::error, 0);
 							}
 						}
-					} catch (std::exception&
+					} catch (
+						std::exception&
 #ifdef DEBUG
-								 e
+							e
 #endif
 					)
 					{
