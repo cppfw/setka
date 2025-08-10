@@ -249,12 +249,8 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 		}
 	}
 
-#	ifdef DEBUG
 	// if some event occurred then some of readiness flags should be set
-	if (events.lNetworkEvents != 0) {
-		utki::assert(!flags.is_clear(), SL);
-	}
-#	endif
+	utki::assert(events.lNetworkEvents == 0 || !flags.is_clear(), SL);
 
 	return flags;
 }

@@ -84,9 +84,8 @@ std::string parse_host_name_from_dns_packet(const uint8_t*& p, const uint8_t* en
 
 		host += std::string(reinterpret_cast<const char*>(p), size_t(len)); // NOLINT
 		p += len; // NOLINT
-		ASSERT(p <= end - 1 || p == end)
+		utki::assert(p <= std::prev(end) || p == end, SL);
 	}
-	//			TRACE(<< "host = " << host << std::endl)
 
 	return host;
 }
@@ -229,7 +228,7 @@ public:
 
 		ASSERT(packet_size <= buf.size())
 
-		uint8_t* p = &*buf.begin();
+		uint8_t* p = buf.data();
 
 		// ID
 		utki::serialize16be(r->id, p);
@@ -275,7 +274,7 @@ public:
 
 			++dot_pos;
 
-			ASSERT(p <= &*buf.end());
+			ASSERT(p <= utki::end_pointer(buf));
 		}
 
 		*p = 0; // terminate labels sequence
@@ -288,14 +287,14 @@ public:
 		utki::serialize16be(1, p);
 		p += 2; // NOLINT
 
-		ASSERT(&*buf.begin() <= p && p <= &*buf.end());
-		ASSERT(size_t(p - &*buf.begin()) == packet_size);
+		ASSERT(buf.data() <= p && p <= utki::end_pointer(buf));
+		ASSERT(size_t(p - buf.data()) == packet_size);
 
 		LOG([&](auto& o) {
 			o << "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->host_name
 			  << ", reqID = " << r->id << std::endl;
 		})
-		size_t ret = this->socket.send(utki::make_span(&*buf.begin(), packet_size), r->dns);
+		size_t ret = this->socket.send(utki::make_span(buf.data(), packet_size), r->dns);
 
 		ASSERT(ret == packet_size || ret == 0)
 
@@ -342,19 +341,17 @@ public:
 	//       this function will call the resolver callback
 	parse_result parse_reply_from_dns(dns::resolver* r, const utki::span<uint8_t> buf)
 	{
-		LOG([&](auto& o) {
+		utki::log_debug([&](auto& o) {
 			o << "dns::resolver::parse_reply_from_dns(): enter" << std::endl;
-		})
-#ifdef DEBUG
-		for (unsigned i = 0; i < buf.size(); ++i) {
-			LOG([&](auto& o) {
-				o << std::hex << int(buf[i]) << std::dec << std::endl;
-			})
-		}
-#endif
+		});
 
-		if (
-			buf.size() < 2 + // ID
+		utki::log_debug([&](auto& o) {
+			for (auto& b : buf) {
+				o << std::hex << int(b) << std::dec << std::endl;
+			}
+		});
+
+		if (buf.size() < 2 + // ID
 				2 + // flags
 				2 + // Number of questions
 				2 + // Number of answers
@@ -426,7 +423,7 @@ public:
 
 		// parse host name
 		{
-			std::string host = dns::parse_host_name_from_dns_packet(p, buf.end());
+			std::string host = dns::parse_host_name_from_dns_packet(p, utki::end_pointer(buf));
 			//			TRACE(<< "host = " << host << std::endl)
 
 			if (r->host_name != host) {
@@ -726,16 +723,16 @@ private:
 
 			std::vector<uint8_t> buf = f.load(size_t(utki::kilobyte) * 4); // 4kb max
 
-			for (uint8_t* p = &*buf.begin(); p != &*buf.end(); ++p) { // NOLINT
+			for (uint8_t* p = buf.data(); p != utki::end_pointer(buf); ++p) { // NOLINT
 				uint8_t* start = p;
 
-				while (p != &*buf.end() && *p != '\n') {
+				while (p != utki::end_pointer(buf) && *p != '\n') {
 					++p; // NOLINT
 				}
 
 				ASSERT(p >= start)
 				std::string line(reinterpret_cast<const char*>(start), size_t(p - start)); // NOLINT
-				if (p == &*buf.end()) {
+				if (p == utki::end_pointer(buf)) {
 					--p; // NOLINT
 				}
 
@@ -803,8 +800,7 @@ private:
 		})
 
 		{
-			std::lock_guard<decltype(dns::mutex)> mutex_guard(
-				dns::mutex
+			std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex
 			); // mutex is needed because socket opening may fail and we will have to set is_exiting flag which should
 			// be protected by mutex
 
@@ -870,11 +866,11 @@ private:
 								// check by host name also
 								// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 								const uint8_t* p = buf.data() + host_name_start_offset;
-								std::string host = dns::parse_host_name_from_dns_packet(p, &*buf.end());
+								std::string host = dns::parse_host_name_from_dns_packet(p, utki::end_pointer(buf));
 
 								if (host == i->second->host_name) {
 									parse_result res =
-										this->parse_reply_from_dns(i->second, utki::span<uint8_t>(&*buf.begin(), ret));
+										this->parse_reply_from_dns(i->second, utki::span<uint8_t>(buf.data(), ret));
 
 									if (res.result == setka::dns_result::not_found &&
 										i->second->recordType == dns_record_aaaa_id)
@@ -891,8 +887,8 @@ private:
 										try {
 											this->send_list.push_back(i->second);
 											i->second->sendIter = --this->send_list.end();
-											if (this->send_list.size() ==
-												1) { // if need to switch to wait for writing mode
+											if (this->send_list.size() == 1)
+											{ // if need to switch to wait for writing mode
 												this->start_sending();
 											}
 										} catch (...) {
@@ -948,9 +944,8 @@ private:
 								LOG([&](auto& o) {
 									o << "request sent" << std::endl;
 								})
-								r->sendIter =
-									this->send_list
-										.end(); // end() value will indicate that the request has already been sent
+								r->sendIter = this->send_list.end(
+								); // end() value will indicate that the request has already been sent
 								this->send_list.pop_front();
 							} else {
 								std::unique_ptr<dns::resolver> removed_resolver = this->remove_resolver(r->hnr);
@@ -961,10 +956,9 @@ private:
 								this->call_callback(removed_resolver.operator->(), dns_result::error, 0);
 							}
 						}
-					} catch (
-						std::exception&
+					} catch (std::exception&
 #ifdef DEBUG
-							e
+								 e
 #endif
 					)
 					{
@@ -1090,12 +1084,12 @@ dns_resolver::~dns_resolver()
 	if (dns::thread) {
 		std::lock_guard<decltype(dns::thread->mutex)> mutex_guard(dns::thread->mutex);
 
-		dns::resolvers_iter_type i = dns::thread->resolvers_map.find(this);
+		auto i = dns::thread->resolvers_map.find(this);
 		if (i != dns::thread->resolvers_map.end()) {
 			utki::assert(
 				false,
 				[&](auto& o) {
-					o << "trying to destroy the dns_resolver object while DNS lookup request is in progress, call dns_resolver::Cancel_ts() first.";
+					o << "trying to destroy the dns_resolver object while DNS lookup request is in progress, call dns_resolver::cancel() first.";
 				},
 				SL
 			);

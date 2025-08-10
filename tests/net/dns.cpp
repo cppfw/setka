@@ -58,17 +58,17 @@ void run(){
 		LOG([&](auto&o){o << "test_simple_dns_lookup::run(): waiting on semaphore" << std::endl;})
 		
 		if(!sema.wait(11000)){
-			utki::assert(false, SL);
+			utki::assert_always(false, SL);
 		}
 
-		utki::assert(
+		utki::assert_always(
 			r.res == setka::dns_result::ok,
 			[&](auto&o){o << "r.result = " << unsigned(r.res);},
 			SL
 		);
 
 //		ASSERT_INFO_ALWAYS(r.ip == 0x4D581503 || r.ip == 0x57FAFB03, "r.ip = " << r.ip)
-		utki::assert(
+		utki::assert_always(
 			r.ip.is_valid(),
 			[&](auto&o){o << "ip = " << r.ip.to_string();},
 			SL
@@ -77,18 +77,17 @@ void run(){
 		LOG([&](auto&o){o << "ip = " << r.ip.to_string() << std::endl;})
 	}
 	
-	{//test several resolves at a time
+	// test several resolves at a time
+	{
 		nitki::semaphore sema;
 
 		using resolver_list_type = std::vector<std::unique_ptr<resolver> >;
 		resolver_list_type r;
 
-		r.push_back(std::make_unique<resolver>(sema, "google.ru"));
-		r.push_back(std::make_unique<resolver>(sema, "ya.ru"));
-		r.push_back(std::make_unique<resolver>(sema, "mail.ru"));
-		r.push_back(std::make_unique<resolver>(sema, "vk.com"));
-		
-//		TRACE(<< "starting resolutions" << std::endl)
+		r.push_back(std::make_unique<resolver>(sema, "google.com"));
+		r.push_back(std::make_unique<resolver>(sema, "gagistech.com"));
+		r.push_back(std::make_unique<resolver>(sema, "yle.fi"));
+		r.push_back(std::make_unique<resolver>(sema, "facebook.com"));
 		
 		for(auto& rslvr : r){
 			rslvr->resolve_host();
@@ -96,26 +95,23 @@ void run(){
 		
 		for(unsigned i = 0; i < r.size(); ++i){
 			if(!sema.wait(11000)){
-				utki::assert(false, SL);
+				utki::assert_always(false, SL);
 			}
 		}
-//		TRACE(<< "resolutions done" << std::endl)
 		
 		for(auto& rslvr: r){
-			utki::assert(
+			utki::assert_always(
 				rslvr->res == setka::dns_result::ok,
 				[&](auto&o){o << "result = " << unsigned(rslvr->res) << " host to resolve = " << rslvr->host_name;},
 				SL
 			);
 
-			utki::assert(rslvr->ip.is_valid(), SL);
+			utki::assert_always(rslvr->ip.is_valid(), SL);
 		}
 	}
 }
 
 }
-
-
 
 namespace test_request_from_callback{
 
@@ -140,17 +136,17 @@ public:
 //		ASSERT_INFO_ALWAYS(result == ting::net::dns_resolver::OK, "result = " << result)
 		
 		if(this->host.size() == 0){
-			utki::assert(
+			utki::assert_always(
 				res == setka::dns_result::not_found,
 				[&](auto&o){o << "result = " << unsigned(res);},
 				SL
 			);
-			utki::assert(!ip.is_valid(), SL);
+			utki::assert_always(!ip.is_valid(), SL);
 			
-			this->host = "ya.ru";
+			this->host = "google.com";
 			this->resolve(this->host, 5000);
 		}else{
-			utki::assert(this->host == "ya.ru", SL);
+			utki::assert_always(this->host == "google.com", SL);
 			this->res = res;
 			this->ip = ip;
 			this->sema.signal();
@@ -163,20 +159,20 @@ void run(){
 	
 	resolver r(sema);
 	
-	r.resolve("rfesfdf.ru", 3000);
+	r.resolve("rfesfdf.com", 3000);
 	
 	if(!sema.wait(8000)){
-		utki::assert(false, SL);
+		utki::assert_always(false, SL);
 	}
 	
-	utki::assert(
+	utki::assert_always(
 		r.res == setka::dns_result::ok,
 		[&](auto&o){o << "r.result = " << unsigned(r.res);},
 		SL
 	);
 
 //	ASSERT_INFO_ALWAYS(r.ip == 0x4D581503 || r.ip == 0x57FAFB03, "r.ip = " << r.ip)
-	utki::assert(r.ip.is_valid(), SL);
+	utki::assert_always(r.ip.is_valid(), SL);
 }
 }
 
@@ -197,7 +193,7 @@ void run(){
 	utki::log([&](auto&o){o << "\tRunning 'cacnel DNS lookup' test, it will take about 4 seconds" << std::endl;});
 	resolver r;
 	
-	r.resolve("rfesweefdqfdf.ru", 3000, setka::address("1.2.3.4", 53));
+	r.resolve("rfesweefdqfdf.com", 3000, setka::address("1.2.3.4", 53));
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	
@@ -205,8 +201,8 @@ void run(){
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 	
-	utki::assert(res, SL);
+	utki::assert_always(res, SL);
 	
-	utki::assert(!r.called, SL);
+	utki::assert_always(!r.called, SL);
 }
 }

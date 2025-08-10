@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 namespace test_simple_dns_lookup{
 void run();
 }
