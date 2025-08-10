@@ -1,3 +1,9 @@
+libsetka (1.0.41) unstable; urgency=medium
+
+  * debian trixie build
+
+ -- Ivan Gagis <igagis@gmail.com>  Mon, 11 Aug 2025 00:00:25 +0300
+
 libsetka (1.0.40) unstable; urgency=medium
 
   * add debian dbg package
