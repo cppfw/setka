@@ -2,7 +2,7 @@
     "name": "setka",
     "version": "$(version)",
     "homepage": "https://github.com/cppfw/setka",
-    "description": "filesystem abstraction in C++",
+    "description": "network sockets wrapper in C++",
     "license": "MIT",
     "dependencies": [
       {
