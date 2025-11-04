@@ -8,5 +8,5 @@ target "setka" do
 	pod 'utki', '>= 1.1.124'
 	pod 'opros', '>= 1.0.46'
 	pod 'nitki', '>= 1.0.41'
-	pod 'papki', '>= 1.0.93'
+	pod 'fsif', '>= 1.0.93'
 end

@@ -10,7 +10,7 @@ class Libsetka < Formula
   depends_on "libnitki"
   depends_on "libopros"
   depends_on "libutki"
-  depends_on "libpapki"
+  depends_on "libfsif"
 
   # use gmake here because otherwise homebrew uses default Mac's make which is of too old version 3.81
   def install

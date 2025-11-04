@@ -10,7 +10,7 @@ this_no_install := true
 this_srcs += $(call prorab-src-dir, .)
 
 this_ldlibs += -l nitki$(this_dbg)
-this_ldlibs += -l papki$(this_dbg)
+this_ldlibs += -l fsif$(this_dbg)
 this_ldlibs += -l opros$(this_dbg)
 this_ldlibs += -l utki$(this_dbg)
 

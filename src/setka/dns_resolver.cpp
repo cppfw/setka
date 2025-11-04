@@ -38,7 +38,7 @@ SOFTWARE.
 #include <utki/util.hpp>
 
 #if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
-#	include <papki/fs_file.hpp>
+#	include <fsif/native_file.hpp>
 #endif
 
 #include "dns_resolver.hpp"
@@ -719,7 +719,7 @@ private:
 			}
 
 #elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
-			papki::fs_file f("/etc/resolv.conf");
+			fsif::native_file f("/etc/resolv.conf");
 
 			std::vector<uint8_t> buf = f.load(size_t(utki::kilobyte) * 4); // 4kb max
 
