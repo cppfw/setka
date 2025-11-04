@@ -25,3 +25,7 @@ myci_declare_library(${PROJECT_NAME}
         fsif
         nitki
 )
+
+if(WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
+endif()
