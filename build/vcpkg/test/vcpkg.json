@@ -1,6 +1,5 @@
 {
   "dependencies": [
-      "fsif",
-      "nitki"
+    "setka"
   ]
 }
