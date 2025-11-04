@@ -1,0 +1,5 @@
+setka provides CMake targets:
+
+find_package(setka CONFIG REQUIRED)
+
+target_link_libraries(main PRIVATE setka::setka)
