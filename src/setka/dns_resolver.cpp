@@ -657,12 +657,22 @@ private:
 			std::array<char, std::numeric_limits<uint8_t>::max() + 1> subkey;
 
 			// TODO: rewrite using RegEnumKeyEx() as RegEnumKeyA() is only provided for compatibility with 16-bit Windows
-			for (unsigned i = 0; RegEnumKeyA(key.key,//
-				 i, subkey.data(), DWORD(subkey.size())) == ERROR_SUCCESS; ++i) {
+			for (unsigned i = 0; RegEnumKeyA(
+									 key.key, //
+									 i,
+									 subkey.data(),
+									 DWORD(subkey.size())
+								 ) == ERROR_SUCCESS;
+				 ++i)
+			{
 				HKEY h_sub = nullptr;
 				// TODO: rewrite using RegOpenKeyEx() as RegOpenKeyA() is only provided for compatibility with 16-bit Windows
-				if (RegOpenKeyA(key.key,//
-					 subkey.data(), &h_sub) != ERROR_SUCCESS) {
+				if (RegOpenKeyA(
+						key.key, //
+						subkey.data(),
+						&h_sub
+					) != ERROR_SUCCESS)
+				{
 					continue;
 				}
 
@@ -671,8 +681,15 @@ private:
 
 				auto len = DWORD(value.size());
 
-				if (RegQueryValueExA(h_sub,//
-					 "NameServer", nullptr, nullptr, value.data(), &len) != ERROR_SUCCESS) {
+				if (RegQueryValueExA(
+						h_sub, //
+						"NameServer",
+						nullptr,
+						nullptr,
+						value.data(),
+						&len
+					) != ERROR_SUCCESS)
+				{
 					utki::log_debug([&](auto& o) {
 						o << "NameServer reading failed " << std::endl;
 					});
@@ -697,8 +714,15 @@ private:
 				}
 
 				len = DWORD(value.size());
-				if (RegQueryValueExA(h_sub,//
-					 "DhcpNameServer", nullptr, nullptr, value.data(), &len) != ERROR_SUCCESS) {
+				if (RegQueryValueExA(
+						h_sub, //
+						"DhcpNameServer",
+						nullptr,
+						nullptr,
+						value.data(),
+						&len
+					) != ERROR_SUCCESS)
+				{
 					LOG([&](auto& o) {
 						o << "DhcpNameServer reading failed " << std::endl;
 					})
