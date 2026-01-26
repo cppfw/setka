@@ -628,7 +628,8 @@ private:
 
 				win_reg_key()
 				{
-					if (RegOpenKey(
+					// TODO: rewrite useing RegOpenKeyExA() as RegOpenKeyA() is provided only for compatibility with 16-bit Windows
+					if (RegOpenKeyA(
 							HKEY_LOCAL_MACHINE,
 							R"(SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces)",
 							&this->key
@@ -650,13 +651,18 @@ private:
 				}
 			} key;
 
+			// According to MSDN docs maximum key name length is 255 chars.
+			// Add also space for terminating zero.
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-			std::array<char, std::numeric_limits<uint8_t>::max() + 1>
-				subkey; // according to MSDN docs maximum key name length is 255 chars.
+			std::array<char, std::numeric_limits<uint8_t>::max() + 1> subkey;
 
-			for (unsigned i = 0; RegEnumKey(key.key, i, subkey.data(), DWORD(subkey.size())) == ERROR_SUCCESS; ++i) {
+			// TODO: rewrite using RegEnumKeyEx() as RegEnumKeyA() is only provided for compatibility with 16-bit Windows
+			for (unsigned i = 0; RegEnumKeyA(key.key,//
+				 i, subkey.data(), DWORD(subkey.size())) == ERROR_SUCCESS; ++i) {
 				HKEY h_sub = nullptr;
-				if (RegOpenKey(key.key, subkey.data(), &h_sub) != ERROR_SUCCESS) {
+				// TODO: rewrite using RegOpenKeyEx() as RegOpenKeyA() is only provided for compatibility with 16-bit Windows
+				if (RegOpenKeyA(key.key,//
+					 subkey.data(), &h_sub) != ERROR_SUCCESS) {
 					continue;
 				}
 
@@ -665,10 +671,11 @@ private:
 
 				auto len = DWORD(value.size());
 
-				if (RegQueryValueEx(h_sub, "NameServer", nullptr, nullptr, value.data(), &len) != ERROR_SUCCESS) {
-					LOG([&](auto& o) {
+				if (RegQueryValueExA(h_sub,//
+					 "NameServer", nullptr, nullptr, value.data(), &len) != ERROR_SUCCESS) {
+					utki::log_debug([&](auto& o) {
 						o << "NameServer reading failed " << std::endl;
-					})
+					});
 				} else {
 					try {
 						// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -676,9 +683,9 @@ private:
 						size_t space_index = str.find(' ');
 
 						std::string ip = str.substr(0, space_index);
-						LOG([&](auto& o) {
+						utki::log_debug([&](auto& o) {
 							o << "NameServer ip = " << ip << std::endl;
-						})
+						});
 
 						this->dns = setka::address(ip.c_str(), dns_port);
 						RegCloseKey(h_sub);
@@ -690,7 +697,8 @@ private:
 				}
 
 				len = DWORD(value.size());
-				if (RegQueryValueEx(h_sub, "DhcpNameServer", nullptr, nullptr, value.data(), &len) != ERROR_SUCCESS) {
+				if (RegQueryValueExA(h_sub,//
+					 "DhcpNameServer", nullptr, nullptr, value.data(), &len) != ERROR_SUCCESS) {
 					LOG([&](auto& o) {
 						o << "DhcpNameServer reading failed " << std::endl;
 					})
@@ -704,9 +712,9 @@ private:
 					size_t space_index = str.find(' ');
 
 					std::string ip = str.substr(0, space_index);
-					LOG([&](auto& o) {
+					utki::log_debug([&](auto& o) {
 						o << "DhcpNameServer ip = " << ip << std::endl;
-					})
+					});
 
 					this->dns = setka::address(ip.c_str(), dns_port);
 					RegCloseKey(h_sub);
@@ -730,7 +738,7 @@ private:
 					++p; // NOLINT
 				}
 
-				ASSERT(p >= start)
+				utki::assert(p >= start, SL);
 				std::string line(reinterpret_cast<const char*>(start), size_t(p - start)); // NOLINT
 				if (p == utki::end_pointer(buf)) {
 					--p; // NOLINT
@@ -749,9 +757,9 @@ private:
 
 				std::string ipstr = line.substr(ip_start, ip_end - ip_start);
 
-				LOG([&](auto& o) {
+				utki::log_debug([&](auto& o) {
 					o << "dns ipstr = " << ipstr << std::endl;
-				})
+				});
 
 				try {
 					this->dns = setka::address(ipstr.c_str(), dns_port);
@@ -773,9 +781,9 @@ private:
 
 	void run() override
 	{
-		LOG([&](auto& o) {
+		utki::log_debug([&](auto& o) {
 			o << "DNS lookup thread started" << std::endl;
-		})
+		});
 
 		// destroy previous thread if necessary
 		if (this->prev_thread) {
@@ -784,20 +792,20 @@ private:
 			// started thread.
 			this->prev_thread->join();
 			this->prev_thread.reset();
-			LOG([&](auto& o) {
+			utki::log_debug([&](auto& o) {
 				o << "Previous thread destroyed" << std::endl;
-			})
+			});
 		}
 
-		LOG([&](auto& o) {
+		utki::log_debug([&](auto& o) {
 			o << "calling this->init_dns()" << std::endl;
-		})
+		});
 
 		this->init_dns();
 
-		LOG([&](auto& o) {
+		utki::log_debug([&](auto& o) {
 			o << "this->dns.host = " << this->dns.host.to_string() << std::endl;
-		})
+		});
 
 		{
 			std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex
@@ -827,9 +835,9 @@ private:
 				for (const auto& t : this->wait_set.get_triggered()) {
 					if (t.user_data == &this->socket) {
 						flags = t.flags;
-						LOG([&](auto& o) {
+						utki::log_debug([&](auto& o) {
 							o << "socket flags = " << flags << std::endl;
-						})
+						});
 					}
 				}
 
@@ -840,9 +848,9 @@ private:
 				}
 
 				if (flags.get(opros::ready::read)) {
-					LOG([&](auto& o) {
+					utki::log_debug([&](auto& o) {
 						o << "can read" << std::endl;
-					})
+					});
 					try {
 						// RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger
 						// buffer.
@@ -853,15 +861,15 @@ private:
 
 						constexpr auto host_name_start_offset = 12;
 
-						ASSERT(ret != 0)
-						ASSERT(ret <= buf.size())
+						utki::assert(ret != 0, SL);
+						utki::assert(ret <= buf.size(), SL);
 						// at least there should be standard header and host name, otherwise ignore received UDP packet
 						if (ret > host_name_start_offset) {
 							uint16_t id = utki::deserialize16be(buf.data());
 
 							auto i = this->id_map.find(id);
 							if (i != this->id_map.end()) {
-								ASSERT(id == i->second->id)
+								utki::assert(id == i->second->id, SL);
 
 								// check by host name also
 								// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -876,14 +884,14 @@ private:
 										i->second->recordType == dns_record_aaaa_id)
 									{
 										// try getting record type A
-										LOG([&](auto& o) {
+										utki::log_debug([&](auto& o) {
 											o << "no record AAAA found, trying to get record type A" << std::endl;
-										})
+										});
 
 										i->second->recordType = dns_record_a_id;
 
 										// add to send list
-										ASSERT(i->second->sendIter == this->send_list.end())
+										utki::assert(i->second->sendIter == this->send_list.end(), SL);
 										try {
 											this->send_list.push_back(i->second);
 											i->second->sendIter = --this->send_list.end();
