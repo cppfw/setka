@@ -187,7 +187,7 @@ tcp_server_socket::tcp_server_socket(uint16_t port, bool disable_naggle, uint16_
 
 tcp_socket tcp_server_socket::accept()
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("tcp_server_socket::accept(): the socket is not opened");
 	}
 

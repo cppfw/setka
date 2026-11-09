@@ -183,7 +183,7 @@ udp_socket::udp_socket(uint16_t port) :
 
 size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destination_address)
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("udp_socket::send(): socket is empty");
 	}
 
@@ -309,7 +309,7 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 
 size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("udp_socket::recieve(): socket is empty");
 	}
 

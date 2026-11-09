@@ -145,8 +145,7 @@ public:
 	 * @brief Tells whether the socket is empty or not.
 	 * @return Returns true if the socket is empty or false otherwise.
 	 */
-
-	bool is_empty() const noexcept
+	bool empty() const noexcept
 	{
 #if CFG_OS == CFG_OS_WINDOWS
 		return this->handle == WSA_INVALID_EVENT;

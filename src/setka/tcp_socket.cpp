@@ -36,7 +36,7 @@ using namespace setka;
 
 tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 {
-	if (!this->is_empty()) {
+	if (!this->empty()) {
 		throw std::logic_error("tcp_socket::open(): socket is already connected");
 	}
 
@@ -149,7 +149,7 @@ tcp_socket::tcp_socket(const address& ip, bool disable_naggle)
 
 size_t tcp_socket::send(utki::span<const uint8_t> buf)
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("tcp_socket::send(): socket is empty");
 	}
 
@@ -201,7 +201,7 @@ size_t tcp_socket::send(utki::span<const uint8_t> buf)
 
 size_t tcp_socket::receive(utki::span<uint8_t> buf)
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("tcp_socket::receive(): socket is empty");
 	}
 
@@ -254,7 +254,7 @@ size_t tcp_socket::receive(utki::span<uint8_t> buf)
 
 void tcp_socket::disconnect()
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		return;
 	}
 
@@ -315,7 +315,7 @@ address make_ip_address(const sockaddr_storage& addr)
 
 address tcp_socket::get_local_address()
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("tcp_socket::get_local_address(): socket is empty");
 	}
 
@@ -348,7 +348,7 @@ address tcp_socket::get_local_address()
 
 address tcp_socket::get_remote_address()
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("tcp_socket::get_remote_address(): socket is empty");
 	}
 

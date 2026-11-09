@@ -47,7 +47,7 @@ socket::~socket() noexcept
 void socket::close() noexcept
 {
 	//		TRACE(<< "socket::Close(): invoked " << this << std::endl)
-	if (this->is_empty()) {
+	if (this->empty()) {
 		return;
 	}
 
@@ -71,7 +71,7 @@ setka::socket& socket::operator=(socket&& s) noexcept(false)
 		return *this;
 	}
 
-	if (!this->is_empty()) {
+	if (!this->empty()) {
 		throw std::logic_error("socket::operator=(socket&&): cannot not move to non-empty socket");
 	}
 
@@ -92,7 +92,7 @@ setka::socket& socket::operator=(socket&& s) noexcept(false)
 
 void socket::disable_naggle()
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("socket::disable_naggle(): socket is empty");
 	}
 
@@ -119,7 +119,7 @@ void socket::disable_naggle()
 
 void socket::set_nonblocking_mode()
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("socket::set_nonblocking_mode(): socket is empty");
 	}
 
@@ -161,7 +161,7 @@ void socket::set_nonblocking_mode()
 
 uint16_t socket::get_local_port()
 {
-	if (this->is_empty()) {
+	if (this->empty()) {
 		throw std::logic_error("socket::GetLocalPort(): socket is not valid");
 	}
 
@@ -199,7 +199,7 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 {
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
-	ASSERT(!this->is_empty())
+	ASSERT(!this->empty())
 	if (WSAEnumNetworkEvents(this->win_sock, this->handle, &events) != 0) {
 		throw std::system_error(
 			WSAGetLastError(),
@@ -277,7 +277,7 @@ void socket::close_event_for_waitable()
 
 void socket::set_waiting_events_for_windows(long flags)
 {
-	ASSERT(!this->is_empty() && (this->handle != WSA_INVALID_EVENT), [&](auto& o) {
+	ASSERT(!this->empty() && (this->handle != WSA_INVALID_EVENT), [&](auto& o) {
 		o << "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.";
 	})
 

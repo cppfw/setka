@@ -53,7 +53,7 @@ bool is_ipv6_supported_by_os(){
 
 namespace basic_client_server_test{
 void send_all(setka::tcp_socket& s, utki::span<const uint8_t> buf){
-	if(s.is_empty()){
+	if(s.empty()){
 		throw std::logic_error("send_all(): socket is not opened");
 	}
 
@@ -90,7 +90,7 @@ public:
 
 			// accept some connection
 			setka::tcp_socket sock;
-			while(sock.is_empty() && !this->quit_flag){
+			while(sock.empty() && !this->quit_flag){
 				sock = listen_sock.accept();
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				if(auto m = this->queue.pop_front()){
@@ -98,7 +98,7 @@ public:
 				}
 			}
 
-			utki::assert_always(!sock.is_empty(), SL);
+			utki::assert_always(!sock.empty(), SL);
 
 			utki::assert_always(sock.get_local_address().host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
@@ -130,7 +130,7 @@ void run(){
 
 		setka::tcp_socket sock(ip);
 
-		utki::assert_always(!sock.is_empty(), SL);
+		utki::assert_always(!sock.empty(), SL);
 
 		// give some time for socket to connect
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -178,17 +178,17 @@ void run(){
 
 	setka::tcp_socket sock_s(setka::address("127.0.0.1", 13666));
 
-	utki::assert_always(!sock_s.is_empty(), SL);
+	utki::assert_always(!sock_s.empty(), SL);
 
 	//Accept connection
 //	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
 	setka::tcp_socket sock_r;
-	for(unsigned i = 0; i < 20 && sock_r.is_empty(); ++i){
+	for(unsigned i = 0; i < 20 && sock_r.empty(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sock_r = server_sock.accept();
 	}
 
-	utki::assert_always(!sock_r.is_empty(), SL);
+	utki::assert_always(!sock_r.empty(), SL);
 
 	//Here we have 2 sockets sock_s and sock_r
 
@@ -375,13 +375,13 @@ void run(){
 	// accept connection
 //	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
 	setka::tcp_socket sock_r;
-	for(unsigned i = 0; i < 20 && sock_r.is_empty(); ++i){
+	for(unsigned i = 0; i < 20 && sock_r.empty(); ++i){
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sock_r = server_sock.accept();
 	}
 
-	utki::assert_always(!sock_s.is_empty(), SL);
-	utki::assert_always(!sock_r.is_empty(), SL);
+	utki::assert_always(!sock_s.empty(), SL);
+	utki::assert_always(!sock_r.empty(), SL);
 
 	// here we have 2 sockets sock_s and sock_r
 
