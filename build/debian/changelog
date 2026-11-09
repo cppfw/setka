@@ -1,3 +1,9 @@
+libsetka (1.0.43) unstable; urgency=medium
+
+  * rename
+
+ -- Ivan Gagis <igagis@gmail.com>  Mon, 09 Nov 2026 02:05:16 +0200
+
 libsetka (1.0.42) unstable; urgency=medium
 
   * debian: fix dbgsrc path
