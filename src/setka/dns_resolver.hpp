@@ -27,12 +27,14 @@ SOFTWARE.
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
 #include <utki/config.hpp>
 
 #include "address.hpp"
+#include "init_guard.hpp"
 
 namespace setka {
 
@@ -74,6 +76,12 @@ enum class dns_result {
  * This class allows asynchronous DNS lookup.
  * One has to derive his/her own class from this class to override the
  * on_completed() method which will be called upon the DNS lookup operation has finished.
+ *
+ * Constructing a dns_resolver object automatically acquires a reference to the library's
+ * initialization guard (see setka::get_init_guard_reference()) which is released when the
+ * object is destroyed, so the library stays initialized as long as any resolver object
+ * is alive. The constructor therefore performs the one-time library initialization and
+ * may throw if it fails (e.g. WSAStartup() error on Windows).
  */
 class dns_resolver
 {
@@ -151,5 +159,14 @@ public:
 private:
 	friend class setka::init_guard;
 	static void clean_up();
+
+	// Holds a reference to the library's initialization guard for the whole lifetime of
+	// this object, so that the library cannot be de-initialized (last guard reference
+	// dropped) while a resolver object still exists. An active resolver depends on the
+	// initialized state (the background DNS lookup thread, Winsock, ...). The reference
+	// is deliberately released from the object destructor and never from within the
+	// on_completed() callback: dropping the last reference there would run clean_up() on
+	// the DNS thread itself and join the thread from within the thread.
+	std::shared_ptr<utki::destructable> setka_init_guard = get_init_guard_reference();
 };
 } // namespace setka
