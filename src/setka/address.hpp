@@ -190,6 +190,16 @@ public:
 		}
 
 		/**
+		 * @brief Check if it is a native IPv6 address (not an IPv4 mapped to IPv6).
+		 * @return true if this ip object holds a native IPv6 address.
+		 * @return false otherwise.
+		 */
+		bool is_v6() const noexcept
+		{
+			return !this->is_v4();
+		}
+
+		/**
 		 * @brief Get IPv4 address.
 		 * @return IPv4 host if this is a IPv4 mapped to IPv6.
 		 * @return undefined value otherwise.
@@ -220,7 +230,7 @@ public:
 		 * @return true if two IP addresses are identical.
 		 * @return false otherwise.
 		 */
-		bool operator==(const ip& h)
+		bool operator==(const ip& h) const
 		{
 			return this->quad == h.quad;
 		}
@@ -306,7 +316,7 @@ public:
 	 * @return true if hosts and ports of the two IP addresses are equal accordingly.
 	 * @return false otherwise.
 	 */
-	bool operator==(const address& ip)
+	bool operator==(const address& ip) const
 	{
 		return this->host == ip.host && this->port == ip.port;
 	}

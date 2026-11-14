@@ -18,56 +18,290 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OF THIS SOFTWARE.
 */
 
 /* ================ LICENSE END ================ */
 
 #include <atomic>
+#include <bitset>
+#include <chrono>
+#include <condition_variable>
 #include <cstring>
-#include <list>
+#include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <optional>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <nitki/queue.hpp>
 #include <nitki/thread.hpp>
 #include <opros/wait_set.hpp>
 #include <utki/config.hpp>
-#include <utki/time.hpp>
+#include <utki/debug.hpp>
+#include <utki/log.hpp>
+#include <utki/span.hpp>
 #include <utki/types.hpp>
-#include <utki/util.hpp>
+#include <utki/utility.hpp>
 
-#if CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
+#if CFG_OS == CFG_OS_WINDOWS
+#	include <winreg.h>
+#	include <winsock2.h>
+#	include <ws2tcpip.h>
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
 #	include <fsif/native_file.hpp>
 #endif
 
+#include "address.hpp"
 #include "dns_resolver.hpp"
 #include "init_guard.hpp"
+#include "tcp_socket.hpp"
 #include "udp_socket.hpp"
 
 using namespace setka;
 
 namespace {
 
-const uint16_t dns_record_a_id = 1;
-const uint16_t dns_record_aaaa_id = 28;
+constexpr uint16_t dns_type_a = 1;
+constexpr uint16_t dns_type_aaaa = 28;
+constexpr uint16_t dns_type_opt = 41; // the EDNS0 OPT record
+
+constexpr auto dns_port = uint16_t(53);
+// The UDP payload size advertised via EDNS0, chosen so that typical DNS responses fit
+// into a single non-fragmented IP datagram.
+constexpr auto edns_udp_payload_size = uint16_t(1232);
+// The size of the buffer used for receiving UDP responses.
+constexpr auto udp_response_buffer_size = edns_udp_payload_size;
+// The maximum number of concurrent TCP fallback connections.
+constexpr auto max_tcp_fallbacks = 4u;
+// The wait set capacity: the wake-up queue + the UDP socket + the TCP fallback connections.
+constexpr auto wait_set_capacity = 2u + max_tcp_fallbacks;
+// The initial interval between the retransmissions of a DNS query, the interval doubles
+// with every retransmission up to max_retransmit_interval_ms.
+constexpr auto initial_retransmit_interval_ms = uint32_t(1000);
+constexpr auto max_retransmit_interval_ms = uint32_t(8000);
+// The maximum lifetime of a positive DNS result cache entry, regardless of the record's TTL.
+constexpr auto max_positive_cache_ttl_ms = uint64_t(600 * 1000);
+// The lifetime of a negative (not found) DNS result cache entry.
+constexpr auto negative_cache_ttl_ms = uint64_t(60 * 1000);
+// The maximum number of entries in the DNS result cache.
+constexpr auto max_cache_entries = 256u;
+
+using clock_type = std::chrono::steady_clock;
+using time_point = clock_type::time_point;
+using milliseconds = std::chrono::milliseconds;
+
+// True while the execution is inside a dns_resolver::on_completed() callback invoked by
+// the background DNS lookup thread.
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables, "it is a thread local variable, protected by the thread confinement")
+thread_local bool in_dns_callback = false;
+
+// -----------------------------------------------------------------------------------------------
+// The DNS result cache
+// -----------------------------------------------------------------------------------------------
+
+namespace dns_cache {
+
+struct key {
+	std::string host;
+	// The record type the entry was requested with:
+	// A for dns_record_type::ipv4, AAAA for dns_record_type::ipv6, 0 for dns_record_type::both.
+	uint16_t type = 0;
+
+	bool operator<(const key& other) const
+	{
+		if (this->host != other.host) {
+			return this->host < other.host;
+		}
+		return this->type < other.type;
+	}
+};
+
+struct entry {
+	std::vector<setka::address::ip> addresses;
+	bool not_found = false;
+	time_point expiry{};
+};
+
+using map_type = std::map<key, entry>;
+
+} // namespace dns_cache
+
+using cache_key = dns_cache::key;
+
+// -----------------------------------------------------------------------------------------------
+// The global state
+// -----------------------------------------------------------------------------------------------
+
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 
 namespace dns {
 
-class resolver;
+class request;
+class lookup_thread;
 
-// After the successful completion the 'p' points to the byte right after the host name.
-// In case of unsuccessful completion 'p' is undefined.
-std::string parse_host_name_from_dns_packet(const uint8_t*& p, const uint8_t* end)
+// Protects the thread pointer, the DNS servers list and the "servers loaded" flag.
+std::mutex dns_mutex;
+
+// The background DNS lookup thread.
+std::unique_ptr<lookup_thread> thread;
+
+// The DNS servers discovered from the OS.
+std::vector<setka::address> dns_servers;
+bool dns_servers_loaded = false;
+std::string dns_servers_error;
+
+// The resolvers that have an outstanding (not yet invoked) completion callback.
+// Global (not per thread), because a lookup request can be completed by a thread that is
+// already being replaced by a new one (the thread object that completes the request is
+// not necessarily the current dns::thread). Allows the resolvers' destructors/cancel()
+// (called from another thread) to wait until their completion callback (if any) is
+// finished, so that the callback is never invoked on a destroyed object.
+std::mutex pending_mutex;
+std::condition_variable pending_cv;
+std::set<dns_resolver*> pending;
+
+// Waits until there are no outstanding (not yet invoked) completion callbacks for the
+// given resolver. NOTE: must not be called from the background thread.
+inline void wait_no_pending(dns_resolver* r)
+{
+	std::unique_lock p_lock(pending_mutex);
+	pending_cv.wait(p_lock, [&r] {
+		return pending.count(r) == 0;
+	});
+}
+
+} // namespace dns
+
+// The DNS result cache.
+std::mutex cache_mutex;
+dns_cache::map_type cache;
+
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+
+namespace dns {
+
+// -----------------------------------------------------------------------------------------------
+// DNS packet building and parsing
+// -----------------------------------------------------------------------------------------------
+
+/**
+ * @brief Builds a DNS query packet into buf and returns its size.
+ *
+ * The query contains a single question and an EDNS0 OPT record in the additional section.
+ *
+ * NOTE: the caller must ensure that buf is large enough (28 + host_name.size() bytes is
+ *       sufficient) and that host_name is a valid domain name (labels of 1..255 characters,
+ *       total length of at most 253 characters).
+ */
+size_t build_query(uint16_t id, const std::string& host_name, uint16_t type, uint8_t* buf)
+{
+	uint8_t* p = buf;
+
+	// the header
+	utki::serialize16be(id, p);
+	p += 2; // NOLINT
+	utki::serialize16be(0x0100, p); // the RD flag is set // NOLINT
+	p += 2; // NOLINT
+	utki::serialize16be(1, p); // QDCOUNT
+	p += 2; // NOLINT
+	utki::serialize16be(0, p); // ANCOUNT
+	p += 2; // NOLINT
+	utki::serialize16be(0, p); // NSCOUNT
+	p += 2; // NOLINT
+	utki::serialize16be(1, p); // ARCOUNT (the EDNS0 OPT record)
+	p += 2; // NOLINT
+
+	// the question section: the domain name
+	{
+		size_t pos = 0;
+		while (pos < host_name.size()) {
+			size_t end = host_name.find('.', pos);
+			if (end == std::string::npos) {
+				end = host_name.size();
+			}
+			*p++ = uint8_t(end - pos); // NOLINT
+			if (end > pos) {
+				memcpy(p, host_name.data() + pos, end - pos); // NOLINT
+				p += end - pos; // NOLINT
+			}
+			if (end == host_name.size()) {
+				break;
+			}
+			pos = end + 1;
+		}
+		*p++ = 0; // the terminating root label // NOLINT
+	}
+
+	// the question section: the type and the class
+	utki::serialize16be(type, p);
+	p += 2; // NOLINT
+	utki::serialize16be(1, p); // the IN class
+	p += 2; // NOLINT
+
+	// the additional section: the EDNS0 OPT record
+	*p++ = 0; // the root domain name // NOLINT
+	utki::serialize16be(dns_type_opt, p);
+	p += 2; // NOLINT
+	utki::serialize16be(edns_udp_payload_size, p); // the "class" field of the OPT record
+	p += 2; // NOLINT
+	utki::serialize32be(0, p); // the "TTL" field of the OPT record (extended RCODE and flags)
+	p += 4; // NOLINT
+	utki::serialize16be(0, p); // the RDLENGTH
+	p += 2; // NOLINT
+
+	return size_t(p - buf);
+}
+
+/**
+ * @brief Skips a (possibly compressed) domain name in a DNS packet.
+ *
+ * The compression pointers are not followed.
+ *
+ * On success 'p' is left pointing right after the name, otherwise false is returned.
+ */
+bool skip_name(const uint8_t*& p, const uint8_t* end)
+{
+	while (p != end) {
+		uint8_t len = *p++; // NOLINT
+		if (len == 0) {
+			return true;
+		}
+		if ((len & 0xc0) != 0) { // NOLINT
+			// a compression pointer, it takes 2 bytes in total
+			if (p == end) {
+				return false; // the second byte is missing
+			}
+			++p; // skip the second byte of the pointer // NOLINT
+			return true;
+		}
+		if (size_t(end - p) < len) {
+			return false;
+		}
+		p += len; // NOLINT
+	}
+	return false;
+}
+
+/**
+ * @brief Parses a host name from a DNS packet, following the compression pointers.
+ *
+ * On success returns the name and leaves 'p' pointing right after it,
+ * otherwise returns an empty string.
+ */
+std::string parse_host_name(const uint8_t* base, const uint8_t*& p, const uint8_t* end)
 {
 	std::string host;
+	std::array<uint16_t, 16> visited{}; // NOLINT
+	unsigned visited_count = 0;
+	bool need_dot = false;
 
-	for (;;) {
-		if (p == end) {
-			return "";
-		}
-
+	while (p != end) {
 		uint8_t len = *p;
 		++p; // NOLINT
 
@@ -75,1278 +309,1649 @@ std::string parse_host_name_from_dns_packet(const uint8_t*& p, const uint8_t* en
 			break;
 		}
 
-		if (host.size() != 0) { // if not first label
-			host += '.';
+		if ((len & 0xc0) == 0xc0) { // NOLINT
+			// a compression pointer
+			if (p == end) {
+				return "";
+			}
+			auto offset = uint16_t(((uint16_t(len) & 0x3f) << 8) | uint16_t(*p)); // NOLINT
+			++p; // NOLINT
+
+			if (size_t(offset) >= size_t(end - base)) {
+				return "";
+			}
+			bool cycle = false;
+			for (unsigned i = 0; i < visited_count; ++i) {
+				if (visited[i] == offset) {
+					cycle = true;
+					break;
+				}
+			}
+			if (cycle || visited_count == 16) { // NOLINT
+				return ""; // a cyclic or too deeply nested compression pointer
+			}
+			visited[visited_count++] = offset;
+			if (need_dot) {
+				host += '.';
+			}
+			p = base + offset; // NOLINT
+			continue;
 		}
 
-		if (end - p < len) {
+		if (size_t(end - p) < len) {
 			return "";
 		}
-
-		host += std::string(reinterpret_cast<const char*>(p), size_t(len)); // NOLINT
+		if (need_dot) {
+			host += '.';
+		}
+		host.append(reinterpret_cast<const char*>(p), len); // NOLINT
+		need_dot = true;
 		p += len; // NOLINT
-		utki::assert(p <= std::prev(end) || p == end, SL);
 	}
 
 	return host;
 }
 
-// this mutex is used to protect the dns::thread access.
-std::mutex mutex; // NOLINT
+// -----------------------------------------------------------------------------------------------
+// The DNS lookup request
+// -----------------------------------------------------------------------------------------------
 
-using resolvers_time_map_type = std::multimap<uint32_t, resolver*>;
-using resolvers_time_iter_type = resolvers_time_map_type::iterator;
-
-using id_map_type = std::map<uint16_t, resolver*>;
-using id_iter_type = id_map_type::iterator;
-
-using requests_to_send_list_type = std::list<resolver*>; // TODO: use vector
-using requests_to_send_iter_type = requests_to_send_list_type::iterator;
-
-using resolvers_map_type = std::map<dns_resolver*, std::unique_ptr<resolver>>;
-using resolvers_iter_type = resolvers_map_type::iterator;
-
-class resolver
+/**
+ * @brief The state of a single in-progress DNS lookup.
+ *
+ * A request consists of one or two "legs", each leg being a UDP query (with an optional
+ * TCP fallback) for a single record type (A or AAAA). For dns_record_type::both the legs
+ * are processed in parallel and the request completes with the first leg that returned
+ * one or more addresses.
+ */
+class request
 {
 public:
-	// TODO: figure out why on MacOS it caomplains about this line
-	// NOLINTNEXTLINE(bugprone-exception-escape, "for some reason clang-tidy complains about this line only on MacOS")
-	resolver() = default;
+	request() = default;
+	request(const request&) = delete;
+	request& operator=(const request&) = delete;
+	request(request&&) = delete;
+	request& operator=(request&&) = delete;
+	~request() = default;
 
-	resolver(const resolver&) = default;
-	resolver& operator=(const resolver&) = default;
+	/**
+	 * @brief A single record type query of the request.
+	 */
+	struct leg {
+		enum class tcp_phase_t {
+			none,
+			connecting,
+			sending,
+			receiving
+		};
 
-	resolver(resolver&&) = delete;
-	resolver& operator=(resolver&&) = delete;
+		uint16_t id = 0; // the DNS transaction ID
+		bool in_flight = false; // the id is registered in the thread's id map
+		uint16_t type = 0; // the DNS record type (A or AAAA)
+		uint16_t server_index = 0; // the index of the current DNS server in request::servers
+		bool sent = false; // a UDP query (initial or a retransmission) has been sent
+		bool needs_send = false; // the UDP query of this leg has to be (re)sent
+		time_point next_retransmit{}; // empty = no pending retransmission
+		uint32_t retransmits = 0;
+		bool done = false; // the leg is terminal, no further responses for it will be processed
+		setka::dns_result done_result = setka::dns_result::error;
 
-	~resolver() = default;
-
-	dns_resolver* hnr = nullptr;
-
-	std::string host_name; // host name to resolve
-
-	uint16_t recordType = 0; // type of DNS record to get
-
-	resolvers_time_map_type* timeMap = nullptr;
-	resolvers_time_iter_type timeMapIter;
-
-	uint16_t id = 0;
-	id_iter_type idIter;
-
-	requests_to_send_iter_type sendIter; // TODO: get rid of iter
-
-	setka::address dns;
-};
-
-class lookup_thread : public nitki::thread
-{
-	setka::udp_socket socket;
-	opros::wait_set wait_set;
-
-	resolvers_time_map_type resolvers_by_time_1, resolvers_by_time_2;
-
-public:
-	std::atomic<bool> quit_flag = false;
-	nitki::queue queue;
-
-	std::mutex mutex; // this mutex is used to protect access to members of the thread object.
-
-	// this mutex is used to make sure that the callback has finished calling when Cancel_ts() method is called.
-	// I.e. to guarantee that after Cancel_ts() method has returned the callback will not be called anymore.
-	std::mutex completed_mutex;
-
-	// this variable is for joining and destroying previous thread object if there was any.
-	std::unique_ptr<nitki::thread> prev_thread;
-
-	// this is to indicate that the thread is exiting and new DNS lookup requests should be queued to
-	// a new thread.
-	std::atomic<bool> is_exiting = true; // initially the thread is not running, so set to true
-
-	// This variable is for detecting system clock ticks warp around.
-	// True if last call to ting::GetTicks() returned value in first half.
-	// False otherwise.
-	bool last_ticks_in_first_half = false;
-
-	resolvers_time_map_type* time_map_1;
-	resolvers_time_map_type* time_map_2;
-
-	requests_to_send_list_type send_list;
-
-	resolvers_map_type resolvers_map;
-	id_map_type id_map;
-
-	setka::address dns;
-
-	void start_sending()
-	{
-		this->wait_set.change(this->socket, utki::make_flags({opros::ready::read, opros::ready::write}), &this->socket);
-	}
-
-	// NOTE: call to this function should be protected by mutex.
-	//       throws dns_resolver::TooMuchRequestsExc if all IDs are occupied.
-	uint16_t find_free_id()
-	{
-		if (this->id_map.size() == 0) {
-			return 0;
-		}
-
-		if (this->id_map.begin()->first != 0) {
-			return this->id_map.begin()->first - 1;
-		}
-
-		if ((--(this->id_map.end()))->first != uint16_t(-1)) {
-			return (--(this->id_map.end()))->first + 1;
-		}
-
-		auto i1 = this->id_map.begin();
-		auto i2 = ++this->id_map.begin();
-		for (; i2 != this->id_map.end(); ++i1, ++i2) {
-			if (i2->first - i1->first > 1) {
-				return i1->first + 1;
-			}
-		}
-
-		throw dns_resolver::too_many_requests();
-	}
-
-	// NOTE: call to this function should be protected by mutex, to make sure the request is not canceled while sending.
-	//       returns true if request is sent, false otherwise.
-	bool send_request_to_dns(const dns::resolver* r)
-	{
-		// RFC 1035 limits DNS request UDP packet size to 512 bytes.
-		std::array<uint8_t, utki::kilobyte / 2> buf; // NOLINT
-
-		size_t packet_size = 2 + // ID
-			2 + // flags
-			2 + // Number of questions
-			2 + // Number of answers
-			2 + // Number of authority records
-			2 + // Number of other records
-			r->host_name.size() + 2 + // domain name
-			2 + // Question type
-			2 // Question class
-			;
-
-		utki::assert(packet_size <= buf.size(), SL);
-
-		uint8_t* p = buf.data();
-
-		// ID
-		utki::serialize16be(r->id, p);
-		p += 2; // NOLINT
-
-		// flags
-		utki::serialize16be(0x100, p); // NOLINT
-		p += 2; // NOLINT
-
-		// Number of questions
-		utki::serialize16be(1, p);
-		p += 2; // NOLINT
-
-		// Number of answers
-		utki::serialize16be(0, p);
-		p += 2; // NOLINT
-
-		// Number of authority records
-		utki::serialize16be(0, p);
-		p += 2; // NOLINT
-
-		// Number of other records
-		utki::serialize16be(0, p);
-		p += 2; // NOLINT
-
-		// domain name
-		for (size_t dot_pos = 0; dot_pos < r->host_name.size();) {
-			size_t old_dot_pos = dot_pos;
-			dot_pos = r->host_name.find('.', dot_pos);
-			if (dot_pos == std::string::npos) {
-				dot_pos = r->host_name.size();
-			}
-
-			utki::assert(dot_pos <= size_t(std::numeric_limits<uint8_t>::max()), SL);
-			size_t label_length = dot_pos - old_dot_pos;
-			utki::assert(label_length <= size_t(std::numeric_limits<uint8_t>::max()), SL);
-
-			*p = uint8_t(label_length); // save label length
-			++p; // NOLINT
-			// copy the label bytes
-			memcpy(p, r->host_name.c_str() + old_dot_pos, label_length); // NOLINT
-			p += label_length; // NOLINT
-
-			++dot_pos;
-
-			utki::assert(p <= utki::end_pointer(buf), SL);
-		}
-
-		*p = 0; // terminate labels sequence
-		++p; // NOLINT
-
-		utki::serialize16be(r->recordType, p);
-		p += 2; // NOLINT
-
-		// Question class (1 means inet)
-		utki::serialize16be(1, p);
-		p += 2; // NOLINT
-
-		utki::assert(buf.data() <= p && p <= utki::end_pointer(buf), SL);
-		utki::assert(size_t(p - buf.data()) == packet_size, SL);
-
-		LOG([&](auto& o) {
-			o << "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->host_name
-			  << ", reqID = " << r->id << std::endl;
-		})
-		size_t ret = this->socket.send(utki::make_span(buf.data(), packet_size), r->dns);
-
-		utki::assert(ret == packet_size || ret == 0, SL);
-
-		//		TRACE(<< "DNS request sent, packet_size = " << packet_size << std::endl)
-		// #ifdef DEBUG
-		//		for(unsigned i = 0; i < packet_size; ++i){
-		//			TRACE(<< int(buf[i]) << std::endl)
-		//		}
-		// #endif
-		return ret == packet_size;
-	}
-
-	// NOTE: call to this function should be protected by mutex
-	inline void call_callback(
-		dns::resolver* r,
-		setka::dns_result result,
-		address::ip ip = address::ip(0, 0, 0, 0)
-	) noexcept
-	{
-		this->completed_mutex.lock();
-		this->mutex.unlock();
-		try {
-			r->hnr->on_completed(result, ip);
-
-			// NOLINTNEXTLINE(bugprone-empty-catch)
-		} catch (...) {
-			// ignore
-		}
-		this->completed_mutex.unlock();
-		this->mutex.lock();
-	}
-
-	struct parse_result {
-		setka::dns_result result;
-		setka::address::ip host;
-
-		parse_result(setka::dns_result result, setka::address::ip host = setka::address::ip(0, 0, 0, 0)) :
-			result(result),
-			host(host)
-		{}
+		// the TCP fallback state
+		bool tcp_active = false; // the TCP fallback socket is registered in the wait set
+		tcp_phase_t tcp_phase = tcp_phase_t::none;
+		setka::tcp_socket tcp_sock;
+		std::vector<uint8_t> tcp_tx; // the 2-byte length prefixed query
+		size_t tcp_tx_sent = 0;
+		std::vector<uint8_t> tcp_rx; // the accumulated 2-byte length prefixed response
 	};
 
-	// NOTE: call to this function should be protected by mutex,
-	//       this function will call the resolver callback
-	parse_result parse_reply_from_dns(dns::resolver* r, const utki::span<uint8_t> buf)
-	{
-		utki::log_debug([&](auto& o) {
-			o << "dns::resolver::parse_reply_from_dns(): enter" << std::endl;
-		});
-
-		utki::log_debug([&](auto& o) {
-			for (auto& b : buf) {
-				o << std::hex << int(b) << std::dec << std::endl;
-			}
-		});
-
-		if (buf.size() < 2 + // ID
-				2 + // flags
-				2 + // Number of questions
-				2 + // Number of answers
-				2 + // Number of authority records
-				2 // Number of other records
-		)
-		{
-			return {setka::dns_result::dns_error};
-		}
-
-		const uint8_t* p = buf.begin();
-		// skip ID
-		p += 2; // NOLINT
-
-		{
-			uint16_t flags = utki::deserialize16be(p);
-			p += 2; // NOLINT
-
-			constexpr auto response_flag_mask = 0x8000;
-			if ((flags & response_flag_mask) == 0) { // we expect it to be a response, not query.
-				LOG([&](auto& o) {
-					o << "parse_reply_from_dns(): (flags & response_flag_mask) = " << (flags & response_flag_mask)
-					  << std::endl;
-				})
-				return {setka::dns_result::dns_error};
-			}
-
-			// Check response code
-			if ((flags & utki::lower_nibble_mask) != 0) { // 0 means no error condition
-				if ((flags & utki::lower_nibble_mask) == 3) { // name does not exist
-					return {setka::dns_result::not_found};
-				} else {
-					LOG([&](auto& o) {
-						o << "parse_reply_from_dns(): (flags & 0xf) = " << (flags & 0xf) << std::endl;
-					})
-					return {setka::dns_result::dns_error};
-				}
-			}
-		}
-
-		// check number of questions
-		{
-			uint16_t num_questions = utki::deserialize16be(p);
-			p += 2; // NOLINT
-
-			if (num_questions != 1) {
-				return {setka::dns_result::dns_error};
-			}
-		}
-
-		uint16_t num_answers = utki::deserialize16be(p);
-		p += 2; // NOLINT
-		utki::assert(buf.begin() <= p, SL);
-		utki::assert(p <= (buf.end() - 1) || p == buf.end(), SL);
-
-		if (num_answers == 0) {
-			return {setka::dns_result::not_found};
-		}
-
-		{
-			//			uint16_t nscount = utki::deserialize16be(p);
-			p += 2; // NOLINT
-		}
-
-		{
-			//			uint16_t arcount = utki::deserialize16be(p);
-			p += 2; // NOLINT
-		}
-
-		// parse host name
-		{
-			std::string host = dns::parse_host_name_from_dns_packet(p, utki::end_pointer(buf));
-			//			TRACE(<< "host = " << host << std::endl)
-
-			if (r->host_name != host) {
-				//				TRACE(<< "this->host_name = " << this->host_name << std::endl)
-				return {setka::dns_result::dns_error}; // wrong host name for ID.
-			}
-		}
-
-		// check query type, we sent question type 1 (A query).
-		{
-			uint16_t type = utki::deserialize16be(p);
-			p += 2; // NOLINT
-
-			if (type != r->recordType) {
-				return {setka::dns_result::dns_error}; // wrong question type
-			}
-		}
-
-		// check query class, we sent question class 1 (inet).
-		{
-			uint16_t cls = utki::deserialize16be(p);
-			p += 2; // NOLINT
-
-			if (cls != 1) {
-				return {setka::dns_result::dns_error}; // wrong question class
-			}
-		}
-
-		utki::assert(utki::overlaps(buf, p) || p == buf.end(), SL);
-
-		// loop through the answers
-		for (uint16_t n = 0; n != num_answers; ++n) {
-			if (p == buf.end()) {
-				return {setka::dns_result::dns_error}; // unexpected end of packet
-			}
-
-			// check if there is a domain name or a reference to the domain name
-
-			// check if two high bits are set
-			if (((*p) >> 6) == 0) { // NOLINT
-				// skip possible domain name
-				for (; p != buf.end() && *p != 0; ++p) { // NOLINT
-					utki::assert(utki::overlaps(buf, p), SL);
-				}
-				if (p == buf.end()) {
-					return {setka::dns_result::dns_error}; // unexpected end of packet
-				}
-				++p; // NOLINT
-			} else {
-				// it is a reference to the domain name.
-				// skip it
-				p += 2; // NOLINT
-			}
-
-			if (buf.end() - p < 2) {
-				return {setka::dns_result::dns_error}; // unexpected end of packet
-			}
-			uint16_t type = utki::deserialize16be(p);
-			p += 2; // NOLINT
-
-			if (buf.end() - p < 2) {
-				return {setka::dns_result::dns_error}; // unexpected end of packet
-			}
-			//			uint16_t cls = ting::util::Deserialize16(p);
-			p += 2; // NOLINT
-
-			if (buf.end() - p < 4) {
-				return {setka::dns_result::dns_error}; // unexpected end of packet
-			}
-			//			uint32_t ttl = ting::util::Deserialize32(p);//time till the returned value can be cached.
-			p += 4; // NOLINT
-
-			if (buf.end() - p < 2) {
-				return {setka::dns_result::dns_error}; // unexpected end of packet
-			}
-			uint16_t data_len = utki::deserialize16be(p);
-			p += 2; // NOLINT
-
-			if (buf.end() - p < data_len) {
-				return {setka::dns_result::dns_error}; // unexpected end of packet
-			}
-			if (type == r->recordType) {
-				address::ip h{};
-
-				switch (type) {
-					case dns_record_a_id: // 'A' type answer
-						if (data_len < 4) {
-							return {setka::dns_result::dns_error}; // unexpected end of packet
-						}
-
-						h = address::ip(utki::deserialize32be(p));
-						break;
-					case dns_record_aaaa_id: // 'AAAA' type answer
-						if (data_len < 2 * 8) { // NOLINT
-							return {setka::dns_result::dns_error}; // unexpected end of packet
-						}
-
-						h = address::ip(
-							utki::deserialize32be(p),
-							utki::deserialize32be(p + 4), // NOLINT
-							utki::deserialize32be(p + 4 * 2), // NOLINT
-							utki::deserialize32be(p + 4 * 3) // NOLINT
-						);
-						break;
-					default:
-						// we should not get here since if type is not the record type which we know then 'if(type ==
-						// r->recordType)' condition will not trigger.
-						utki::assert(false, SL);
-						h = address::ip(0, 0, 0, 0);
-						break;
-				}
-
-				LOG([&](auto& o) {
-					o << "host resolved: " << r->host_name << " = " << h.to_string() << std::endl;
-				})
-				return {setka::dns_result::ok, h};
-			}
-			p += data_len; // NOLINT
-		}
-
-		return {setka::dns_result::dns_error}; // no answer found
-	}
-
-public:
-	lookup_thread() :
-		wait_set(2),
-		time_map_1(&resolvers_by_time_1),
-		time_map_2(&resolvers_by_time_2)
-	{
-		// TODO: get init guard?
-		// ASSERT(setka::init_guard::is_created(), [&](auto& o) {
-		// 	o << "setka::init_guard is not created before doing the DNS request";
-		// })
-	}
-
-	// NOLINTNEXTLINE(modernize-use-equals-default, "destructor is not trivial in DEBUG build")
-	~lookup_thread() noexcept override
-	{
-		utki::assert(this->send_list.size() == 0, SL);
-		utki::assert(this->resolvers_map.size() == 0, SL);
-		utki::assert(this->resolvers_by_time_1.size() == 0, SL);
-		utki::assert(this->resolvers_by_time_2.size() == 0, SL);
-		utki::assert(this->id_map.size() == 0, SL);
-	}
-
-	lookup_thread(const lookup_thread&) = delete;
-	lookup_thread& operator=(const lookup_thread&) = delete;
-
-	lookup_thread(lookup_thread&&) = delete;
-	lookup_thread& operator=(lookup_thread&&) = delete;
-
-	// returns the removed resolver, returns nullptr if there was
-	// no such resolver object found.
-	// NOTE: call to this function should be protected by mutex.
-	std::unique_ptr<dns::resolver> remove_resolver(dns_resolver* resolver) noexcept
-	{
-		std::unique_ptr<dns::resolver> r;
-		{
-			auto i = this->resolvers_map.find(resolver);
-			if (i == this->resolvers_map.end()) {
-				return r;
-			}
-			r = std::move(i->second);
-			this->resolvers_map.erase(i);
-		}
-
-		// the request is active, remove it from all the maps
-
-		// if the request was not sent yet
-		if (r->sendIter != this->send_list.end()) {
-			this->send_list.erase(r->sendIter);
-		}
-
-		r->timeMap->erase(r->timeMapIter);
-
-		this->id_map.erase(r->idIter);
-
-		return r;
-	}
-
-private:
-	// NOTE: call to this function should be protected by dns::mutex
-	void remove_all_resolvers()
-	{
-		while (this->resolvers_map.size() != 0) {
-			std::unique_ptr<dns::resolver> r = this->remove_resolver(this->resolvers_map.begin()->first);
-			utki::assert(r, SL);
-
-#if CFG_OS == CFG_OS_WINDOWS && defined(ERROR)
-#	undef ERROR
-#endif
-
-			// on_completed() does not throw any exceptions, so no worries about that.
-			this->call_callback(r.operator->(), dns_result::error);
-		}
-	}
-
-	void init_dns()
-	{
-		constexpr auto dns_port = 53;
-
-		try {
-#if CFG_OS == CFG_OS_WINDOWS
-			struct win_reg_key {
-				HKEY key = nullptr;
-
-				win_reg_key()
-				{
-					// TODO: rewrite useing RegOpenKeyExA() as RegOpenKeyA() is provided only for compatibility with 16-bit Windows
-					if (RegOpenKeyA(
-							HKEY_LOCAL_MACHINE,
-							R"(SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces)",
-							&this->key
-						) != ERROR_SUCCESS)
-					{
-						throw std::runtime_error("init_dns(): RegOpenKey() failed");
-					}
-				}
-
-				win_reg_key(const win_reg_key&) = delete;
-				win_reg_key& operator=(const win_reg_key&) = delete;
-
-				win_reg_key(win_reg_key&&) = delete;
-				win_reg_key& operator=(win_reg_key&&) = delete;
-
-				~win_reg_key()
-				{
-					RegCloseKey(this->key);
-				}
-			} key;
-
-			// According to MSDN docs maximum key name length is 255 chars.
-			// Add also space for terminating zero.
-			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-			std::array<char, std::numeric_limits<uint8_t>::max() + 1> subkey;
-
-			// TODO: rewrite using RegEnumKeyEx() as RegEnumKeyA() is only provided for compatibility with 16-bit Windows
-			for (unsigned i = 0; RegEnumKeyA(
-									 key.key, //
-									 i,
-									 subkey.data(),
-									 DWORD(subkey.size())
-								 ) == ERROR_SUCCESS;
-				 ++i)
-			{
-				HKEY h_sub = nullptr;
-				// TODO: rewrite using RegOpenKeyEx() as RegOpenKeyA() is only provided for compatibility with 16-bit Windows
-				if (RegOpenKeyA(
-						key.key, //
-						subkey.data(),
-						&h_sub
-					) != ERROR_SUCCESS)
-				{
-					continue;
-				}
-
-				// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-				std::array<BYTE, utki::kilobyte> value;
-
-				auto len = DWORD(value.size());
-
-				if (RegQueryValueExA(
-						h_sub, //
-						"NameServer",
-						nullptr,
-						nullptr,
-						value.data(),
-						&len
-					) != ERROR_SUCCESS)
-				{
-					utki::log_debug([&](auto& o) {
-						o << "NameServer reading failed " << std::endl;
-					});
-				} else {
-					try {
-						// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-						std::string str(reinterpret_cast<char*>(value.data()));
-						size_t space_index = str.find(' ');
-
-						std::string ip = str.substr(0, space_index);
-						utki::log_debug([&](auto& o) {
-							o << "NameServer ip = " << ip << std::endl;
-						});
-
-						this->dns = setka::address(ip.c_str(), dns_port);
-						RegCloseKey(h_sub);
-						return;
-
-						// NOLINTNEXTLINE(bugprone-empty-catch)
-					} catch (...) {
-					}
-				}
-
-				len = DWORD(value.size());
-				if (RegQueryValueExA(
-						h_sub, //
-						"DhcpNameServer",
-						nullptr,
-						nullptr,
-						value.data(),
-						&len
-					) != ERROR_SUCCESS)
-				{
-					LOG([&](auto& o) {
-						o << "DhcpNameServer reading failed " << std::endl;
-					})
-					RegCloseKey(h_sub);
-					continue;
-				}
-
-				try {
-					// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-					std::string str(reinterpret_cast<char*>(value.data()));
-					size_t space_index = str.find(' ');
-
-					std::string ip = str.substr(0, space_index);
-					utki::log_debug([&](auto& o) {
-						o << "DhcpNameServer ip = " << ip << std::endl;
-					});
-
-					this->dns = setka::address(ip.c_str(), dns_port);
-					RegCloseKey(h_sub);
-					return;
-
-					// NOLINTNEXTLINE(bugprone-empty-catch)
-				} catch (...) {
-				}
-				RegCloseKey(h_sub);
-			}
-
-#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
-			fsif::native_file f("/etc/resolv.conf");
-
-			std::vector<uint8_t> buf = f.load(size_t(utki::kilobyte) * 4); // 4kb max
-
-			for (uint8_t* p = buf.data(); p != utki::end_pointer(buf); ++p) { // NOLINT
-				uint8_t* start = p;
-
-				while (p != utki::end_pointer(buf) && *p != '\n') {
-					++p; // NOLINT
-				}
-
-				utki::assert(p >= start, SL);
-				std::string line(reinterpret_cast<const char*>(start), size_t(p - start)); // NOLINT
-				if (p == utki::end_pointer(buf)) {
-					--p; // NOLINT
-				}
-
-				const std::string ns("nameserver ");
-
-				size_t ns_start = line.find(ns);
-				if (ns_start != 0) {
-					continue;
-				}
-
-				size_t ip_start = ns_start + ns.size();
-
-				size_t ip_end = line.find_first_not_of(":.0123456789", ip_start); // IPv6 address may contain ':'
-
-				std::string ipstr = line.substr(ip_start, ip_end - ip_start);
-
-				utki::log_debug([&](auto& o) {
-					o << "dns ipstr = " << ipstr << std::endl;
-				});
-
-				try {
-					this->dns = setka::address(ipstr.c_str(), dns_port);
-					return;
-					// NOLINTNEXTLINE(bugprone-empty-catch)
-				} catch (...) {
-				}
-			}
-#else
-			LOG([&](auto& o) {
-				o << "init_dns(): don't know how to get DNS IP on this OS" << std::endl;
-			})
-#endif
-			// NOLINTNEXTLINE(bugprone-empty-catch)
-		} catch (...) {
-		}
-		this->dns = setka::address(uint32_t(0), 0);
-	}
-
-	void run() override
-	{
-		utki::log_debug([&](auto& o) {
-			o << "DNS lookup thread started" << std::endl;
-		});
-
-		// destroy previous thread if necessary
-		if (this->prev_thread) {
-			// NOTE: if the thread was not started due to some error during adding its
-			// first DNS lookup request it is OK to call Join() on such not
-			// started thread.
-			this->prev_thread->join();
-			this->prev_thread.reset();
-			utki::log_debug([&](auto& o) {
-				o << "Previous thread destroyed" << std::endl;
-			});
-		}
-
-		utki::log_debug([&](auto& o) {
-			o << "calling this->init_dns()" << std::endl;
-		});
-
-		this->init_dns();
-
-		utki::log_debug([&](auto& o) {
-			o << "this->dns.host = " << this->dns.host.to_string() << std::endl;
-		});
-
-		{
-			std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex
-			); // mutex is needed because socket opening may fail and we will have to set is_exiting flag which should
-			// be protected by mutex
-
-			try {
-				this->socket = setka::udp_socket(0);
-			} catch (...) {
-				this->is_exiting = true;
-				this->remove_all_resolvers();
-				return;
-			}
-		}
-
-		this->wait_set.add(this->queue, utki::make_flags({opros::ready::read}), &this->queue);
-		this->wait_set.add(this->socket, utki::make_flags({opros::ready::read}), &this->socket);
-
-		// TODO: rewrite using nitki::loop_thread
-		while (!this->quit_flag) {
-			uint32_t timeout = 0;
-
-			{
-				std::lock_guard<decltype(this->mutex)> mutex_guard(this->mutex);
-
-				utki::flags<opros::ready> flags(false);
-				for (const auto& t : this->wait_set.get_triggered()) {
-					if (t.user_data == &this->socket) {
-						flags = t.flags;
-						utki::log_debug([&](auto& o) {
-							o << "socket flags = " << flags << std::endl;
-						});
-					}
-				}
-
-				if (flags.get(opros::ready::error)) {
-					this->is_exiting = true;
-					this->remove_all_resolvers();
-					break; // exit thread
-				}
-
-				if (flags.get(opros::ready::read)) {
-					utki::log_debug([&](auto& o) {
-						o << "can read" << std::endl;
-					});
-					try {
-						// RFC 1035 limits DNS request UDP packet size to 512 bytes. So, no need to allocate bigger
-						// buffer.
-						// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-						std::array<uint8_t, utki::kilobyte / 2> buf;
-						setka::address address;
-						size_t ret = this->socket.recieve(utki::make_span(buf), address);
-
-						constexpr auto host_name_start_offset = 12;
-
-						utki::assert(ret != 0, SL);
-						utki::assert(ret <= buf.size(), SL);
-						// at least there should be standard header and host name, otherwise ignore received UDP packet
-						if (ret > host_name_start_offset) {
-							uint16_t id = utki::deserialize16be(buf.data());
-
-							auto i = this->id_map.find(id);
-							if (i != this->id_map.end()) {
-								utki::assert(id == i->second->id, SL);
-
-								// check by host name also
-								// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-								const uint8_t* p = buf.data() + host_name_start_offset;
-								std::string host = dns::parse_host_name_from_dns_packet(p, utki::end_pointer(buf));
-
-								if (host == i->second->host_name) {
-									parse_result res =
-										this->parse_reply_from_dns(i->second, utki::span<uint8_t>(buf.data(), ret));
-
-									if (res.result == setka::dns_result::not_found &&
-										i->second->recordType == dns_record_aaaa_id)
-									{
-										// try getting record type A
-										utki::log_debug([&](auto& o) {
-											o << "no record AAAA found, trying to get record type A" << std::endl;
-										});
-
-										i->second->recordType = dns_record_a_id;
-
-										// add to send list
-										utki::assert(i->second->sendIter == this->send_list.end(), SL);
-										try {
-											this->send_list.push_back(i->second);
-											i->second->sendIter = --this->send_list.end();
-											if (this->send_list.size() == 1)
-											{ // if need to switch to wait for writing mode
-												this->start_sending();
-											}
-										} catch (...) {
-											// failed adding to sending list, report error
-											std::unique_ptr<dns::resolver> r = this->remove_resolver(i->second->hnr);
-											this->call_callback(r.operator->(), setka::dns_result::error);
-										}
-									} else {
-										std::unique_ptr<dns::resolver> r = this->remove_resolver(i->second->hnr);
-										// call callback
-										this->call_callback(r.operator->(), res.result, res.host);
-									}
-								}
-							}
-						}
-					} catch (std::exception&) {
-						this->is_exiting = true;
-						this->remove_all_resolvers();
-						break; // exit thread
-					}
-				}
-
-//				TRACE(<< "this->send_list.size() = " << (this->send_list.size()) << std::endl)
-// WORKAROUND: for strange bug on Win32 (reproduced on WinXP at least).
-//             For some reason waiting for WRITE on UDP socket does not work. It hangs in the
-//             wait() method until timeout is hit. So, just try to send data to the socket without waiting for WRITE.
-#if CFG_OS == CFG_OS_WINDOWS
-				if (this->send_list.size() != 0)
-#else
-				if (flags.get(opros::ready::write))
-#endif
-				{
-					LOG([&](auto& o) {
-						o << "can write" << std::endl;
-					})
-					// send request
-					utki::assert(this->send_list.size() > 0, SL);
-
-					try {
-						while (this->send_list.size() != 0) {
-							dns::resolver* r = this->send_list.front();
-							if (r->dns.host.get_v4() == 0) {
-								r->dns = this->dns;
-							}
-
-							if (r->dns.host.is_valid()) {
-								if (!this->send_request_to_dns(r)) {
-									LOG([&](auto& o) {
-										o << "request not sent" << std::endl;
-									})
-									break; // socket is not ready for sending, go out of requests sending loop.
-								}
-								LOG([&](auto& o) {
-									o << "request sent" << std::endl;
-								})
-								r->sendIter = this->send_list.end(
-								); // end() value will indicate that the request has already been sent
-								this->send_list.pop_front();
-							} else {
-								std::unique_ptr<dns::resolver> removed_resolver = this->remove_resolver(r->hnr);
-								utki::assert(removed_resolver, SL);
-
-								// Notify about error. OnCompleted_ts() does not throw any exceptions, so no worries
-								// about that.
-								this->call_callback(removed_resolver.operator->(), dns_result::error, 0);
-							}
-						}
-					} catch (std::exception&
-#ifdef DEBUG
-								 e
-#endif
-					)
-					{
-						LOG([&](auto& o) {
-							o << "writing to a socket failed: " << e.what() << std::endl;
-						})
-						this->is_exiting = true;
-						this->remove_all_resolvers();
-						break; // exit thread
-					}
-
-					if (this->send_list.size() == 0) {
-						// move socket to waiting for READ condition only
-						this->wait_set.change(this->socket, utki::make_flags({opros::ready::read}), &this->socket);
-						LOG([&](auto& o) {
-							o << "socket wait mode changed to read only" << std::endl;
-						})
-					}
-				}
-
-				uint32_t cur_time = utki::get_ticks_ms();
-				{ // check if time has wrapped around and it is necessary to swap time maps
-					bool is_first_half = cur_time < (uint32_t(-1) / 2);
-					if (is_first_half && !this->last_ticks_in_first_half) {
-						// Time wrapped.
-						// Timeout all requests from first time map
-						while (this->time_map_1->size() != 0) {
-							std::unique_ptr<dns::resolver> r =
-								this->remove_resolver(this->time_map_1->begin()->second->hnr);
-							utki::assert(r, SL);
-
-							// Notify about timeout.
-							this->call_callback(r.operator->(), dns_result::timeout, 0);
-						}
-
-						utki::assert(this->time_map_1->size() == 0, SL);
-						std::swap(this->time_map_1, this->time_map_2);
-					}
-					this->last_ticks_in_first_half = is_first_half;
-				}
-
-				while (this->time_map_1->size() != 0) {
-					if (this->time_map_1->begin()->first > cur_time) {
-						break;
-					}
-
-					// timeout
-					std::unique_ptr<dns::resolver> r = this->remove_resolver(this->time_map_1->begin()->second->hnr);
-					utki::assert(r, SL);
-
-					// Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
-					this->call_callback(r.operator->(), dns_result::timeout, 0);
-				}
-
-				if (this->resolvers_map.size() == 0) {
-					this->is_exiting = true;
-					break; // exit thread
-				}
-
-				utki::assert(this->time_map_1->size() > 0, SL);
-				utki::assert(this->time_map_1->begin()->first > cur_time, SL);
-
-				//				TRACE(<< "DNS thread: cur_time = " << cur_time << std::endl)
-				//				TRACE(<< "DNS thread: this->time_map_1->begin()->first = " <<
-				//(this->time_map_1->begin()->first)
-				//<< std::endl)
-
-				timeout = this->time_map_1->begin()->first - cur_time;
-			}
-
-			// Make sure that utki::get_ticks_ms() is called at least 4 times per full time warp around cycle.
-			timeout = std::min(timeout, uint32_t(-1) / 4); // clamp top
-
-// Workaround for strange bug on Win32 (reproduced on WinXP at least).
-// For some reason waiting for WRITE on UDP socket does not work. It hangs in the
-// wait() method until timeout is hit. So, just check every 100ms if it is OK to write to UDP socket.
-#if CFG_OS == CFG_OS_WINDOWS
-			if (this->send_list.size() > 0) {
-				constexpr auto max_timeout_ms = 100;
-				timeout = std::min(timeout, uint32_t(max_timeout_ms)); // clamp top
-			}
-#endif
-
-			LOG([&](auto& o) {
-				o << "DNS thread: waiting with timeout = " << timeout << std::endl;
-			})
-			bool is_triggered = this->wait_set.wait(timeout);
-			if (!is_triggered) {
-				// no waitables triggered
-				LOG([](auto& o) {
-					o << "timeout hit" << std::endl;
-				})
-				continue;
-			}
-
-			while (auto m = this->queue.pop_front()) {
-				m();
-			}
-		} // ~while(!this->quit_flag)
-
-		this->wait_set.remove(this->socket);
-		this->wait_set.remove(this->queue);
-		LOG([&](auto& o) {
-			o << "DNS lookup thread stopped" << std::endl;
-		})
-	}
+	dns_resolver* hnr = nullptr;
+	std::string host_name;
+	std::vector<setka::address> servers;
+	setka::dns_record_type record_type = setka::dns_record_type::both;
+	time_point deadline{};
+
+	// A cache hit: the request completes immediately with this result, no query is sent.
+	bool complete_immediately = false;
+	setka::dns_result immediate_result = setka::dns_result::error;
+
+	// The resolved addresses (filled in on success) and their metadata.
+	std::vector<setka::address::ip> addresses;
+	uint32_t ttl = 0; // the minimum TTL of the resolved records, in seconds
+	bool nxdomain = false; // the DNS server reported that the domain does not exist
+
+	std::array<leg, 2> legs;
+	uint8_t num_legs = 0;
 };
 
-// accessing this variable must be protected by dnsMutex
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-std::unique_ptr<lookup_thread> thread;
+// -----------------------------------------------------------------------------------------------
+// The DNS response parsing
+// -----------------------------------------------------------------------------------------------
 
-} // namespace dns
-} // namespace
+/**
+ * @brief The result of parsing a DNS response.
+ */
+struct reply {
+	bool matches = false; // a well-formed response to our query
+	bool truncated = false; // the TC flag
+	uint16_t rcode = 0;
+	std::vector<setka::address::ip> addresses; // the answer records of the requested type
+	uint32_t ttl = 0; // the minimum TTL among the answer records, in seconds
+};
 
-// NOLINTNEXTLINE(modernize-use-equals-default, "destructor is not trivial in DEBUG mode")
-dns_resolver::~dns_resolver()
+/**
+ * @brief Parses a DNS response packet.
+ *
+ * On success (a well-formed response with a matching ID, question name and question type)
+ * sets reply::matches to true and fills in the remaining fields.
+ */
+void parse_reply(
+	const request* r,
+	uint16_t expected_id,
+	uint16_t expected_type,
+	const uint8_t* data,
+	size_t len,
+	reply& out
+)
 {
-#ifdef DEBUG
-	// check that there is no ongoing DNS lookup operation.
-	std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex);
+	if (len < 12) { // NOLINT
+		return;
+	}
 
-	if (dns::thread) {
-		std::lock_guard<decltype(dns::thread->mutex)> mutex_guard(dns::thread->mutex);
+	const uint8_t* p = data;
+	const uint8_t* end = data + len; // NOLINT
 
-		auto i = dns::thread->resolvers_map.find(this);
-		if (i != dns::thread->resolvers_map.end()) {
-			utki::assert(
-				false,
-				[&](auto& o) {
-					o << "trying to destroy the dns_resolver object while DNS lookup request is in progress, call dns_resolver::cancel() first.";
-				},
-				SL
+	// the header
+	uint16_t id = utki::deserialize16be(p);
+	p += 2; // NOLINT
+	if (id != expected_id) {
+		return;
+	}
+	uint16_t flags = utki::deserialize16be(p);
+	p += 2; // NOLINT
+	if ((flags & 0x8000) == 0) { // the QR flag must be set // NOLINT
+		return;
+	}
+	out.truncated = (flags & 0x0200) != 0; // NOLINT
+	out.rcode = flags & 0x000f; // NOLINT
+	uint16_t qdcount = utki::deserialize16be(p);
+	p += 2; // NOLINT
+	uint16_t ancount = utki::deserialize16be(p);
+	p += 2; // NOLINT
+	uint16_t nscount = utki::deserialize16be(p);
+	p += 2; // NOLINT
+	uint16_t arcount = utki::deserialize16be(p);
+	p += 2; // NOLINT
+
+	// the question section
+	if (qdcount != 1) {
+		return;
+	}
+	std::string host = parse_host_name(data, p, end);
+	if (host != r->host_name) {
+		return;
+	}
+	if (end - p < 4) {
+		return;
+	}
+	uint16_t qtype = utki::deserialize16be(p);
+	p += 2; // NOLINT
+	uint16_t qclass = utki::deserialize16be(p);
+	p += 2; // NOLINT
+	if (qtype != expected_type || qclass != 1) {
+		return;
+	}
+
+	// the answer section
+	for (uint16_t i = 0; i < ancount; ++i) {
+		if (!skip_name(p, end)) {
+			return;
+		}
+		if (end - p < 10) { // type(2) + class(2) + ttl(4) + rdlength(2) // NOLINT
+			return;
+		}
+		uint16_t type = utki::deserialize16be(p);
+		p += 2; // NOLINT
+		p += 2; // the class // NOLINT
+		uint32_t ttl = utki::deserialize32be(p);
+		p += 4; // NOLINT
+		uint16_t rdlength = utki::deserialize16be(p);
+		p += 2; // NOLINT
+		if (end - p < rdlength) {
+			return;
+		}
+		if (type == expected_type) {
+			if (type == dns_type_a) {
+				if (rdlength < 4) {
+					return;
+				}
+				out.addresses.emplace_back(utki::deserialize32be(p)); // NOLINT
+			} else { // dns_type_aaaa
+				if (rdlength < 16) { // NOLINT
+					return;
+				}
+				out.addresses.emplace_back( // NOLINT
+					utki::deserialize32be(p),
+					utki::deserialize32be(p + 4), // NOLINT
+					utki::deserialize32be(p + 8), // NOLINT
+					utki::deserialize32be(p + 12) // NOLINT
+				);
+			}
+			if (out.ttl == 0 || ttl < out.ttl) {
+				out.ttl = ttl;
+			}
+		}
+		p += rdlength; // NOLINT
+	}
+
+	// the authority and the additional sections are not of interest to us
+	(void)nscount;
+	(void)arcount;
+
+	out.matches = true;
+}
+
+// -----------------------------------------------------------------------------------------------
+// The background DNS lookup thread
+// -----------------------------------------------------------------------------------------------
+
+/**
+ * @brief The background thread performing the DNS lookups.
+ *
+ * The thread is persistent: once started it stays alive until the library is de-initialized,
+ * serving lookups from any number of resolver objects.
+ */
+class lookup_thread : public nitki::thread
+{
+	setka::udp_socket udp_sock;
+	opros::wait_set wait_set{wait_set_capacity};
+	nitki::queue queue;
+
+public:
+	lookup_thread() = default;
+	lookup_thread(const lookup_thread&) = delete;
+	lookup_thread& operator=(const lookup_thread&) = delete;
+	lookup_thread(lookup_thread&&) = delete;
+	lookup_thread& operator=(lookup_thread&&) = delete;
+	~lookup_thread() override = default;
+
+	// The previous (exited) thread object that this thread should join and destroy,
+	// set when this thread replaces a dead (fatal) predecessor.
+	std::unique_ptr<lookup_thread> prev_thread;
+
+	// NOTE: all the thread-owned state below must be accessed with the mutex held,
+	//       the atomics are the exception.
+
+	std::mutex mutex;
+
+	// Set to make the thread exit.
+	std::atomic<bool> quit_flag = false;
+	// Set by the resolver when the thread has been started, so that the thread is started
+	// only once.
+	std::atomic<bool> started = false;
+	// Set if the thread encountered a fatal error (e.g. could not open the UDP socket) and
+	// has exited or is about to exit.
+	std::atomic<bool> fatal = false;
+
+	// Serializes the completion callbacks. Only the background thread ever takes this lock.
+	std::mutex completed_mutex;
+
+	// The resolver objects that have been deregistered (cancelled or destroyed) from within
+	// a completion callback in the current batch: their already queued (but not yet invoked)
+	// completions must be skipped, the objects may be destroyed before the completions
+	// would be invoked. Guarded by skip_mutex, which is never held while the user code runs.
+	std::mutex skip_mutex;
+	std::set<dns_resolver*> skip;
+
+	// Wakes up the background thread.
+	void wake_up()
+	{
+		this->queue.push_back([]() {});
+	}
+
+	// The DNS transaction ID allocator.
+	std::bitset<65536> ids_used; // NOLINT
+	uint16_t next_id_hint = 0;
+
+	// The requests awaiting the initial UDP queries to be sent.
+	std::deque<request*> send_queue;
+
+	// All the in-progress requests, keyed by the resolver object.
+	std::map<dns_resolver*, std::unique_ptr<request>> requests;
+
+	// The in-progress requests, keyed by the DNS transaction ID.
+	std::map<uint16_t, request*> ids;
+
+	// The request deadlines, keyed by the absolute (monotonic) deadline.
+	std::multimap<time_point, request*> deadlines;
+
+	// The legs with the active TCP fallback connections, keyed by the leg.
+	std::map<request::leg*, request*> tcp_legs;
+	uint32_t tcp_fallback_count = 0;
+
+	bool udp_write_interest = false;
+
+	// A request that finished in the current loop iteration, the completion callbacks are
+	// invoked for these outside of the mutex protection.
+	struct completion {
+		std::unique_ptr<request> req;
+		setka::dns_result result;
+	};
+
+	// ---------------------------------------------------------------------------
+	// The transaction ID management
+	// ---------------------------------------------------------------------------
+
+	uint16_t take_id()
+	{
+		if (this->ids_used.count() == this->ids_used.size()) {
+			throw dns_resolver::too_many_requests();
+		}
+		for (size_t i = 0; i < this->ids_used.size(); ++i) {
+			auto id = uint16_t((this->next_id_hint + i) % this->ids_used.size()); // NOLINT
+			if (!this->ids_used.test(id)) {
+				this->ids_used.set(id);
+				this->next_id_hint = uint16_t((id + 1) % this->ids_used.size());
+				return id;
+			}
+		}
+		throw dns_resolver::too_many_requests(); // unreachable
+	}
+
+	void release_id(uint16_t id)
+	{
+		this->ids_used.reset(id);
+	}
+
+	// ---------------------------------------------------------------------------
+	// The request removal
+	// ---------------------------------------------------------------------------
+
+	// Stops the leg's TCP fallback connection (if any), closing the socket.
+	// NOTE: must be called with the leg registered in the wait set (leg->tcp_active is true).
+	void stop_tcp_leg(request::leg* leg)
+	{
+		this->wait_set.remove(leg->tcp_sock);
+		this->tcp_legs.erase(leg);
+		leg->tcp_sock.disconnect();
+		leg->tcp_active = false;
+		leg->tcp_phase = request::leg::tcp_phase_t::none;
+		--this->tcp_fallback_count;
+	}
+
+	// Removes the request from all the thread's data structures without invoking the
+	// completion callback and returns it.
+	std::unique_ptr<request> detach_request(request* req)
+	{
+		// from the deadline map (several requests can share the same deadline)
+		auto dr = this->deadlines.equal_range(req->deadline);
+		for (auto di = dr.first; di != dr.second; ++di) {
+			if (di->second == req) {
+				this->deadlines.erase(di);
+				break;
+			}
+		}
+
+		// from the id map, close the TCP fallbacks
+		for (unsigned l = 0; l < req->num_legs; ++l) {
+			auto* leg = &req->legs[l];
+			if (leg->in_flight) {
+				this->ids.erase(leg->id);
+				this->release_id(leg->id);
+				leg->in_flight = false;
+			}
+			if (leg->tcp_active) {
+				this->stop_tcp_leg(leg);
+			}
+		}
+
+		// from the send queue
+		for (auto it = this->send_queue.begin(); it != this->send_queue.end();) {
+			if (*it == req) {
+				it = this->send_queue.erase(it);
+			} else {
+				++it;
+			}
+		}
+
+		// out of the requests map
+		auto ri = this->requests.find(req->hnr);
+		std::unique_ptr<request> removed = std::move(ri->second);
+		this->requests.erase(ri);
+
+		return removed;
+	}
+
+	// Removes the request (if any) from all the thread's data structures without invoking
+	// the completion callback and returns it. Returns nullptr if there was no request.
+	std::unique_ptr<request> remove_request(dns_resolver* hnr)
+	{
+		auto ri = this->requests.find(hnr);
+		if (ri == this->requests.end()) {
+			return nullptr;
+		}
+		return this->detach_request(ri->second.operator->());
+	}
+
+	// Removes the request from all the thread's data structures and schedules its
+	// completion, the completion callback is invoked outside of the mutex protection.
+	// NOTE: the caller must hold this->mutex.
+	void complete_request(request* req, setka::dns_result result, std::vector<completion>& completed)
+	{
+		auto removed = this->detach_request(req);
+		completed.push_back(completion{.req = std::move(removed), .result = result}); // NOLINT
+		{
+			std::lock_guard p_lock(dns::pending_mutex);
+			dns::pending.insert(req->hnr);
+		}
+	}
+
+	// Fails all the in-progress requests with the error result.
+	void fail_all(std::vector<completion>& completed)
+	{
+		std::vector<request*> reqs;
+		for (auto& kv : this->requests) {
+			reqs.push_back(kv.second.operator->());
+		}
+		for (auto* req : reqs) {
+			this->complete_request(req, setka::dns_result::error, completed);
+		}
+	}
+
+	// Drops all the in-progress requests without scheduling their completions. Used when the
+	// thread is shutting down because the library is being de-initialized: by that time all
+	// the resolver objects are destroyed, invoking their completion callbacks would be a
+	// use-after-free. NOTE: the caller must hold this->mutex.
+	void drop_all()
+	{
+		std::vector<request*> reqs;
+		for (auto& kv : this->requests) {
+			reqs.push_back(kv.second.operator->());
+		}
+		for (auto* req : reqs) {
+			this->detach_request(req);
+		}
+	}
+
+	// ---------------------------------------------------------------------------
+	// The UDP send and the retransmissions
+	// ---------------------------------------------------------------------------
+
+	void update_udp_write_interest()
+	{
+		bool need_write = this->send_queue.size() > 0;
+		if (need_write != this->udp_write_interest) {
+			this->udp_write_interest = need_write;
+			this->wait_set.change(
+				this->udp_sock,
+				need_write ? utki::make_flags({opros::ready::read, opros::ready::write})
+						   : utki::make_flags({opros::ready::read}),
+				&this->udp_sock
 			);
 		}
 	}
+
+	// Sends the initial UDP queries of the requests in the send queue.
+	void send_pending()
+	{
+		while (this->send_queue.size() > 0) {
+			request* req = this->send_queue.front();
+			bool all_sent = true;
+
+			for (unsigned l = 0; l < req->num_legs; ++l) {
+				auto* leg = &req->legs[l];
+				if (!leg->needs_send || leg->tcp_active || leg->done) {
+					continue;
+				}
+
+				std::array<uint8_t, 512> qbuf; // NOLINT
+				size_t qsize = build_query(leg->id, req->host_name, leg->type, qbuf.data());
+
+				setka::address server = req->servers[leg->server_index % req->servers.size()];
+				server.port = dns_port;
+
+				size_t ret = this->udp_sock.send(utki::make_span(qbuf.data(), qsize), server);
+				if (ret == qsize) {
+					leg->sent = true;
+					leg->needs_send = false;
+				} else {
+					// can't send right now, will retry later
+					all_sent = false;
+					break;
+				}
+			}
+
+			if (all_sent) {
+				this->send_queue.pop_front();
+			} else {
+				break;
+			}
+		}
+
+		this->update_udp_write_interest();
+	}
+
+	// Retransmits the queries whose retransmission time has come.
+	void process_retransmissions(time_point now)
+	{
+		for (auto& kv : this->requests) {
+			request* req = kv.second.operator->();
+			if (req->complete_immediately) {
+				continue;
+			}
+			for (unsigned l = 0; l < req->num_legs; ++l) {
+				auto* leg = &req->legs[l];
+				if (leg->sent && !leg->done && !leg->tcp_active && leg->next_retransmit != time_point{} &&
+					leg->next_retransmit <= now)
+				{
+					++leg->retransmits;
+					leg->needs_send = true; // retransmit the query
+					// After the first retransmission (which retries the same server) alternate
+					// between the configured DNS servers.
+					if (req->servers.size() > 1 && (leg->retransmits % 2) == 1) {
+						leg->server_index = uint16_t((leg->server_index + 1) % req->servers.size());
+					}
+
+					// Schedule the next retransmission with the exponential backoff.
+					uint32_t interval = initial_retransmit_interval_ms;
+					for (unsigned i = 0; i < leg->retransmits && interval < max_retransmit_interval_ms; ++i) {
+						interval *= 2;
+					}
+					if (interval > max_retransmit_interval_ms) {
+						interval = max_retransmit_interval_ms;
+					}
+					time_point next = now + milliseconds(interval);
+					leg->next_retransmit = next < req->deadline ? next : time_point{};
+
+					this->send_queue.push_back(req);
+				}
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------------------
+	// The response processing
+	// ---------------------------------------------------------------------------
+
+	// Checks whether all the legs of the request are terminal, and if so completes the
+	// request with the aggregated result.
+	void check_all_legs_done(request* req, std::vector<completion>& completed)
+	{
+		for (unsigned l = 0; l < req->num_legs; ++l) {
+			if (!req->legs[l].done) {
+				return; // still waiting for the other leg
+			}
+		}
+		bool any_not_found = false;
+		for (unsigned l = 0; l < req->num_legs; ++l) {
+			if (req->legs[l].done_result == setka::dns_result::not_found) {
+				any_not_found = true;
+			}
+		}
+		this->complete_request(
+			req,
+			any_not_found ? setka::dns_result::not_found : setka::dns_result::dns_error,
+			completed
+		);
+	}
+
+	// Marks the leg as terminal and completes the request if all the legs are done.
+	void finish_leg(request* req, request::leg* leg, setka::dns_result result, std::vector<completion>& completed)
+	{
+		leg->done = true;
+		leg->done_result = result;
+		this->check_all_legs_done(req, completed);
+	}
+
+	// Starts the TCP fallback for a truncated UDP response.
+	void start_tcp_fallback(request* req, request::leg* leg, std::vector<completion>& completed)
+	{
+		if (this->tcp_fallback_count >= max_tcp_fallbacks) {
+			// Too many concurrent TCP fallbacks, this leg will just fail.
+			this->finish_leg(req, leg, setka::dns_result::dns_error, completed);
+			return;
+		}
+
+		setka::address server = req->servers[leg->server_index % req->servers.size()];
+		server.port = dns_port;
+
+		try {
+			leg->tcp_sock = setka::tcp_socket(server);
+		} catch (std::exception& e) {
+			// An immediate connection failure (e.g. no route to host).
+			this->finish_leg(req, leg, setka::dns_result::dns_error, completed);
+			return;
+		}
+
+		std::array<uint8_t, 512> qbuf; // NOLINT
+		size_t qsize = build_query(leg->id, req->host_name, leg->type, qbuf.data());
+		leg->tcp_tx.resize(qsize + 2);
+		utki::serialize16be(uint16_t(qsize), leg->tcp_tx.data());
+		memcpy(leg->tcp_tx.data() + 2, qbuf.data(), qsize); // NOLINT
+		leg->tcp_tx_sent = 0;
+		leg->tcp_rx.clear();
+		leg->tcp_phase = request::leg::tcp_phase_t::connecting;
+
+		try {
+			this->wait_set.add(leg->tcp_sock, utki::make_flags({opros::ready::read, opros::ready::write}), leg);
+		} catch (std::exception&) {
+			// Should not happen (the wait set has enough capacity), but handle it anyway.
+			leg->tcp_sock.disconnect();
+			leg->tcp_phase = request::leg::tcp_phase_t::none;
+			this->finish_leg(req, leg, setka::dns_result::dns_error, completed);
+			return;
+		}
+
+		leg->tcp_active = true; // from this point on the socket is registered in the wait set
+		++this->tcp_fallback_count;
+		this->tcp_legs[leg] = req;
+	}
+
+	// Processes a parsed DNS response (received over UDP or TCP) for the leg.
+	void process_reply(request* req, request::leg* leg, reply& rep, std::vector<completion>& completed)
+	{
+		// The TCP fallback for this leg is no longer needed, we got a complete response.
+		if (leg->tcp_active) {
+			this->stop_tcp_leg(leg);
+		}
+
+		if (rep.rcode == 3) {
+			// NXDOMAIN: the domain does not exist, so there cannot be any records of
+			// any other type either.
+			req->nxdomain = true;
+			this->complete_request(req, setka::dns_result::not_found, completed);
+			return;
+		}
+
+		if (rep.addresses.size() > 0) {
+			req->addresses = std::move(rep.addresses);
+			req->ttl = rep.ttl;
+			this->complete_request(req, setka::dns_result::ok, completed);
+			return;
+		}
+
+		if (rep.rcode == 0) {
+			if (rep.truncated) {
+				// The response was truncated, get the full response over TCP.
+				this->start_tcp_fallback(req, leg, completed);
+				return;
+			}
+			// NOERROR without the answers of the requested type: this leg is done.
+			this->finish_leg(req, leg, setka::dns_result::not_found, completed);
+			return;
+		}
+
+		// Some other error reported by the DNS server (e.g. SERVFAIL).
+		this->finish_leg(req, leg, setka::dns_result::dns_error, completed);
+	}
+
+	// Processes a received UDP datagram.
+	void handle_datagram(const uint8_t* data, size_t len, std::vector<completion>& completed)
+	{
+		if (len < 12) { // NOLINT
+			return;
+		}
+		uint16_t id = utki::deserialize16be(data);
+		auto ii = this->ids.find(id);
+		if (ii == this->ids.end()) {
+			return; // not our query (or it was already completed)
+		}
+		request* req = ii->second;
+		request::leg* leg = nullptr;
+		for (unsigned l = 0; l < req->num_legs; ++l) {
+			if (req->legs[l].in_flight && req->legs[l].id == id) {
+				leg = &req->legs[l];
+				break;
+			}
+		}
+		if (!leg) {
+			return;
+		}
+
+		reply rep;
+		parse_reply(req, id, leg->type, data, len, rep);
+		if (!rep.matches) {
+			return; // malformed or a mismatched response, ignore it
+		}
+
+		this->process_reply(req, leg, rep, completed);
+	}
+
+	// ---------------------------------------------------------------------------
+	// The TCP fallback state machine
+	// ---------------------------------------------------------------------------
+
+	// Processes a state machine event for the leg's TCP fallback connection.
+	void process_tcp_event(
+		request* req,
+		request::leg* leg,
+		utki::flags<opros::ready> flags,
+		std::vector<completion>& completed
+	)
+	{
+		auto fail_tcp = [this, req, leg, &completed]() {
+			if (leg->tcp_active) {
+				this->stop_tcp_leg(leg);
+			}
+			this->finish_leg(req, leg, setka::dns_result::dns_error, completed);
+		};
+
+		if (flags.get(opros::ready::error)) {
+			fail_tcp();
+			return;
+		}
+
+		if (leg->tcp_phase == request::leg::tcp_phase_t::connecting) {
+			if (flags.get(opros::ready::read)) {
+				// A readable socket while connecting means a reset or a closed connection.
+				fail_tcp();
+				return;
+			}
+			if (flags.get(opros::ready::write)) {
+				// The connection is (probably) established, try to send the query.
+				// If the connection failed, the send will fail and we will find out then.
+				leg->tcp_phase = request::leg::tcp_phase_t::sending;
+			}
+		}
+
+		if (leg->tcp_phase == request::leg::tcp_phase_t::sending) {
+			if (flags.get(opros::ready::write)) {
+				try {
+					size_t n = leg->tcp_sock.send(utki::make_span(
+						leg->tcp_tx.data() + leg->tcp_tx_sent,
+						leg->tcp_tx.size() - leg->tcp_tx_sent
+					) // NOLINT
+					);
+					if (n > 0) {
+						leg->tcp_tx_sent += n;
+						if (leg->tcp_tx_sent == leg->tcp_tx.size()) {
+							leg->tcp_phase = request::leg::tcp_phase_t::receiving;
+						}
+					} else {
+						// The write was signalled as ready but nothing could be sent,
+						// the connection has been disconnected.
+						fail_tcp();
+						return;
+					}
+				} catch (std::exception&) {
+					fail_tcp();
+					return;
+				}
+			}
+			if (!leg->tcp_active) {
+				return; // the request was completed
+			}
+		}
+
+		if (leg->tcp_phase == request::leg::tcp_phase_t::receiving) {
+			if (flags.get(opros::ready::read)) {
+				std::array<uint8_t, 4096> buf; // NOLINT
+				size_t n = 0;
+				try {
+					n = leg->tcp_sock.receive(utki::make_span(buf.data(), buf.size()));
+				} catch (std::exception&) {
+					fail_tcp();
+					return;
+				}
+				if (n > 0) {
+					leg->tcp_rx.insert(leg->tcp_rx.end(), buf.data(), buf.data() + n);
+					this->process_tcp_rx(req, leg, completed);
+					if (!leg->tcp_active) {
+						return; // the request was completed
+					}
+				} else if (flags.get(opros::ready::error)) {
+					fail_tcp();
+					return;
+				}
+				// Otherwise: the read was signalled as ready but there was nothing to read.
+				// Either the connection was closed by the peer (we wait for the full response
+				// or the deadline in that case) or it was a spurious wakeup.
+			}
+		}
+	}
+
+	// Processes the accumulated TCP response buffer, extracting the complete
+	// 2-byte length prefixed DNS messages.
+	void process_tcp_rx(request* req, request::leg* leg, std::vector<completion>& completed)
+	{
+		// A DNS message over TCP is at most 65535 bytes, if the buffer exceeds that then
+		// something is wrong with the connection.
+		if (leg->tcp_rx.size() > 65535u + 2u) { // NOLINT
+			if (leg->tcp_active) {
+				this->stop_tcp_leg(leg);
+			}
+			this->finish_leg(req, leg, setka::dns_result::dns_error, completed);
+			return;
+		}
+
+		while (true) {
+			if (leg->tcp_rx.size() < 2) {
+				break;
+			}
+			uint16_t msg_len = utki::deserialize16be(leg->tcp_rx.data());
+			if (leg->tcp_rx.size() < size_t(2) + msg_len) {
+				break;
+			}
+
+			reply rep;
+			parse_reply(req, leg->id, leg->type, leg->tcp_rx.data() + 2, msg_len, rep); // NOLINT
+			// Consume the message (it might not match our query, in which case we just
+			// skip it).
+			leg->tcp_rx.erase(leg->tcp_rx.begin(), leg->tcp_rx.begin() + size_t(2) + msg_len);
+			if (rep.matches) {
+				this->process_reply(req, leg, rep, completed);
+				return;
+			}
+		}
+	}
+
+	// Processes a triggered event for one of the TCP fallback sockets.
+	void process_tcp_event(const opros::event_info& e, std::vector<completion>& completed)
+	{
+		auto it = this->tcp_legs.find(static_cast<request::leg*>(e.user_data));
+		if (it == this->tcp_legs.end()) {
+			return;
+		}
+		this->process_tcp_event(it->second, it->first, e.flags, completed);
+	}
+
+	// ---------------------------------------------------------------------------
+	// The completion callbacks
+	// ---------------------------------------------------------------------------
+
+	// Stores the result of the completed request into the DNS result cache (if applicable).
+	void cache_store(const request* req, setka::dns_result result)
+	{
+		if (result != setka::dns_result::ok && result != setka::dns_result::not_found) {
+			return;
+		}
+
+		uint16_t cache_type = 0;
+		switch (req->record_type) {
+			case setka::dns_record_type::ipv4:
+				cache_type = dns_type_a;
+				break;
+			case setka::dns_record_type::ipv6:
+				cache_type = dns_type_aaaa;
+				break;
+			default:
+				cache_type = 0; // setka::dns_record_type::both
+				break;
+		}
+
+		auto now = clock_type::now();
+		{
+			std::lock_guard lock(cache_mutex);
+			if (result == setka::dns_result::ok) {
+				if (req->ttl == 0) {
+					return; // don't cache the records with the zero TTL
+				}
+				uint64_t ttl_ms = uint64_t(req->ttl) * 1000; // NOLINT
+				if (ttl_ms > max_positive_cache_ttl_ms) {
+					ttl_ms = max_positive_cache_ttl_ms;
+				}
+				dns_cache::entry e;
+				e.addresses = req->addresses;
+				e.expiry = now + milliseconds(ttl_ms);
+				cache[cache_key{req->host_name, cache_type}] = std::move(e);
+			} else { // not_found
+				dns_cache::entry e;
+				e.not_found = true;
+				e.expiry = now + milliseconds(negative_cache_ttl_ms);
+				cache[cache_key{req->host_name, cache_type}] = e;
+				if (req->nxdomain) {
+					// NXDOMAIN: the domain does not exist, so no records of any type exist.
+					cache[cache_key{req->host_name, dns_type_a}] = e;
+					cache[cache_key{req->host_name, dns_type_aaaa}] = e;
+				}
+			}
+			// Keep the cache size bounded.
+			while (cache.size() > max_cache_entries) {
+				cache.erase(cache.begin());
+			}
+		}
+	}
+
+	// Invokes the completion callback for the completed request.
+	void call_callback(const completion& c)
+	{
+		this->cache_store(c.req.operator->(), c.result);
+
+		bool skipped = false;
+		{
+			std::lock_guard s_lock(this->skip_mutex);
+			if (this->skip.count(c.req->hnr)) {
+				// The resolver was deregistered from within a completion callback,
+				// the object may be destroyed, skip the completion.
+				this->skip.erase(c.req->hnr);
+				skipped = true;
+			}
+		}
+
+		if (!skipped) {
+			std::lock_guard c_lock(this->completed_mutex);
+			in_dns_callback = true;
+			try {
+				c.req->hnr->on_completed(c.result, utki::make_span(c.req->addresses));
+			} catch (...) { // NOLINT
+				// swallow the exceptions thrown by the user code
+			}
+			in_dns_callback = false;
+		}
+
+		{
+			std::lock_guard p_lock(dns::pending_mutex);
+			dns::pending.erase(c.req->hnr);
+		}
+		dns::pending_cv.notify_all();
+	}
+
+	// Invokes the completion callbacks for the given completed requests.
+	// NOTE: must be called without the mutex held.
+	void invoke_completions(std::vector<completion>& completed)
+	{
+		for (auto& c : completed) {
+			this->call_callback(c);
+		}
+		{
+			std::lock_guard s_lock(this->skip_mutex);
+			this->skip.clear();
+		}
+		completed.clear();
+	}
+
+	// ---------------------------------------------------------------------------
+	// The thread main loop
+	// ---------------------------------------------------------------------------
+
+	void run() override
+	{
+		// Destroy the previous (exited) thread object if there is one. The predecessor
+		// has finished its run() by the time this thread is started, so the join is
+		// guaranteed to finish.
+		if (this->prev_thread) {
+			this->prev_thread->join();
+			this->prev_thread.reset();
+		}
+
+		std::vector<completion> completed;
+		bool waitables_added = false;
+
+		{
+			std::lock_guard lock(this->mutex);
+
+			// Open the UDP socket.
+			try {
+				this->udp_sock = setka::udp_socket(0);
+			} catch (std::exception& e) {
+				utki::log([&](auto& o) {
+					o << "dns_resolver: could not open the UDP socket: " << e.what() << std::endl;
+				});
+				this->fatal = true;
+				this->fail_all(completed);
+			}
+
+			if (!this->fatal) {
+				this->wait_set.add(this->queue, utki::make_flags({opros::ready::read}), &this->queue);
+				this->wait_set.add(this->udp_sock, utki::make_flags({opros::ready::read}), &this->udp_sock);
+				this->udp_write_interest = this->send_queue.size() > 0;
+				this->update_udp_write_interest();
+				waitables_added = true;
+			}
+
+			LOG([&](auto& o) {
+				o << "DNS lookup thread started" << std::endl;
+			})
+		}
+
+		while (!this->quit_flag && !this->fatal) {
+			uint32_t wait_ms = 0;
+			bool infinite_wait = false;
+
+			{
+				std::lock_guard lock(this->mutex);
+
+				time_point now = clock_type::now();
+
+				// Process the triggered events.
+				for (const opros::event_info& e : this->wait_set.get_triggered()) {
+					if (e.user_data == &this->udp_sock) {
+						if (e.flags.get(opros::ready::error)) {
+							utki::log([&](auto& o) {
+								o << "dns_resolver: error on the DNS UDP socket, failing all the pending requests"
+								  << std::endl;
+							});
+							this->fatal = true;
+							this->fail_all(completed);
+							break;
+						}
+						if (e.flags.get(opros::ready::read)) {
+							std::array<uint8_t, udp_response_buffer_size> buf; // NOLINT
+							setka::address from;
+							while (true) {
+								size_t n = this->udp_sock.receive(utki::make_span(buf.data(), buf.size()), from);
+								if (n == 0) {
+									break;
+								}
+								this->handle_datagram(buf.data(), n, completed);
+							}
+						}
+					} else if (e.user_data == &this->queue) {
+						// just a wake-up signal
+					} else {
+						this->process_tcp_event(e, completed);
+					}
+				}
+
+				if (!this->fatal) {
+					// Process the expired deadlines.
+					while (this->deadlines.size() > 0 && this->deadlines.begin()->first <= now) {
+						request* req = this->deadlines.begin()->second;
+						this->complete_request(req, setka::dns_result::timeout, completed);
+					}
+
+					// Process the retransmissions whose time has come, they are queued into
+					// the send queue.
+					this->process_retransmissions(now);
+
+					// Send the pending UDP queries (the initial ones and the retransmissions).
+					this->send_pending();
+
+					// Process the immediate completions (the cache hits).
+					{
+						std::vector<request*> reqs;
+						for (auto& kv : this->requests) {
+							if (kv.second->complete_immediately) {
+								reqs.push_back(kv.second.operator->());
+							}
+						}
+						for (auto* req : reqs) {
+							this->complete_request(req, req->immediate_result, completed);
+						}
+					}
+
+					// Compute the wait timeout.
+					std::optional<time_point> next_time;
+					if (this->deadlines.size() > 0) {
+						next_time = this->deadlines.begin()->first;
+					}
+					for (auto& kv : this->requests) {
+						request* req = kv.second.operator->();
+						for (unsigned l = 0; l < req->num_legs; ++l) {
+							auto* leg = &req->legs[l];
+							if (leg->sent && !leg->done && !leg->tcp_active && leg->next_retransmit != time_point{}) {
+								if (!next_time || *next_time > leg->next_retransmit) {
+									next_time = leg->next_retransmit;
+								}
+							}
+						}
+					}
+					if (next_time) {
+						auto ms = std::chrono::duration_cast<milliseconds>(*next_time - now).count();
+						if (ms > 0) {
+							if (ms < uint32_t(-1)) {
+								wait_ms = uint32_t(ms);
+							} else {
+								infinite_wait = true;
+							}
+						}
+					} else {
+						infinite_wait = true;
+					}
+					// If there are requests that couldn't be sent right now, don't wait long,
+					// they are waiting for the UDP socket to become writable.
+					if (this->send_queue.size() > 0) {
+						infinite_wait = false;
+						if (wait_ms > 100) { // NOLINT
+							wait_ms = 100; // NOLINT
+						}
+					}
+				}
+			}
+
+			if (this->fatal) {
+				break;
+			}
+
+			// Invoke the completion callbacks for the requests completed in this
+			// iteration, outside of the mutex protection.
+			this->invoke_completions(completed);
+
+			// Wait for the events.
+			if (infinite_wait) {
+				this->wait_set.wait();
+			} else {
+				this->wait_set.wait(wait_ms);
+			}
+
+			// Process the wake-up queue.
+			while (auto proc = this->queue.pop_front()) {
+				proc();
+			}
+		}
+
+		{
+			std::lock_guard lock(this->mutex);
+
+			// Drop the in-progress requests (if any) without invoking their completion
+			// callbacks: the thread is shutting down because the library is being
+			// de-initialized, by that time all the resolver objects are destroyed, so
+			// invoking their completion callbacks would be a use-after-free.
+			this->drop_all();
+
+			// Remove the waitables from the wait set.
+			if (waitables_added) {
+				this->wait_set.remove(this->udp_sock);
+				this->wait_set.remove(this->queue);
+			}
+		}
+
+		LOG([&](auto& o) {
+			o << "DNS lookup thread stopped" << std::endl;
+		})
+
+		// Invoke the remaining completion callbacks (the fail-all ones).
+		this->invoke_completions(completed);
+	}
+};
+
+// -----------------------------------------------------------------------------------------------
+// The OS-specific helpers
+// -----------------------------------------------------------------------------------------------
+
+// Checks whether the underlying OS supports IPv6.
+// The result is computed once and cached.
+bool os_supports_ipv6()
+{
+	static const bool result = []() {
+#if CFG_OS == CFG_OS_WINDOWS
+		OSVERSIONINFOEX osvi;
+		memset(&osvi, 0, sizeof(osvi));
+		osvi.dwOSVersionInfoSize = sizeof(osvi);
+		if (GetVersionEx(reinterpret_cast<OSVERSIONINFO*>(&osvi)) == 0) {
+			// Could not determine the OS version, assume the IPv6 is supported.
+			return true;
+		}
+		// Windows XP (5.1) and earlier do not support IPv6.
+		return osvi.dwMajorVersion > 5 || (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion > 1);
+#else
+		return true;
+#endif
+	}();
+	return result;
+}
+
+// Parses a DNS server address from a string, returns true on success.
+bool parse_dns_server_address(const std::string& str, setka::address& out)
+{
+	try {
+		out = setka::address(str.c_str(), 0);
+	} catch (std::exception&) {
+		return false;
+	}
+	return out.host.is_valid();
+}
+
+// Adds the DNS server to the servers list if it is valid and not already present.
+void add_dns_server(const std::string& str)
+{
+	setka::address a;
+	if (!parse_dns_server_address(str, a)) {
+		return;
+	}
+	for (auto& existing : dns_servers) {
+		if (existing.host == a.host) {
+			return;
+		}
+	}
+	dns_servers.push_back(a);
+}
+
+// Loads the DNS servers from the OS configuration.
+// NOTE: call with the dns_mutex held.
+void load_dns_servers()
+{
+#if CFG_OS == CFG_OS_WINDOWS
+	// Get the DNS servers from the registry: the interfaces' NameServer and
+	// DhcpNameServer values.
+
+	struct win_reg_key {
+		HKEY key = nullptr;
+
+		win_reg_key()
+		{
+			if (RegOpenKeyA(
+					HKEY_LOCAL_MACHINE,
+					R"(SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces)",
+					&this->key
+				) != ERROR_SUCCESS)
+			{
+				throw std::runtime_error("load_dns_servers(): RegOpenKey() failed");
+			}
+		}
+
+		win_reg_key(const win_reg_key&) = delete;
+		win_reg_key& operator=(const win_reg_key&) = delete;
+		win_reg_key(win_reg_key&&) = delete;
+		win_reg_key& operator=(win_reg_key&&) = delete;
+
+		~win_reg_key()
+		{
+			RegCloseKey(this->key);
+		}
+	};
+
+	try {
+		win_reg_key key;
+
+		// According to MSDN docs maximum key name length is 255 chars.
+		// Add also space for terminating zero.
+		// NOLINT(cppcoreguidelines-pro-type-member-init)
+		std::array<char, std::numeric_limits<uint8_t>::max() + 1> subkey;
+
+		// TODO: rewrite using RegEnumKeyEx() as RegEnumKeyA() is only provided for compatibility with 16-bit Windows
+		for (unsigned i = 0; RegEnumKeyA(
+								 key.key, //
+								 i,
+								 subkey.data(),
+								 DWORD(subkey.size())
+							 ) == ERROR_SUCCESS;
+			 ++i)
+		{
+			HKEY h_sub = nullptr;
+			// TODO: rewrite using RegOpenKeyEx() as RegOpenKeyA() is only provided for compatibility with 16-bit Windows
+			if (RegOpenKeyA(
+					key.key, //
+					subkey.data(),
+					&h_sub
+				) != ERROR_SUCCESS)
+			{
+				continue;
+			}
+
+			for (const char* value_name : {"NameServer", "DhcpNameServer"}) {
+				// NOLINT(cppcoreguidelines-pro-type-member-init)
+				std::array<BYTE, utki::kilobyte> value;
+				auto len = DWORD(value.size());
+				DWORD type = 0;
+
+				if (RegQueryValueExA(
+						h_sub, //
+						value_name,
+						nullptr,
+						&type,
+						value.data(),
+						&len
+					) != ERROR_SUCCESS)
+				{
+					continue;
+				}
+
+				// Both the values can be REG_SZ or REG_MULTI_SZ.
+				if (type == REG_SZ || type == REG_MULTI_SZ) {
+					// The values are a sequence of NUL terminated strings (a single string
+					// for REG_SZ).
+					size_t start = 0;
+					while (start < len) {
+						size_t end = start;
+						while (end < len && value[end] != '\0') {
+							++end;
+						}
+						if (end > start) {
+							std::string str(reinterpret_cast<const char*>(value.data() + start), end - start);
+							// Trim the whitespace.
+							size_t b = str.find_first_not_of(" \t");
+							if (b != std::string::npos) {
+								add_dns_server(str.substr(b));
+							}
+						}
+						if (type == REG_SZ || end >= len) {
+							break;
+						}
+						start = end + 1;
+					}
+				}
+			}
+
+			RegCloseKey(h_sub);
+		}
+	} catch (std::exception&) {
+		// ignore the error
+	}
+
+	if (dns_servers.empty()) {
+		dns_servers_error = "no DNS servers found in the Windows registry";
+	}
+
+#elif CFG_OS == CFG_OS_LINUX || CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_UNIX
+	// Get the DNS servers from /etc/resolv.conf.
+	try {
+		fsif::native_file f("/etc/resolv.conf");
+		std::vector<uint8_t> buf = f.load(size_t(utki::kilobyte) * 4); // 4kb max
+
+		for (const uint8_t* p = buf.data(); p < utki::end_pointer(buf);) {
+			const uint8_t* start = p;
+			while (p < utki::end_pointer(buf) && *p != '\n') {
+				++p; // NOLINT
+			}
+			std::string line(reinterpret_cast<const char*>(start), size_t(p - start)); // NOLINT
+			if (p < utki::end_pointer(buf)) {
+				++p; // NOLINT
+			}
+
+			// Trim the leading whitespace.
+			size_t b = line.find_first_not_of(" \t\r");
+			if (b == std::string::npos) {
+				continue;
+			}
+			line = line.substr(b);
+			if (!line.starts_with("nameserver")) {
+				continue;
+			}
+
+			// Extract the IP address (the first whitespace separated token).
+			std::string ipstr = line.substr(10); // NOLINT
+			size_t tok_start = ipstr.find_first_not_of(" \t\r");
+			if (tok_start == std::string::npos) {
+				continue;
+			}
+			size_t tok_end = ipstr.find_first_of(" \t\r", tok_start);
+			ipstr = ipstr.substr(tok_start, tok_end == std::string::npos ? std::string::npos : tok_end - tok_start);
+			add_dns_server(ipstr);
+		}
+	} catch (std::exception& e) {
+		dns_servers_error = std::string("could not read /etc/resolv.conf: ") + e.what();
+	}
+
+	if (dns_servers.empty() && dns_servers_error.empty()) {
+		dns_servers_error = "no DNS servers found in /etc/resolv.conf";
+	}
+#else
+	dns_servers_error = "don't know how to get the DNS servers on this OS";
 #endif
 }
 
-void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, const setka::address& dns_ip)
+} // namespace dns
+
+} // namespace
+
+// -----------------------------------------------------------------------------------------------
+// The dns_resolver implementation
+// -----------------------------------------------------------------------------------------------
+
+void dns_resolver::set_completed_handler(completed_handler_type handler)
 {
-	//	TRACE(<< "dns_resolver::Resolve_ts(): enter" << std::endl)
+	std::lock_guard<std::mutex> guard(this->completed_handler_mutex);
+	this->completed_handler = std::move(handler);
+}
 
-	// TODO: get init guard?
-	// ASSERT(setka::init_guard::is_created())
+dns_resolver::~dns_resolver()
+{
+	this->deregister();
+}
 
+bool dns_resolver::deregister() noexcept
+{
+	dns::lookup_thread* t = nullptr;
+	std::unique_ptr<dns::request> removed;
+	{
+		std::lock_guard dns_lock(dns::dns_mutex);
+
+		if (!dns::thread) {
+			return false;
+		}
+		t = dns::thread.get();
+
+		std::lock_guard t_lock(t->mutex);
+		removed = t->remove_request(this);
+	}
+	// The dns_mutex is intentionally released before the wait below, so that this method
+	// cannot deadlock with a completion callback (invoked on the background thread) that
+	// calls resolve(), which takes the dns_mutex.
+
+	if (in_dns_callback) {
+		// We are inside a completion callback invoked by the background thread. Any of this
+		// object's completions that are already queued in the current batch must be skipped,
+		// the object may be destroyed before they would be invoked. The object's in-progress
+		// request (if any) was removed above, so no new completions can be generated for it.
+		std::lock_guard s_lock(t->skip_mutex);
+		t->skip.insert(this);
+	} else {
+		// Wait for the completion callback (if any) to finish, so that after this method
+		// returns the on_completed() callback is not invoked on this (possibly destroyed)
+		// object. The wait is a no-op if there is no outstanding completion for this object.
+		dns::wait_no_pending(this);
+	}
+
+	return bool(removed);
+}
+
+bool dns_resolver::cancel() noexcept
+{
+	return this->deregister();
+}
+
+void dns_resolver::resolve(
+	const std::string& host_name,
+	uint32_t timeout_ms,
+	dns_record_type record_type,
+	const setka::address& dns_ip
+)
+{
 	constexpr auto max_host_name_size = 253;
 
 	if (host_name.size() > max_host_name_size) {
 		throw std::logic_error("Too long domain name, it should not exceed 253 characters according to RFC 2181");
 	}
 
-	std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex);
+	// Validate the domain name: no empty labels, no labels longer than 255 characters.
+	{
+		size_t pos = 0;
+		while (pos < host_name.size()) {
+			size_t end = host_name.find('.', pos);
+			if (end == std::string::npos) {
+				end = host_name.size();
+			}
+			if (end == pos || end - pos > 255) { // NOLINT
+				throw std::logic_error("Malformed domain name: " + host_name);
+			}
+			pos = end + 1;
+		}
+	}
 
-	bool need_start_the_thread = false;
+	// The list of the DNS servers to use.
+	std::vector<setka::address> servers;
+	{
+		std::lock_guard dns_lock(dns::dns_mutex);
 
-	// check if thread is created
-	if (!dns::thread) {
-		dns::thread = std::make_unique<dns::lookup_thread>();
-		need_start_the_thread = true;
+		if (dns_ip.host.is_valid()) {
+			servers.push_back(dns_ip);
+		} else {
+			if (!dns::dns_servers_loaded) {
+				dns::load_dns_servers();
+				dns::dns_servers_loaded = true;
+			}
+			if (dns::dns_servers.empty()) {
+				throw std::runtime_error(
+					std::string("No DNS server is available to use: ") +
+					(dns::dns_servers_error.empty() ? "unknown reason" : dns::dns_servers_error)
+				);
+			}
+			servers = dns::dns_servers;
+		}
+	}
+
+	// The record types to query.
+	std::vector<uint16_t> types;
+	if (record_type == dns_record_type::ipv4) {
+		types.push_back(dns_type_a);
+	} else if (record_type == dns_record_type::ipv6) {
+		if (!dns::os_supports_ipv6()) {
+			throw std::logic_error("IPv6 is not supported by the underlying OS");
+		}
+		types.push_back(dns_type_aaaa);
+	} else { // dns_record_type::both
+		types.push_back(dns_type_a);
+		if (dns::os_supports_ipv6()) {
+			types.push_back(dns_type_aaaa);
+		}
+	}
+
+	// Check the DNS result cache for the immediate result.
+	std::optional<setka::dns_result> immediate_result;
+	std::vector<setka::address::ip> immediate_addresses;
+	{
+		uint16_t cache_type = 0;
+		switch (record_type) {
+			case dns_record_type::ipv4:
+				cache_type = dns_type_a;
+				break;
+			case dns_record_type::ipv6:
+				cache_type = dns_type_aaaa;
+				break;
+			default:
+				cache_type = 0; // dns_record_type::both
+				break;
+		}
+		std::lock_guard c_lock(cache_mutex);
+		auto it = cache.find(cache_key{host_name, cache_type});
+		if (it != cache.end() && it->second.expiry > clock_type::now()) {
+			if (it->second.not_found) {
+				immediate_result = setka::dns_result::not_found;
+			} else if (it->second.addresses.size() > 0) {
+				immediate_result = setka::dns_result::ok;
+				immediate_addresses = it->second.addresses;
+			}
+		}
+	}
+
+	auto time_now = clock_type::now();
+
+	// Create the request.
+	auto req = std::make_unique<dns::request>();
+	req->hnr = this;
+	req->host_name = host_name;
+	req->servers = std::move(servers);
+	req->record_type = record_type;
+	req->deadline = time_now + milliseconds(timeout_ms);
+
+	if (immediate_result) {
+		// A cache hit: the request completes immediately, no queries are sent.
+		req->complete_immediately = true;
+		req->immediate_result = *immediate_result;
+		req->addresses = std::move(immediate_addresses);
 	} else {
-		std::lock_guard<decltype(dns::thread->mutex)> mutex_guard(dns::thread->mutex);
+		req->num_legs = uint8_t(types.size());
+		for (unsigned i = 0; i < types.size(); ++i) {
+			req->legs[i].type = types[i];
+			req->legs[i].needs_send = true;
+			time_point t = time_now + milliseconds(initial_retransmit_interval_ms);
+			req->legs[i].next_retransmit = t < req->deadline ? t : time_point{};
+		}
+	}
 
-		// check if already in progress
-		if (dns::thread->resolvers_map.find(this) != dns::thread->resolvers_map.end()) {
+	// Make sure the background thread exists and is started, check the preconditions
+	// and insert the request into the thread's data structures. All done in one
+	// critical section to make the operation atomic.
+	{
+		std::lock_guard dns_lock(dns::dns_mutex);
+
+		if (!dns::thread || dns::thread->fatal.load()) {
+			auto t = std::make_unique<dns::lookup_thread>();
+			if (dns::thread) {
+				// The old thread has exited with a fatal error, the new thread will
+				// join and destroy it (the thread object must be joined before it
+				// can be destroyed, and it cannot be joined here, because the thread
+				// may still be invoking the completion callbacks, which can in turn
+				// call resolve() and wait for the dns_mutex we hold).
+				t->prev_thread = std::move(dns::thread);
+			}
+			dns::thread = std::move(t);
+		}
+
+		std::lock_guard t_lock(dns::thread->mutex);
+
+		// Check if there is already an in-progress DNS lookup on this resolver object.
+		if (dns::thread->requests.find(this) != dns::thread->requests.end()) {
 			throw std::logic_error("DNS lookup operation is already in progress");
 		}
 
-		// Thread is created, check if it is running.
-		// If there are active requests then the thread must be running.
-		if (dns::thread->is_exiting == true) {
-			auto t = std::make_unique<dns::lookup_thread>();
-			t->prev_thread = std::move(dns::thread);
-			dns::thread = std::move(t);
-			need_start_the_thread = true;
-		}
-	}
-
-	utki::assert(dns::thread, SL);
-
-	auto r = std::make_unique<dns::resolver>();
-	r->hnr = this;
-	r->host_name = host_name;
-	r->dns = dns_ip;
-
-#if CFG_OS == CFG_OS_WINDOWS
-	// check OS version, if WinXP then start from record A, since setka does not support IPv6 on WinXP
-	{
-		OSVERSIONINFOEX osvi;
-		memset(&osvi, 0, sizeof(osvi));
-		osvi.dwOSVersionInfoSize = sizeof(osvi);
-
-		constexpr auto winxp_major_version = 5;
-
-		osvi.dwMajorVersion = winxp_major_version;
-		osvi.dwMinorVersion = 0;
-		osvi.wServicePackMajor = 0;
-		osvi.wServicePackMinor = 0;
-
-		DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR;
-
-		if (VerifyVersionInfo(
-				&osvi,
-				mask,
-				VerSetConditionMask(0, mask, VER_GREATER) // we check if current Windows version is greater than WinXP
-			) == 0)
-		{
-			DWORD last_error = GetLastError();
-			if (last_error != ERROR_OLD_WIN_VERSION) {
-				throw std::system_error(int(last_error), std::generic_category(), "Win32: VerifyVersionInfo() failed");
+		if (!dns::thread->started.load()) {
+			try {
+				dns::thread->start();
+			} catch (...) {
+				throw; // nothing to clean up, the thread will be re-created on the next call
 			}
-
-			// Windows version is WinXP or before
-
-			r->recordType = dns_record_a_id;
-		} else {
-			r->recordType = dns_record_aaaa_id; // start with IPv6 first
+			dns::thread->started = true;
+			LOG([&](auto& o) {
+				o << "dns_resolver::resolve(): thread started" << std::endl;
+			})
 		}
-	}
-#else
-	r->recordType = dns_record_aaaa_id; // start with IPv6 first
-#endif
 
-	std::lock_guard<decltype(dns::thread->mutex)> mutex_guard_2(dns::thread->mutex);
-
-	// find free ID, it will throw TooMuchRequestsExc if there are no free IDs
-	{
-		r->id = dns::thread->find_free_id();
-		std::pair<dns::id_iter_type, bool> res =
-			dns::thread->id_map.insert(std::pair<uint16_t, dns::resolver*>(r->id, r.operator->()));
-		utki::assert(res.second, SL);
-		r->idIter = res.first;
-	}
-
-	// calculate time
-	uint32_t cur_time = utki::get_ticks_ms();
-	{
-		uint32_t end_time = cur_time + timeout_ms;
-		//		TRACE(<< "dns_resolver::Resolve_ts(): cur_time = " << cur_time << std::endl)
-		//		TRACE(<< "dns_resolver::Resolve_ts(): end_time = " << end_time << std::endl)
-		if (end_time < cur_time) { // if warped around
-			r->timeMap = dns::thread->time_map_2;
-		} else {
-			r->timeMap = dns::thread->time_map_1;
+		// Allocate the DNS transaction IDs for the request legs.
+		for (unsigned i = 0; i < req->num_legs; ++i) {
+			try {
+				req->legs[i].id = dns::thread->take_id(); // may throw too_many_requests
+			} catch (...) {
+				// Release the IDs already taken for the previous legs.
+				for (unsigned j = 0; j < i; ++j) {
+					dns::thread->release_id(req->legs[j].id);
+				}
+				throw;
+			}
 		}
+
+		// NOTE: capture the values needed below before moving 'req' into the map,
+		//       since after the move 'req' is empty and cannot be dereferenced.
+		dns::request* r = req.operator->();
+		const bool complete_immediately = req->complete_immediately;
+		const time_point deadline = req->deadline;
+
 		try {
-			r->timeMapIter = r->timeMap->insert(std::pair<uint32_t, dns::resolver*>(end_time, r.operator->()));
+			for (unsigned i = 0; i < r->num_legs; ++i) {
+				r->legs[i].in_flight = true;
+				dns::thread->ids[r->legs[i].id] = r;
+			}
+			dns::thread->requests[this] = std::move(req);
+			if (!complete_immediately) {
+				dns::thread->send_queue.push_back(r);
+				dns::thread->deadlines.insert({deadline, r});
+			}
 		} catch (...) {
-			dns::thread->id_map.erase(r->idIter);
+			// Roll back the partially inserted request.
+			for (unsigned i = 0; i < r->num_legs; ++i) {
+				if (r->legs[i].in_flight) {
+					dns::thread->ids.erase(r->legs[i].id);
+					dns::thread->release_id(r->legs[i].id);
+				}
+			}
+			dns::thread->requests.erase(this); // no-op if the request was not inserted into the map
 			throw;
 		}
 	}
 
-	// add resolver to send queue
-	try {
-		dns::thread->send_list.push_back(r.operator->());
-	} catch (...) {
-		r->timeMap->erase(r->timeMapIter);
-		dns::thread->id_map.erase(r->idIter);
-		throw;
-	}
-	r->sendIter = --dns::thread->send_list.end();
-
-	// NOTE: capture the values needed for the cleanup below before moving 'r' into the map,
-	//       since after the move 'r' is empty and cannot be dereferenced.
-	auto time_map_ptr = r->timeMap;
-	auto time_map_iter = r->timeMapIter;
-	auto id_iter = r->idIter;
-
-	// insert the resolver to main resolvers map
-	try {
-		dns::thread->resolvers_map[this] = std::move(r);
-
-		// If there was no send requests in the list, send the message to the thread to switch
-		// socket to wait for sending mode.
-		if (dns::thread->send_list.size() == 1) {
-			dns::thread->queue.push_back([]() {
-				dns::thread->start_sending();
-			});
-		}
-
-		// Start the thread if we created the new one.
-		if (need_start_the_thread) {
-			dns::thread->last_ticks_in_first_half = cur_time < (uint32_t(-1) / 2);
-			dns::thread->start();
-			dns::thread->is_exiting = false; // thread has just started, clear the exiting flag
-			LOG([&](auto& o) {
-				o << "dns_resolver::Resolve_ts(): thread started" << std::endl;
-			})
-		}
-	} catch (...) {
-		dns::thread->resolvers_map.erase(this);
-		dns::thread->send_list.pop_back();
-		time_map_ptr->erase(time_map_iter);
-		dns::thread->id_map.erase(id_iter);
-		throw;
-	}
-}
-
-bool dns_resolver::cancel() noexcept
-{
-	std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex);
-
-	if (!dns::thread) {
-		return false;
-	}
-
-	std::lock_guard<decltype(dns::thread->mutex)> mutex_guard_2(dns::thread->mutex);
-
-	bool ret = bool(dns::thread->remove_resolver(this));
-
-	if (dns::thread->resolvers_map.size() == 0) {
-		dns::thread->quit_flag = true;
-		dns::thread->queue.push_back([]() {});
-	}
-
-	if (!ret) {
-		// Make sure the callback has finished if it is in process of calling the callback.
-		// Because upon calling the callback the resolver object is already removed from all the lists and maps
-		// and if 'ret' is false then it is possible that the resolver is in process of calling the callback.
-		// To do that, lock and unlock the mutex.
-		std::lock_guard<decltype(dns::thread->completed_mutex)> mutex_guard(dns::thread->completed_mutex);
-	}
-
-	return ret;
+	// Wake up the background thread.
+	dns::thread->wake_up();
 }
 
 void dns_resolver::clean_up()
 {
-	std::lock_guard<decltype(dns::mutex)> mutex_guard(dns::mutex);
+	std::unique_ptr<dns::lookup_thread> t;
+	{
+		std::lock_guard dns_lock(dns::dns_mutex);
 
-	if (dns::thread) {
+		if (!dns::thread) {
+			return;
+		}
+
 		dns::thread->quit_flag = true;
-		dns::thread->queue.push_back([]() {});
-		dns::thread->join();
-
-		utki::assert(
-			dns::thread->resolvers_map.size() == 0,
-			[&](auto& o) {
-				o << "There are active DNS requests upon Sockets library de-initialization, all active DNS requests must be canceled before that.";
-			},
-			SL
-		);
-
-		dns::thread.reset();
+		// Take the thread out of the global variable, so that a new thread can be
+		// created by a concurrent (or a callback-initiated) resolve() call while we
+		// are joining the old one.
+		t = std::move(dns::thread);
+		dns::thread = nullptr;
 	}
-}
 
-void dns_resolver::on_completed(dns_result res, address::ip address)
-{
-	if (this->completed_handler) {
-		this->completed_handler(res, address);
-	}
+	t->wake_up();
+	t->join();
 }

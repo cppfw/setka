@@ -315,10 +315,10 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 	return size_t(len);
 }
 
-size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
+size_t udp_socket::receive(utki::span<uint8_t> buf, address& out_sender_address)
 {
 	if (this->empty()) {
-		throw std::logic_error("udp_socket::recieve(): socket is empty");
+		throw std::logic_error("udp_socket::receive(): socket is empty");
 	}
 
 	sockaddr_storage socket_address{};
