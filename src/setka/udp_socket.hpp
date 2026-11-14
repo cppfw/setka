@@ -106,7 +106,7 @@ public:
 	 *                             of the sender will be stored.
 	 * @return number of bytes stored in the output buffer.
 	 */
-	size_t recieve(utki::span<uint8_t> buf, address& out_sender_address);
+	size_t receive(utki::span<uint8_t> buf, address& out_sender_address);
 
 #if CFG_OS == CFG_OS_WINDOWS
 

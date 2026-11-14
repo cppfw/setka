@@ -20,6 +20,8 @@ inline void test_setka_socket(){
 	test_simple_dns_lookup::run();
 	test_request_from_callback::run();
 	test_cancel_dns_lookup::run();
+	test_completed_handler::run();
+	test_resolve_record_types::run();
 
 	utki::log([&](auto&o){o << "[PASSED]: Socket test" << std::endl;});
 }
