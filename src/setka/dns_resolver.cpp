@@ -24,6 +24,7 @@ SOFTWARE.
 
 /* ================ LICENSE END ================ */
 
+#include <atomic>
 #include <cstring>
 #include <list>
 #include <map>
@@ -145,7 +146,7 @@ class lookup_thread : public nitki::thread
 	resolvers_time_map_type resolvers_by_time_1, resolvers_by_time_2;
 
 public:
-	volatile bool quit_flag = false;
+	std::atomic<bool> quit_flag = false;
 	nitki::queue queue;
 
 	std::mutex mutex; // this mutex is used to protect access to members of the thread object.
@@ -159,7 +160,7 @@ public:
 
 	// this is to indicate that the thread is exiting and new DNS lookup requests should be queued to
 	// a new thread.
-	volatile bool is_exiting = true; // initially the thread is not running, so set to true
+	std::atomic<bool> is_exiting = true; // initially the thread is not running, so set to true
 
 	// This variable is for detecting system clock ticks warp around.
 	// True if last call to ting::GetTicks() returned value in first half.
@@ -1258,6 +1259,12 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 	}
 	r->sendIter = --dns::thread->send_list.end();
 
+	// NOTE: capture the values needed for the cleanup below before moving 'r' into the map,
+	//       since after the move 'r' is empty and cannot be dereferenced.
+	auto time_map_ptr = r->timeMap;
+	auto time_map_iter = r->timeMapIter;
+	auto id_iter = r->idIter;
+
 	// insert the resolver to main resolvers map
 	try {
 		dns::thread->resolvers_map[this] = std::move(r);
@@ -1282,8 +1289,8 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 	} catch (...) {
 		dns::thread->resolvers_map.erase(this);
 		dns::thread->send_list.pop_back();
-		r->timeMap->erase(r->timeMapIter);
-		dns::thread->id_map.erase(r->idIter);
+		time_map_ptr->erase(time_map_iter);
+		dns::thread->id_map.erase(id_iter);
 		throw;
 	}
 }
