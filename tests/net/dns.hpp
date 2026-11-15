@@ -19,3 +19,7 @@ void run();
 namespace test_resolve_record_types {
 void run();
 }
+
+namespace test_dns_tcp_fallback {
+void run();
+}
