@@ -919,7 +919,7 @@ public:
 
 		try {
 			leg->tcp_sock = setka::tcp_socket(server);
-		} catch (std::exception& e) {
+		} catch (std::exception&) {
 			// An immediate connection failure (e.g. no route to host).
 			this->finish_leg(req, leg, setka::dns_result::dns_error, completed);
 			return;
@@ -1470,12 +1470,25 @@ bool os_supports_ipv6()
 		OSVERSIONINFOEX osvi;
 		memset(&osvi, 0, sizeof(osvi));
 		osvi.dwOSVersionInfoSize = sizeof(osvi);
-		if (GetVersionEx(reinterpret_cast<OSVERSIONINFO*>(&osvi)) == 0) {
-			// Could not determine the OS version, assume the IPv6 is supported.
-			return true;
+
+		constexpr auto winxp_major_version = 5;
+		osvi.dwMajorVersion = winxp_major_version;
+		osvi.dwMinorVersion = 0;
+		osvi.wServicePackMajor = 0;
+		osvi.wServicePackMinor = 0;
+
+		DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR;
+
+		// The check if the current Windows version is greater than WinXP,
+		// the Windows XP and earlier do not support IPv6.
+		if (VerifyVersionInfo(&osvi, mask, VerSetConditionMask(0, mask, VER_GREATER)) == 0) {
+			DWORD last_error = GetLastError();
+			if (last_error != ERROR_OLD_WIN_VERSION) {
+				throw std::system_error(int(last_error), std::generic_category(), "Win32: VerifyVersionInfo() failed");
+			}
+			return false; // Windows XP or before
 		}
-		// Windows XP (5.1) and earlier do not support IPv6.
-		return osvi.dwMajorVersion > 5 || (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion > 1);
+		return true;
 #else
 		return true;
 #endif
