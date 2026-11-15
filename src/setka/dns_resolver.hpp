@@ -169,7 +169,6 @@ public:
 	 * @throw std::logic_error if the supplied domain name is too long. It must be at most 253 characters.
 	 * @throw std::logic_error if the supplied domain name is malformed.
 	 * @throw std::logic_error if a DNS lookup operation is already in progress on this resolver object.
-	 * @throw std::logic_error if the requested record type is not supported by the underlying OS.
 	 * @throw std::runtime_error if no DNS server is available to use (the dns_ip argument is invalid
 	 *                and no DNS server can be discovered from the OS).
 	 * @throw too_many_requests if there are too many active DNS lookup requests in progress
