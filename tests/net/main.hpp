@@ -22,6 +22,7 @@ inline void test_setka_socket(){
 	test_cancel_dns_lookup::run();
 	test_completed_handler::run();
 	test_resolve_record_types::run();
+	test_dns_tcp_fallback::run();
 
 	utki::log([&](auto&o){o << "[PASSED]: Socket test" << std::endl;});
 }

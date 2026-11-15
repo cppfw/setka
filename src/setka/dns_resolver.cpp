@@ -815,7 +815,11 @@ public:
 				auto qbuf = build_query(leg->id, req->host_name, leg->type);
 
 				setka::address server = req->servers[leg->server_index % req->servers.size()];
-				server.port = dns_port;
+				// The servers loaded from the OS have the default port set, the user-supplied
+				// server may have a custom port, default to 53 only when no port is set.
+				if (server.port == 0) {
+					server.port = dns_port;
+				}
 
 				size_t ret = this->udp_sock.send(qbuf, server);
 				if (ret == qbuf.size()) {
@@ -920,7 +924,10 @@ public:
 		}
 
 		setka::address server = req->servers[leg->server_index % req->servers.size()];
-		server.port = dns_port;
+		// Same as in send_pending(): default to the standard DNS port only when unset.
+		if (server.port == 0) {
+			server.port = dns_port;
+		}
 
 		try {
 			leg->tcp_sock = setka::tcp_socket(server);
