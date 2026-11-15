@@ -18,7 +18,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OF THIS SOFTWARE.
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 */
 
 /* ================ LICENSE END ================ */
@@ -739,7 +740,8 @@ public:
 	void complete_request(request* req, setka::dns_result result, std::vector<completion>& completed)
 	{
 		auto removed = this->detach_request(req);
-		completed.push_back(completion{.req = std::move(removed), .result = result}); // NOLINT
+		// NOTE: the designated initializers are not used because the C++17 standard is required by some of the CI builds
+		completed.push_back(completion{std::move(removed), result}); // NOLINT
 		{
 			std::lock_guard p_lock(dns::pending_mutex);
 			dns::pending.insert(req->hnr);
@@ -1058,7 +1060,7 @@ public:
 			if (flags.get(opros::ready::write)) {
 				try {
 					size_t n = leg->tcp_sock.send(utki::make_span(
-						leg->tcp_tx.data() + leg->tcp_tx_sent,
+						leg->tcp_tx.data() + leg->tcp_tx_sent, // NOLINT
 						leg->tcp_tx.size() - leg->tcp_tx_sent
 					) // NOLINT
 					);
@@ -1645,7 +1647,8 @@ void load_dns_servers()
 				continue;
 			}
 			line = line.substr(b);
-			if (!line.starts_with("nameserver")) {
+			// NOTE: the starts_with() is not used because the C++17 standard is required by some of the CI builds
+			if (line.find("nameserver") != 0) { // NOLINT
 				continue;
 			}
 
