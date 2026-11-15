@@ -549,7 +549,9 @@ void run(){
 		
 		size_t num_bytes_received = 0;
 		for(unsigned i = 0; i < 10; ++i){
-			auto [n, ip] = recv_sock.receive(utki::make_span(buf));
+			auto [n, sender] = recv_sock.receive(utki::make_span(buf));
+			// a regular variable, the structured binding elements cannot be captured in C++17
+			setka::address ip = sender;
 			num_bytes_received = n;
 			utki::assert_always(num_bytes_received == 0 || num_bytes_received == 4, SL); // all or nothing
 			if(num_bytes_received == 4){
