@@ -1461,41 +1461,6 @@ public:
 // The OS-specific helpers
 // -----------------------------------------------------------------------------------------------
 
-// Checks whether the underlying OS supports IPv6.
-// The result is computed once and cached.
-bool os_supports_ipv6()
-{
-	static const bool result = []() {
-#if CFG_OS == CFG_OS_WINDOWS
-		OSVERSIONINFOEX osvi;
-		memset(&osvi, 0, sizeof(osvi));
-		osvi.dwOSVersionInfoSize = sizeof(osvi);
-
-		constexpr auto winxp_major_version = 5;
-		osvi.dwMajorVersion = winxp_major_version;
-		osvi.dwMinorVersion = 0;
-		osvi.wServicePackMajor = 0;
-		osvi.wServicePackMinor = 0;
-
-		DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR;
-
-		// The check if the current Windows version is greater than WinXP,
-		// the Windows XP and earlier do not support IPv6.
-		if (VerifyVersionInfo(&osvi, mask, VerSetConditionMask(0, mask, VER_GREATER)) == 0) {
-			DWORD last_error = GetLastError();
-			if (last_error != ERROR_OLD_WIN_VERSION) {
-				throw std::system_error(int(last_error), std::generic_category(), "Win32: VerifyVersionInfo() failed");
-			}
-			return false; // Windows XP or before
-		}
-		return true;
-#else
-		return true;
-#endif
-	}();
-	return result;
-}
-
 // Parses a DNS server address from a string, returns true on success.
 bool parse_dns_server_address(const std::string& str, setka::address& out)
 {
@@ -1797,20 +1762,16 @@ void dns_resolver::resolve(
 		}
 	}
 
-	// The record types to query.
+	// The record types to query. If the OS does not support IPv6, the AAAA queries
+	// will simply be answered with the 'not found' result (or time out).
 	std::vector<uint16_t> types;
 	if (record_type == dns_record_type::ipv4) {
 		types.push_back(dns_type_a);
 	} else if (record_type == dns_record_type::ipv6) {
-		if (!dns::os_supports_ipv6()) {
-			throw std::logic_error("IPv6 is not supported by the underlying OS");
-		}
 		types.push_back(dns_type_aaaa);
 	} else { // dns_record_type::both
 		types.push_back(dns_type_a);
-		if (dns::os_supports_ipv6()) {
-			types.push_back(dns_type_aaaa);
-		}
+		types.push_back(dns_type_aaaa);
 	}
 
 	// Check the DNS result cache for the immediate result.
