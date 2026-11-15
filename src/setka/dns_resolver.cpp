@@ -192,17 +192,21 @@ namespace dns {
 // -----------------------------------------------------------------------------------------------
 
 /**
- * @brief Builds a DNS query packet into buf and returns its size.
+ * @brief Builds a DNS query packet.
  *
  * The query contains a single question and an EDNS0 OPT record in the additional section.
  *
- * NOTE: the caller must ensure that buf is large enough (28 + host_name.size() bytes is
- *       sufficient) and that host_name is a valid domain name (labels of 1..255 characters,
+ * NOTE: the caller must ensure that host_name is a valid domain name (labels of 1..255 characters,
  *       total length of at most 253 characters).
  */
-size_t build_query(uint16_t id, const std::string& host_name, uint16_t type, uint8_t* buf)
+std::vector<uint8_t> build_query(uint16_t id, const std::string& host_name, uint16_t type)
 {
-	uint8_t* p = buf;
+	// the worst-case packet size: the header (12) + the name (up to 253 characters, each one with a
+	// length byte, plus the terminating root label) + the question type and class (4)
+	// + the EDNS0 OPT record (11)
+	constexpr size_t max_size = 12 + 2 * 253 + 1 + 4 + 11;
+	std::vector<uint8_t> buf(max_size);
+	uint8_t* p = buf.data();
 
 	// the header
 	utki::serialize16be(id, p);
@@ -256,7 +260,8 @@ size_t build_query(uint16_t id, const std::string& host_name, uint16_t type, uin
 	utki::serialize16be(0, p); // the RDLENGTH
 	p += 2; // NOLINT
 
-	return size_t(p - buf);
+	buf.resize(size_t(p - buf.data()));
+	return buf;
 }
 
 /**
@@ -806,14 +811,14 @@ public:
 					continue;
 				}
 
-				std::array<uint8_t, 512> qbuf; // NOLINT
-				size_t qsize = build_query(leg->id, req->host_name, leg->type, qbuf.data());
+				// the query
+				auto qbuf = build_query(leg->id, req->host_name, leg->type);
 
 				setka::address server = req->servers[leg->server_index % req->servers.size()];
 				server.port = dns_port;
 
-				size_t ret = this->udp_sock.send(utki::make_span(qbuf.data(), qsize), server);
-				if (ret == qsize) {
+				size_t ret = this->udp_sock.send(qbuf, server);
+				if (ret == qbuf.size()) {
 					leg->sent = true;
 					leg->needs_send = false;
 				} else {
@@ -925,11 +930,11 @@ public:
 			return;
 		}
 
-		std::array<uint8_t, 512> qbuf; // NOLINT
-		size_t qsize = build_query(leg->id, req->host_name, leg->type, qbuf.data());
-		leg->tcp_tx.resize(qsize + 2);
-		utki::serialize16be(uint16_t(qsize), leg->tcp_tx.data());
-		memcpy(leg->tcp_tx.data() + 2, qbuf.data(), qsize); // NOLINT
+		// the query, the maximum size is 534 bytes, see build_query()
+		auto qbuf = build_query(leg->id, req->host_name, leg->type);
+		leg->tcp_tx.resize(qbuf.size() + 2);
+		utki::serialize16be(uint16_t(qbuf.size()), leg->tcp_tx.data());
+		memcpy(leg->tcp_tx.data() + 2, qbuf.data(), qbuf.size()); // NOLINT
 		leg->tcp_tx_sent = 0;
 		leg->tcp_rx.clear();
 		leg->tcp_phase = request::leg::tcp_phase_t::connecting;
