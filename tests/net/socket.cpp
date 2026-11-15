@@ -549,8 +549,8 @@ void run(){
 		
 		size_t num_bytes_received = 0;
 		for(unsigned i = 0; i < 10; ++i){
-			setka::address ip{};
-			num_bytes_received = recv_sock.receive(utki::make_span(buf), ip);
+			auto [n, ip] = recv_sock.receive(utki::make_span(buf));
+			num_bytes_received = n;
 			utki::assert_always(num_bytes_received == 0 || num_bytes_received == 4, SL); // all or nothing
 			if(num_bytes_received == 4){
 				if(is_ipv6_supported_by_os()){

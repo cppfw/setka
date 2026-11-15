@@ -315,7 +315,7 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 	return size_t(len);
 }
 
-size_t udp_socket::receive(utki::span<uint8_t> buf, address& out_sender_address)
+std::tuple<size_t, address> udp_socket::receive(utki::span<uint8_t> buf)
 {
 	if (this->empty()) {
 		throw std::logic_error("udp_socket::receive(): socket is empty");
@@ -356,7 +356,7 @@ size_t udp_socket::receive(utki::span<uint8_t> buf, address& out_sender_address)
 			if (error_code == error_interrupted) {
 				continue;
 			} else if (error_code == error_again) {
-				return 0; // no data available, return 0 bytes received
+				return {0, address{}}; // no data available
 			} else {
 				throw std::system_error(
 					error_code,
@@ -377,10 +377,12 @@ size_t udp_socket::receive(utki::span<uint8_t> buf, address& out_sender_address)
 		SL
 	);
 
+	address sender_address;
+
 	if (socket_address.ss_family == AF_INET) {
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in&>(socket_address);
-		out_sender_address = address(ntohl(a.sin_addr.s_addr), uint16_t(ntohs(a.sin_port)));
+		sender_address = address(ntohl(a.sin_addr.s_addr), uint16_t(ntohs(a.sin_port)));
 	} else {
 		utki::assert(
 			socket_address.ss_family == AF_INET6,
@@ -392,7 +394,7 @@ size_t udp_socket::receive(utki::span<uint8_t> buf, address& out_sender_address)
 		);
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
-		out_sender_address = address(
+		sender_address = address(
 			address::ip(
 #if CFG_OS == CFG_OS_MACOSX || CFG_OS == CFG_OS_WINDOWS || \
 	(CFG_OS == CFG_OS_LINUX && CFG_OS_NAME == CFG_OS_NAME_ANDROID)
@@ -424,7 +426,7 @@ size_t udp_socket::receive(utki::span<uint8_t> buf, address& out_sender_address)
 	}
 
 	utki::assert(len >= 0, SL);
-	return size_t(len);
+	return {size_t(len), sender_address};
 }
 
 #if CFG_OS == CFG_OS_WINDOWS

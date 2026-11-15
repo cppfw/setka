@@ -1334,12 +1334,12 @@ public:
 						}
 						if (e.flags.get(opros::ready::read)) {
 							std::array<uint8_t, udp_response_buffer_size> buf; // NOLINT
-							setka::address from;
 							while (true) {
-								size_t n = this->udp_sock.receive(utki::make_span(buf.data(), buf.size()), from);
+								auto [n, from] = this->udp_sock.receive(utki::make_span(buf.data(), buf.size()));
 								if (n == 0) {
 									break;
 								}
+								(void)from; // the sender is not checked, the requests are matched by the query ids
 								this->handle_datagram(buf.data(), n, completed);
 							}
 						}
