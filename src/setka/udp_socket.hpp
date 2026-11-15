@@ -27,6 +27,7 @@ SOFTWARE.
 #pragma once
 
 #include <string>
+#include <tuple>
 
 #include <utki/config.hpp>
 #include <utki/span.hpp>
@@ -94,7 +95,6 @@ public:
 	/**
 	 * @brief Receive datagram.
 	 * Writes a datagram to the given buffer at once if it is available.
-	 * If there is no received datagram available a 0 will be returned.
 	 * Note, that it will always write out the whole datagram at once. I.e. it is either all or nothing.
 	 * Except for the case when the given buffer is not large enough to store the datagram,
 	 * in which case the datagram is truncated to the size of the buffer and the rest of the data is lost.
@@ -102,11 +102,10 @@ public:
 	 *              should be large enough to store the whole datagram. If datagram
 	 *              does not fit the passed buffer, then the datagram tail will be truncated
 	 *              and this tail data will be lost.
-	 * @param out_sender_address - reference to the IP-address structure where the IP-address
-	 *                             of the sender will be stored.
-	 * @return number of bytes stored in the output buffer.
+	 * @return the number of bytes stored in the output buffer and the address of the sender.
+	 *         If there is no received datagram available then {0, address()} will be returned.
 	 */
-	size_t receive(utki::span<uint8_t> buf, address& out_sender_address);
+	std::tuple<size_t, address> receive(utki::span<uint8_t> buf);
 
 #if CFG_OS == CFG_OS_WINDOWS
 
