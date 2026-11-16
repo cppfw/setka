@@ -1113,13 +1113,12 @@ public:
 					if (!leg->tcp_active) {
 						return; // the request was completed
 					}
-				} else if (flags.get(opros::ready::error)) {
+				} else {
+					// The read was signalled as ready but there was nothing to read: the
+					// connection was closed by the peer without the full response, fail.
 					fail_tcp();
 					return;
 				}
-				// Otherwise: the read was signalled as ready but there was nothing to read.
-				// Either the connection was closed by the peer (we wait for the full response
-				// or the deadline in that case) or it was a spurious wakeup.
 			}
 		}
 	}
