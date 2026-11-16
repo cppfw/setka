@@ -262,9 +262,9 @@ public:
 				dot_pos = r->host_name.size();
 			}
 
-			utki::assert(dot_pos <= 0xff, SL);
+			utki::assert(dot_pos <= size_t(std::numeric_limits<uint8_t>::max()), SL);
 			size_t label_length = dot_pos - old_dot_pos;
-			utki::assert(label_length <= 0xff, SL);
+			utki::assert(label_length <= size_t(std::numeric_limits<uint8_t>::max()), SL);
 
 			*p = uint8_t(label_length); // save label length
 			++p; // NOLINT
