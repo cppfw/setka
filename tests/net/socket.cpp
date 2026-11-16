@@ -289,10 +289,7 @@ void run()
 				utki::assert_always(send_buffer.size() > 0, SL);
 
 				try {
-					// NOLINTNEXTLINE
-					auto res = sock_s.send(
-						utki::make_span(send_buffer.data() + num_bytes_send, send_buffer.size() - num_bytes_send)
-					);
+					auto res = sock_s.send(utki::make_span(send_buffer).subspan(num_bytes_send));
 					num_bytes_send += res;
 					if (res == 0) {
 						utki::assert_always(
