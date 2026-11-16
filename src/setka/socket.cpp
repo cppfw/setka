@@ -187,7 +187,7 @@ uint16_t socket::get_local_port()
 		auto& a = reinterpret_cast<sockaddr_in&>(addr);
 		return uint16_t(ntohs(a.sin_port));
 	} else {
-		ASSERT(addr.ss_family == AF_INET6)
+		utki::assert(addr.ss_family == AF_INET6, SL);
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in6&>(addr);
 		return uint16_t(ntohs(a.sin6_port));
@@ -199,7 +199,7 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 {
 	WSANETWORKEVENTS events;
 	memset(&events, 0, sizeof(events));
-	ASSERT(!this->empty())
+	utki::assert(!this->empty(), SL);
 	if (WSAEnumNetworkEvents(this->win_sock, this->handle, &events) != 0) {
 		throw std::system_error(
 			WSAGetLastError(),
@@ -219,7 +219,7 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 
 	if ((events.lNetworkEvents & FD_READ) != 0) {
 		flags.set(opros::ready::read);
-		ASSERT(FD_READ_BIT < FD_MAX_EVENTS)
+		utki::assert(FD_READ_BIT < FD_MAX_EVENTS, SL);
 		if (events.iErrorCode[FD_READ_BIT] != 0) {
 			flags.set(opros::ready::error);
 		}
@@ -227,7 +227,7 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 
 	if ((events.lNetworkEvents & FD_ACCEPT) != 0) {
 		flags.set(opros::ready::read);
-		ASSERT(FD_ACCEPT_BIT < FD_MAX_EVENTS)
+		utki::assert(FD_ACCEPT_BIT < FD_MAX_EVENTS, SL);
 		if (events.iErrorCode[FD_ACCEPT_BIT] != 0) {
 			flags.set(opros::ready::error);
 		}
@@ -235,7 +235,7 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 
 	if ((events.lNetworkEvents & FD_WRITE) != 0) {
 		flags.set(opros::ready::write);
-		ASSERT(FD_WRITE_BIT < FD_MAX_EVENTS)
+		utki::assert(FD_WRITE_BIT < FD_MAX_EVENTS, SL);
 		if (events.iErrorCode[FD_WRITE_BIT] != 0) {
 			flags.set(opros::ready::error);
 		}
@@ -243,7 +243,7 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 
 	if ((events.lNetworkEvents & FD_CONNECT) != 0) {
 		flags.set(opros::ready::write);
-		ASSERT(FD_CONNECT_BIT < FD_MAX_EVENTS)
+		utki::assert(FD_CONNECT_BIT < FD_MAX_EVENTS, SL);
 		if (events.iErrorCode[FD_CONNECT_BIT] != 0) {
 			flags.set(opros::ready::error);
 		}
@@ -257,7 +257,7 @@ utki::flags<opros::ready> socket::get_readiness_flags()
 
 void socket::create_event_for_waitable()
 {
-	ASSERT(this->handle == WSA_INVALID_EVENT)
+	utki::assert(this->handle == WSA_INVALID_EVENT, SL);
 	this->handle = WSACreateEvent();
 	if (this->handle == WSA_INVALID_EVENT) {
 		throw std::system_error(
@@ -270,16 +270,20 @@ void socket::create_event_for_waitable()
 
 void socket::close_event_for_waitable()
 {
-	ASSERT(this->handle != WSA_INVALID_EVENT)
+	utki::assert(this->handle != WSA_INVALID_EVENT, SL);
 	WSACloseEvent(this->handle);
 	this->handle = WSA_INVALID_EVENT;
 }
 
 void socket::set_waiting_events_for_windows(long flags)
 {
-	ASSERT(!this->empty() && (this->handle != WSA_INVALID_EVENT), [&](auto& o) {
-		o << "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.";
-	})
+	utki::assert(
+		!this->empty() && (this->handle != WSA_INVALID_EVENT),
+		[&](auto& o) {
+			o << "HINT: Most probably, you are trying to remove the _closed_ socket from WaitSet. If so, you should first remove the socket from WaitSet and only then call the Close() method.";
+		},
+		SL
+	);
 
 	if (WSAEventSelect(this->win_sock, this->handle, flags) != 0) {
 		throw std::system_error(

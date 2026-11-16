@@ -181,7 +181,7 @@ address::address(const char* str)
 			*dst = *str;
 		}
 
-		ASSERT(utki::overlaps(utki::make_span(buf), dst))
+		utki::assert(utki::overlaps(utki::make_span(buf), dst), SL);
 		*dst = 0; // null-terminate
 
 		this->host = ip::parse_v6(buf.data());
@@ -207,7 +207,7 @@ address::address(const char* str)
 				*dst = *str;
 			}
 
-			ASSERT(utki::overlaps(utki::make_span(buf), dst))
+			utki::assert(utki::overlaps(utki::make_span(buf), dst), SL);
 			*dst = 0; // null-terminate
 
 			this->host = ip::parse_v4(buf.data());
@@ -257,7 +257,7 @@ address::address(const char* str)
 			pow *= utki::to_int(utki::integer_base::dec);
 		}
 
-		ASSERT('0' <= *str && *str <= '9')
+		utki::assert('0' <= *str && *str <= '9', SL);
 
 		port += (*str - '0') * pow;
 	}

@@ -295,15 +295,23 @@ size_t udp_socket::send(utki::span<const uint8_t> buf, const address& destinatio
 		break;
 	}
 
-	ASSERT(buf.size() <= size_t(std::numeric_limits<int>::max()))
-	ASSERT(len <= int(buf.size()), [&](auto& o) {
-		o << "res = " << len;
-	})
-	ASSERT((len == int(buf.size())) || (len == 0), [&](auto& o) {
-		o << "res = " << len;
-	})
+	utki::assert(buf.size() <= size_t(std::numeric_limits<int>::max()), SL);
+	utki::assert(
+		len <= int(buf.size()),
+		[&](auto& o) {
+			o << "res = " << len;
+		},
+		SL
+	);
+	utki::assert(
+		(len == int(buf.size())) || (len == 0),
+		[&](auto& o) {
+			o << "res = " << len;
+		},
+		SL
+	);
 
-	ASSERT(len >= 0)
+	utki::assert(len >= 0, SL);
 	return size_t(len);
 }
 
@@ -360,20 +368,28 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 		break;
 	}
 
-	ASSERT(buf.size() <= size_t(std::numeric_limits<int>::max()))
-	ASSERT(len <= int(buf.size()), [&](auto& o) {
-		o << "len = " << len;
-	})
+	utki::assert(buf.size() <= size_t(std::numeric_limits<int>::max()), SL);
+	utki::assert(
+		len <= int(buf.size()),
+		[&](auto& o) {
+			o << "len = " << len;
+		},
+		SL
+	);
 
 	if (socket_address.ss_family == AF_INET) {
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in&>(socket_address);
 		out_sender_address = address(ntohl(a.sin_addr.s_addr), uint16_t(ntohs(a.sin_port)));
 	} else {
-		ASSERT(socket_address.ss_family == AF_INET6, [&](auto& o) {
-			o << "socket_address.ss_family = " << unsigned(socket_address.ss_family) << " AF_INET = " << AF_INET
-			  << " AF_INET6 = " << AF_INET6;
-		})
+		utki::assert(
+			socket_address.ss_family == AF_INET6,
+			[&](auto& o) {
+				o << "socket_address.ss_family = " << unsigned(socket_address.ss_family) << " AF_INET = " << AF_INET
+				  << " AF_INET6 = " << AF_INET6;
+			},
+			SL
+		);
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		auto& a = reinterpret_cast<sockaddr_in6&>(socket_address);
 		out_sender_address = address(
@@ -407,7 +423,7 @@ size_t udp_socket::recieve(utki::span<uint8_t> buf, address& out_sender_address)
 		);
 	}
 
-	ASSERT(len >= 0)
+	utki::assert(len >= 0, SL);
 	return size_t(len);
 }
 

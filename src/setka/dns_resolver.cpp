@@ -226,7 +226,7 @@ public:
 			2 // Question class
 			;
 
-		ASSERT(packet_size <= buf.size())
+		utki::assert(packet_size <= buf.size(), SL);
 
 		uint8_t* p = buf.data();
 
@@ -262,9 +262,9 @@ public:
 				dot_pos = r->host_name.size();
 			}
 
-			ASSERT(dot_pos <= 0xff)
+			utki::assert(dot_pos <= 0xff, SL);
 			size_t label_length = dot_pos - old_dot_pos;
-			ASSERT(label_length <= 0xff)
+			utki::assert(label_length <= 0xff, SL);
 
 			*p = uint8_t(label_length); // save label length
 			++p; // NOLINT
@@ -274,7 +274,7 @@ public:
 
 			++dot_pos;
 
-			ASSERT(p <= utki::end_pointer(buf));
+			utki::assert(p <= utki::end_pointer(buf), SL);
 		}
 
 		*p = 0; // terminate labels sequence
@@ -287,8 +287,8 @@ public:
 		utki::serialize16be(1, p);
 		p += 2; // NOLINT
 
-		ASSERT(buf.data() <= p && p <= utki::end_pointer(buf));
-		ASSERT(size_t(p - buf.data()) == packet_size);
+		utki::assert(buf.data() <= p && p <= utki::end_pointer(buf), SL);
+		utki::assert(size_t(p - buf.data()) == packet_size, SL);
 
 		LOG([&](auto& o) {
 			o << "sending DNS request to " << std::hex << (r->dns.host.get_v4()) << std::dec << " for " << r->host_name
@@ -296,7 +296,7 @@ public:
 		})
 		size_t ret = this->socket.send(utki::make_span(buf.data(), packet_size), r->dns);
 
-		ASSERT(ret == packet_size || ret == 0)
+		utki::assert(ret == packet_size || ret == 0, SL);
 
 		//		TRACE(<< "DNS request sent, packet_size = " << packet_size << std::endl)
 		// #ifdef DEBUG
@@ -404,8 +404,8 @@ public:
 
 		uint16_t num_answers = utki::deserialize16be(p);
 		p += 2; // NOLINT
-		ASSERT(buf.begin() <= p)
-		ASSERT(p <= (buf.end() - 1) || p == buf.end())
+		utki::assert(buf.begin() <= p, SL);
+		utki::assert(p <= (buf.end() - 1) || p == buf.end(), SL);
 
 		if (num_answers == 0) {
 			return {setka::dns_result::not_found};
@@ -452,7 +452,7 @@ public:
 			}
 		}
 
-		ASSERT(utki::overlaps(buf, p) || p == buf.end())
+		utki::assert(utki::overlaps(buf, p) || p == buf.end(), SL);
 
 		// loop through the answers
 		for (uint16_t n = 0; n != num_answers; ++n) {
@@ -466,7 +466,7 @@ public:
 			if (((*p) >> 6) == 0) { // NOLINT
 				// skip possible domain name
 				for (; p != buf.end() && *p != 0; ++p) { // NOLINT
-					ASSERT(utki::overlaps(buf, p))
+					utki::assert(utki::overlaps(buf, p), SL);
 				}
 				if (p == buf.end()) {
 					return {setka::dns_result::dns_error}; // unexpected end of packet
@@ -531,7 +531,7 @@ public:
 					default:
 						// we should not get here since if type is not the record type which we know then 'if(type ==
 						// r->recordType)' condition will not trigger.
-						ASSERT(false)
+						utki::assert(false, SL);
 						h = address::ip(0, 0, 0, 0);
 						break;
 				}
@@ -560,10 +560,14 @@ public:
 	}
 
 	// NOLINTNEXTLINE(modernize-use-equals-default, "destructor is not trivial in DEBUG build")
-	~lookup_thread() noexcept override{ASSERT(this->send_list.size() == 0) ASSERT(this->resolvers_map.size() == 0)
-										   ASSERT(this->resolvers_by_time_1.size() == 0)
-											   ASSERT(this->resolvers_by_time_2.size() == 0)
-												   ASSERT(this->id_map.size() == 0)}
+	~lookup_thread() noexcept override
+	{
+		utki::assert(this->send_list.size() == 0, SL);
+		utki::assert(this->resolvers_map.size() == 0, SL);
+		utki::assert(this->resolvers_by_time_1.size() == 0, SL);
+		utki::assert(this->resolvers_by_time_2.size() == 0, SL);
+		utki::assert(this->id_map.size() == 0, SL);
+	}
 
 	lookup_thread(const lookup_thread&) = delete;
 	lookup_thread& operator=(const lookup_thread&) = delete;
@@ -606,7 +610,7 @@ private:
 	{
 		while (this->resolvers_map.size() != 0) {
 			std::unique_ptr<dns::resolver> r = this->remove_resolver(this->resolvers_map.begin()->first);
-			ASSERT(r)
+			utki::assert(r, SL);
 
 #if CFG_OS == CFG_OS_WINDOWS && defined(ERROR)
 #	undef ERROR
@@ -957,7 +961,7 @@ private:
 						o << "can write" << std::endl;
 					})
 					// send request
-					ASSERT(this->send_list.size() > 0)
+					utki::assert(this->send_list.size() > 0, SL);
 
 					try {
 						while (this->send_list.size() != 0) {
@@ -981,7 +985,7 @@ private:
 								this->send_list.pop_front();
 							} else {
 								std::unique_ptr<dns::resolver> removed_resolver = this->remove_resolver(r->hnr);
-								ASSERT(removed_resolver)
+								utki::assert(removed_resolver, SL);
 
 								// Notify about error. OnCompleted_ts() does not throw any exceptions, so no worries
 								// about that.
@@ -1020,13 +1024,13 @@ private:
 						while (this->time_map_1->size() != 0) {
 							std::unique_ptr<dns::resolver> r =
 								this->remove_resolver(this->time_map_1->begin()->second->hnr);
-							ASSERT(r)
+							utki::assert(r, SL);
 
 							// Notify about timeout.
 							this->call_callback(r.operator->(), dns_result::timeout, 0);
 						}
 
-						ASSERT(this->time_map_1->size() == 0)
+						utki::assert(this->time_map_1->size() == 0, SL);
 						std::swap(this->time_map_1, this->time_map_2);
 					}
 					this->last_ticks_in_first_half = is_first_half;
@@ -1039,7 +1043,7 @@ private:
 
 					// timeout
 					std::unique_ptr<dns::resolver> r = this->remove_resolver(this->time_map_1->begin()->second->hnr);
-					ASSERT(r)
+					utki::assert(r, SL);
 
 					// Notify about timeout. OnCompleted_ts() does not throw any exceptions, so no worries about that.
 					this->call_callback(r.operator->(), dns_result::timeout, 0);
@@ -1050,8 +1054,8 @@ private:
 					break; // exit thread
 				}
 
-				ASSERT(this->time_map_1->size() > 0)
-				ASSERT(this->time_map_1->begin()->first > cur_time)
+				utki::assert(this->time_map_1->size() > 0, SL);
+				utki::assert(this->time_map_1->begin()->first > cur_time, SL);
 
 				//				TRACE(<< "DNS thread: cur_time = " << cur_time << std::endl)
 				//				TRACE(<< "DNS thread: this->time_map_1->begin()->first = " <<
@@ -1169,7 +1173,7 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 		}
 	}
 
-	ASSERT(dns::thread)
+	utki::assert(dns::thread, SL);
 
 	auto r = std::make_unique<dns::resolver>();
 	r->hnr = this;
@@ -1221,7 +1225,7 @@ void dns_resolver::resolve(const std::string& host_name, uint32_t timeout_ms, co
 		r->id = dns::thread->find_free_id();
 		std::pair<dns::id_iter_type, bool> res =
 			dns::thread->id_map.insert(std::pair<uint16_t, dns::resolver*>(r->id, r.operator->()));
-		ASSERT(res.second)
+		utki::assert(res.second, SL);
 		r->idIter = res.first;
 	}
 
@@ -1321,9 +1325,13 @@ void dns_resolver::clean_up()
 		dns::thread->queue.push_back([]() {});
 		dns::thread->join();
 
-		ASSERT(dns::thread->resolvers_map.size() == 0, [&](auto& o) {
-			o << "There are active DNS requests upon Sockets library de-initialization, all active DNS requests must be canceled before that.";
-		})
+		utki::assert(
+			dns::thread->resolvers_map.size() == 0,
+			[&](auto& o) {
+				o << "There are active DNS requests upon Sockets library de-initialization, all active DNS requests must be canceled before that.";
+			},
+			SL
+		);
 
 		dns::thread.reset();
 	}

@@ -195,7 +195,7 @@ size_t tcp_socket::send(utki::span<const uint8_t> buf)
 		break;
 	}
 
-	ASSERT(len >= 0)
+	utki::assert(len >= 0, SL);
 	return size_t(len);
 }
 
@@ -248,7 +248,7 @@ size_t tcp_socket::receive(utki::span<uint8_t> buf)
 		break;
 	}
 
-	ASSERT(len >= 0)
+	utki::assert(len >= 0, SL);
 	return size_t(len);
 }
 
@@ -275,7 +275,7 @@ address make_ip_address(const sockaddr_storage& addr)
 		const auto& a = reinterpret_cast<const sockaddr_in&>(addr);
 		return {uint32_t(ntohl(a.sin_addr.s_addr)), uint16_t(ntohs(a.sin_port))};
 	} else {
-		ASSERT(addr.ss_family == AF_INET6)
+		utki::assert(addr.ss_family == AF_INET6, SL);
 
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 		const auto& a = reinterpret_cast<const sockaddr_in6&>(addr);
