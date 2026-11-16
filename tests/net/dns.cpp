@@ -434,12 +434,12 @@ void run()
 namespace test_dns_tcp_fallback {
 
 // The a-record the fake server returns: 10.20.30.40
-constexpr uint8_t fake_a_record[4] = {0x0a, 0x14, 0x1e, 0x28};
+constexpr std::array<uint8_t, 4> fake_a_record = {0x0a, 0x14, 0x1e, 0x28};
 
 // The aaaa-record the fake server returns: 2001:db8::10.20.30.40
-constexpr uint8_t fake_aaaa_record[16] = {
-	0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x0a, 0x14, 0x1e, 0x28
+constexpr std::array<uint8_t, 16> fake_aaaa_record = {
+	{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+	 0x00, 0x00, 0x00, 0x00, 0x0a, 0x14, 0x1e, 0x28}
 };
 
 // Sends the entire buffer over the connection, retrying while nothing can be sent.
@@ -447,6 +447,7 @@ void send_full(setka::tcp_socket& sock, const std::vector<uint8_t>& buf)
 {
 	size_t sent = 0;
 	for (int i = 0; i < 2000 && sent < buf.size(); ++i) {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 		size_t n = sock.send(utki::make_span(buf.data() + sent, buf.size() - sent));
 		if (n > 0) {
 			sent += n;
@@ -464,22 +465,22 @@ std::string query_host_name(const uint8_t* q, size_t len)
 		return "";
 	}
 	std::string host;
-	const uint8_t* p = q + 12;
-	const uint8_t* end = q + len;
+	size_t i = 12;
 	bool first = true;
-	while (p < end && *p != 0) {
-		uint8_t label_len = *p & 0x3f;
-		if (size_t(p - q) + 1 + label_len > len) {
+	while (i < len && q[i] != 0) { // NOLINT
+		uint8_t label_len = q[i] & 0x3f; // NOLINT
+		if (i + 1 + label_len > len) {
 			return "";
 		}
 		if (!first) {
 			host += '.';
 		}
-		host.append(reinterpret_cast<const char*>(p + 1), label_len); // NOLINT
-		p += 1 + label_len;
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		host.append(reinterpret_cast<const char*>(q) + i + 1, label_len); // NOLINT
+		i += 1 + label_len;
 		first = false;
 	}
-	return p < end ? host : "";
+	return i < len ? host : "";
 }
 
 // The fake dns server for the tcp fallback test:
@@ -512,15 +513,16 @@ private:
 		std::vector<uint8_t> rx;
 		uint16_t msg_len = 0;
 		for (int i = 0; i < 2000; ++i) {
-			uint8_t tmp[512];
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+			std::array<uint8_t, 512> tmp;
 			size_t m = 0;
 			try {
-				m = sock.receive(utki::make_span(tmp, sizeof(tmp)));
+				m = sock.receive(utki::make_span(tmp));
 			} catch (std::exception&) {
 				return; // the client went away
 			}
 			if (m > 0) {
-				rx.insert(rx.end(), tmp, tmp + m);
+				rx.insert(rx.end(), tmp.begin(), tmp.begin() + m);
 			}
 			if (rx.size() >= 2) {
 				msg_len = uint16_t((rx[0] << 8) | rx[1]); // NOLINT
@@ -557,7 +559,7 @@ private:
 		resp.push_back(0x00); resp.push_back(0x01); // ANCOUNT = 1
 		resp.push_back(0x00); resp.push_back(0x00); // NSCOUNT = 0
 		resp.push_back(0x00); resp.push_back(0x00); // ARCOUNT = 0
-		resp.insert(resp.end(), rx.begin() + 14, rx.begin() + q_end); // the question
+		resp.insert(resp.end(), rx.begin() + 14, rx.begin() + std::ptrdiff_t(q_end)); // the question
 		resp.push_back(0xc0); resp.push_back(0x0c); // the answer name: a pointer to the question
 		uint16_t qtype = uint16_t((rx[q_end - 4] << 8) | rx[q_end - 3]); // NOLINT the question type, echoed
 		resp.push_back(uint8_t(qtype >> 8));
@@ -566,21 +568,22 @@ private:
 		resp.push_back(0x00); resp.push_back(0x00); resp.push_back(0x00); resp.push_back(0x3c); // ttl = 60
 		if (qtype == 1) { // the a-record
 			resp.push_back(0x00); resp.push_back(0x04); // rdlength = 4
-			resp.insert(resp.end(), fake_a_record, fake_a_record + 4);
+			resp.insert(resp.end(), fake_a_record.begin(), fake_a_record.end());
 		} else { // the aaaa-record
 			resp.push_back(0x00); resp.push_back(0x10); // rdlength = 16
-			resp.insert(resp.end(), fake_aaaa_record, fake_aaaa_record + 16);
+			resp.insert(resp.end(), fake_aaaa_record.begin(), fake_aaaa_record.end());
 		}
 
 		std::vector<uint8_t> out;
 		out.reserve(2 + resp.size());
-		uint16_t len = uint16_t(resp.size());
+		const auto len = uint16_t(resp.size());
 		out.push_back(uint8_t(len >> 8));
 		out.push_back(uint8_t(len & 0xff));
 		out.insert(out.end(), resp.begin(), resp.end());
 
 		try {
 			send_full(sock, out);
+			// NOLINTNEXTLINE(bugprone-empty-catch)
 		} catch (std::exception&) {
 			// the client went away, nothing to do
 		}
@@ -589,6 +592,7 @@ private:
 	void run() override
 	{
 		this->start_time = std::chrono::steady_clock::now();
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 		std::array<uint8_t, 2048> buf;
 		while (!this->quit_flag) {
 			// the udp side: respond to every query with a truncated response to
@@ -599,7 +603,7 @@ private:
 				n >= 12 &&
 				std::chrono::steady_clock::now() - this->start_time >= std::chrono::milliseconds(1100)
 			) {
-				const std::string host = query_host_name(buf.data(), n);
+				const auto host = query_host_name(buf.data(), n);
 				if (host.find("close") != std::string::npos) {
 					this->close_next_tcp = true;
 				}
