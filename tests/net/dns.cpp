@@ -1,23 +1,23 @@
 #include "dns.hpp"
 
-#include "../../src/setka/dns_resolver.hpp"
-#include "../../src/setka/tcp_server_socket.hpp"
-#include "../../src/setka/tcp_socket.hpp"
-#include "../../src/setka/udp_socket.hpp"
-
-#include <atomic>
-#include <nitki/thread.hpp>
-#include <nitki/semaphore.hpp>
-
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include <nitki/semaphore.hpp>
+#include <nitki/thread.hpp>
+
+#include "../../src/setka/dns_resolver.hpp"
+#include "../../src/setka/tcp_server_socket.hpp"
+#include "../../src/setka/tcp_socket.hpp"
+#include "../../src/setka/udp_socket.hpp"
+
 #ifdef assert
-#  undef assert
+#	undef assert
 #endif
 
 namespace test_simple_dns_lookup {
@@ -26,8 +26,8 @@ class resolver : public setka::dns_resolver
 {
 public:
 	resolver(nitki::semaphore& sema, std::string host_name = std::string()) :
-			sema(sema),
-			host_name(std::move(host_name))
+		sema(sema),
+		host_name(std::move(host_name))
 	{}
 
 	setka::address::ip ip{};
@@ -134,7 +134,7 @@ void run()
 	}
 }
 
-}
+} // namespace test_simple_dns_lookup
 
 namespace test_request_from_callback {
 
@@ -142,7 +142,7 @@ class resolver : public setka::dns_resolver
 {
 public:
 	resolver(nitki::semaphore& sema) :
-			sema(sema)
+		sema(sema)
 	{}
 
 	std::string host;
@@ -201,7 +201,7 @@ void run()
 
 	utki::assert_always(r.ip.is_valid(), SL);
 }
-}
+} // namespace test_request_from_callback
 
 namespace test_cancel_dns_lookup {
 
@@ -244,7 +244,7 @@ void run()
 	// cancel() again after the lookup has been cancelled must return false
 	utki::assert_always(!r.cancel(), SL);
 }
-}
+} // namespace test_cancel_dns_lookup
 
 namespace test_completed_handler {
 
@@ -353,7 +353,7 @@ void run()
 		);
 	}
 }
-}
+} // namespace test_completed_handler
 
 namespace test_resolve_record_types {
 
@@ -429,7 +429,7 @@ void run()
 		}
 	}
 }
-}
+} // namespace test_resolve_record_types
 
 namespace test_dns_tcp_fallback {
 
@@ -438,8 +438,7 @@ constexpr std::array<uint8_t, 4> fake_a_record = {0x0a, 0x14, 0x1e, 0x28};
 
 // The aaaa-record the fake server returns: 2001:db8::10.20.30.40
 constexpr std::array<uint8_t, 16> fake_aaaa_record = {
-	{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
-	 0x00, 0x00, 0x00, 0x00, 0x0a, 0x14, 0x1e, 0x28}
+	{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x14, 0x1e, 0x28}
 };
 
 // Sends the entire buffer over the connection, retrying while nothing can be sent.
@@ -493,8 +492,8 @@ class server : public nitki::thread
 {
 public:
 	explicit server(uint16_t port) :
-			udp(port),
-			tcp(port)
+		udp(port),
+		tcp(port)
 	{}
 
 	std::atomic<bool> quit_flag = false;
@@ -555,22 +554,33 @@ private:
 		resp.push_back(rx[3]);
 		resp.push_back(0x81); // flags: QR|RD|RA
 		resp.push_back(0x80);
-		resp.push_back(0x00); resp.push_back(0x01); // QDCOUNT = 1
-		resp.push_back(0x00); resp.push_back(0x01); // ANCOUNT = 1
-		resp.push_back(0x00); resp.push_back(0x00); // NSCOUNT = 0
-		resp.push_back(0x00); resp.push_back(0x00); // ARCOUNT = 0
+		resp.push_back(0x00);
+		resp.push_back(0x01); // QDCOUNT = 1
+		resp.push_back(0x00);
+		resp.push_back(0x01); // ANCOUNT = 1
+		resp.push_back(0x00);
+		resp.push_back(0x00); // NSCOUNT = 0
+		resp.push_back(0x00);
+		resp.push_back(0x00); // ARCOUNT = 0
 		resp.insert(resp.end(), rx.begin() + 14, rx.begin() + std::ptrdiff_t(q_end)); // the question
-		resp.push_back(0xc0); resp.push_back(0x0c); // the answer name: a pointer to the question
+		resp.push_back(0xc0);
+		resp.push_back(0x0c); // the answer name: a pointer to the question
 		uint16_t qtype = uint16_t((rx[q_end - 4] << 8) | rx[q_end - 3]); // NOLINT the question type, echoed
 		resp.push_back(uint8_t(qtype >> 8));
 		resp.push_back(uint8_t(qtype & 0xff));
-		resp.push_back(0x00); resp.push_back(0x01); // the IN class
-		resp.push_back(0x00); resp.push_back(0x00); resp.push_back(0x00); resp.push_back(0x3c); // ttl = 60
+		resp.push_back(0x00);
+		resp.push_back(0x01); // the IN class
+		resp.push_back(0x00);
+		resp.push_back(0x00);
+		resp.push_back(0x00);
+		resp.push_back(0x3c); // ttl = 60
 		if (qtype == 1) { // the a-record
-			resp.push_back(0x00); resp.push_back(0x04); // rdlength = 4
+			resp.push_back(0x00);
+			resp.push_back(0x04); // rdlength = 4
 			resp.insert(resp.end(), fake_a_record.begin(), fake_a_record.end());
 		} else { // the aaaa-record
-			resp.push_back(0x00); resp.push_back(0x10); // rdlength = 16
+			resp.push_back(0x00);
+			resp.push_back(0x10); // rdlength = 16
 			resp.insert(resp.end(), fake_aaaa_record.begin(), fake_aaaa_record.end());
 		}
 
@@ -599,10 +609,7 @@ private:
 			// trigger the tcp fallback. The responses are delayed to force the client
 			// to retransmit the query before the first response arrives.
 			auto [n, from] = this->udp.receive(utki::make_span(buf.data(), buf.size()));
-			if (
-				n >= 12 &&
-				std::chrono::steady_clock::now() - this->start_time >= std::chrono::milliseconds(1100)
-			) {
+			if (n >= 12 && std::chrono::steady_clock::now() - this->start_time >= std::chrono::milliseconds(1100)) {
 				const auto host = query_host_name(buf.data(), n);
 				if (host.find("close") != std::string::npos) {
 					this->close_next_tcp = true;
@@ -630,7 +637,9 @@ private:
 
 void run()
 {
-	LOG([&](auto& o) { o << "Running 'dns tcp fallback' test" << std::endl; })
+	LOG([&](auto& o) {
+		o << "Running 'dns tcp fallback' test" << std::endl;
+	})
 
 	constexpr uint16_t port = 39101;
 
@@ -733,4 +742,4 @@ void run()
 	srv.quit_flag = true;
 	srv.join();
 }
-}
+} // namespace test_dns_tcp_fallback
