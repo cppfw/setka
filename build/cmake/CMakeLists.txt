@@ -29,3 +29,8 @@ myci_declare_library(${PROJECT_NAME}
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
 endif()
+
+# ==============
+# = unit tests =
+
+include(unit_tests.cmake)

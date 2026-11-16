@@ -1,16 +1,17 @@
 #include <utki/debug.hpp>
+
 #include "../../src/setka/init_guard.hpp"
 
 #include "dns.hpp"
 #include "socket.hpp"
 
-
-inline void test_setka_socket(){
+inline void test_setka_socket()
+{
 	auto guard = setka::get_init_guard_reference();
-	
+
 	basic_ip_address_test::run();
 	test_ip_address::run();
-		
+
 	basic_client_server_test::run();
 	basic_udp_sockets_test::run();
 	test_udp_socket_wait_for_writing::run();
@@ -24,5 +25,7 @@ inline void test_setka_socket(){
 	test_resolve_record_types::run();
 	test_dns_tcp_fallback::run();
 
-	utki::log([&](auto&o){o << "[PASSED]: Socket test" << std::endl;});
+	utki::log([&](auto& o) {
+		o << "[PASSED]: Socket test" << std::endl;
+	});
 }

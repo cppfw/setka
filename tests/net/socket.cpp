@@ -1,24 +1,24 @@
-#include "../../src/setka/tcp_socket.hpp"
-#include "../../src/setka/tcp_server_socket.hpp"
-#include "../../src/setka/udp_socket.hpp"
+#include "socket.hpp"
 
-#include <opros/wait_set.hpp>
-#include <nitki/thread.hpp>
 #include <nitki/queue.hpp>
-
+#include <nitki/thread.hpp>
+#include <opros/wait_set.hpp>
 #include <utki/config.hpp>
-#include <utki/time.hpp>
 #include <utki/debug.hpp>
+#include <utki/time.hpp>
 #include <utki/util.hpp>
 
-#include "socket.hpp"
+#include "../../src/setka/tcp_server_socket.hpp"
+#include "../../src/setka/tcp_socket.hpp"
+#include "../../src/setka/udp_socket.hpp"
 
 #ifdef assert
 #	undef assert
 #endif
 
-namespace{
-bool is_ipv6_supported_by_os(){
+namespace {
+bool is_ipv6_supported_by_os()
+{
 #if CFG_OS == CFG_OS_WINDOWS
 	{
 		OSVERSIONINFOEX osvi;
@@ -32,7 +32,7 @@ bool is_ipv6_supported_by_os(){
 
 		DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR;
 
-		if(VerifyVersionInfo(
+		if (VerifyVersionInfo(
 				&osvi,
 				mask,
 				VerSetConditionMask(0, mask, VER_GREATER) // we check if current Windows version is greater than WinXP
@@ -41,7 +41,7 @@ bool is_ipv6_supported_by_os(){
 			// Windows version is WinXP or before
 
 			return false;
-		}else{
+		} else {
 			return true;
 		}
 	}
@@ -49,11 +49,12 @@ bool is_ipv6_supported_by_os(){
 	return true;
 #endif
 }
-}
+} // namespace
 
-namespace basic_client_server_test{
-void send_all(setka::tcp_socket& s, utki::span<const uint8_t> buf){
-	if(s.empty()){
+namespace basic_client_server_test {
+void send_all(setka::tcp_socket& s, utki::span<const uint8_t> buf)
+{
+	if (s.empty()) {
 		throw std::logic_error("send_all(): socket is not opened");
 	}
 
@@ -62,12 +63,12 @@ void send_all(setka::tcp_socket& s, utki::span<const uint8_t> buf){
 
 	size_t offset = 0;
 
-	while(true){
+	while (true) {
 		size_t res = s.send(decltype(buf)(buf.data() + offset, buf.size() - offset));
 		left -= res;
 		utki::assert_always(left >= 0, SL);
 		offset += res;
-		if(offset == buf.size()){
+		if (offset == buf.size()) {
 			break;
 		}
 		// give 30ms to allow data from send buffer to be sent
@@ -77,23 +78,25 @@ void send_all(setka::tcp_socket& s, utki::span<const uint8_t> buf){
 	utki::assert_always(left == 0, SL);
 }
 
-class server_thread : public nitki::thread{
+class server_thread : public nitki::thread
+{
 public:
 	volatile bool quit_flag = false;
 	nitki::queue queue;
 
-	void run()override{
-		try{
+	void run() override
+	{
+		try {
 			setka::tcp_server_socket listen_sock(13666); // start listening
 
 			utki::assert_always(listen_sock.get_local_port() == 13666, SL);
 
 			// accept some connection
 			setka::tcp_socket sock;
-			while(sock.empty() && !this->quit_flag){
+			while (sock.empty() && !this->quit_flag) {
 				sock = listen_sock.accept();
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-				if(auto m = this->queue.pop_front()){
+				if (auto m = this->queue.pop_front()) {
 					m();
 				}
 			}
@@ -103,29 +106,29 @@ public:
 			utki::assert_always(sock.get_local_address().host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
 
-			std::array<uint8_t, 4> data = {
-				'0',
-				'1',
-				'2',
-				'4'
-			};
+			std::array<uint8_t, 4> data = {'0', '1', '2', '4'};
 			send_all(sock, utki::make_span(data));
-		}catch(std::exception &e){
-			utki::assert_always(false, [&](auto&o){o << "Network error: " << e.what();}, SL);
+		} catch (std::exception& e) {
+			utki::assert_always(
+				false,
+				[&](auto& o) {
+					o << "Network error: " << e.what();
+				},
+				SL
+			);
 		}
 	}
 };
 
-
-
-void run(){
+void run()
+{
 	server_thread server_thread;
-	
+
 	server_thread.start();
-	
+
 	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-	
-	try{
+
+	try {
 		setka::address ip("127.0.0.1", 13666);
 
 		setka::tcp_socket sock(ip);
@@ -134,46 +137,48 @@ void run(){
 
 		// give some time for socket to connect
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		
+
 		utki::assert_always(sock.get_remote_address().host.get_v4() == 0x7f000001, SL);
 
 		std::array<uint8_t, 4> data; // NOLINT
 		size_t num_bytes_received = 0;
-		for(unsigned i = 0; i < 30; ++i){
+		for (unsigned i = 0; i < 30; ++i) {
 			utki::assert_always(num_bytes_received < 4, SL);
 			// NOLINTNEXTLINE
-			num_bytes_received += sock.receive(utki::span<uint8_t>(data.data() + num_bytes_received, data.size() - num_bytes_received));
+			num_bytes_received +=
+				sock.receive(utki::span<uint8_t>(data.data() + num_bytes_received, data.size() - num_bytes_received));
 			utki::assert_always(num_bytes_received <= 4, SL);
-			if(num_bytes_received == 4){
+			if (num_bytes_received == 4) {
 				break;
 			}
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		utki::assert_always(num_bytes_received == 4, SL);
-		
+
 		utki::assert_always(data[0] == '0', SL);
 		utki::assert_always(data[1] == '1', SL);
 		utki::assert_always(data[2] == '2', SL);
 		utki::assert_always(data[3] == '4', SL);
-	}catch(std::exception &e){
+	} catch (std::exception& e) {
 		utki::assert_always(
 			false,
-			[&](auto&o){o << "Network error: " << e.what(); },
+			[&](auto& o) {
+				o << "Network error: " << e.what();
+			},
 			SL
 		);
 	}
-	
+
 	server_thread.join();
 }
 
-}
+} // namespace basic_client_server_test
 
+namespace send_data_continuously_with_wait_set {
 
-
-namespace send_data_continuously_with_wait_set{
-
-void run(){
+void run()
+{
 	setka::tcp_server_socket server_sock(13666);
 
 	setka::tcp_socket sock_s(setka::address("127.0.0.1", 13666));
@@ -181,9 +186,9 @@ void run(){
 	utki::assert_always(!sock_s.empty(), SL);
 
 	//Accept connection
-//	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
+	//	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
 	setka::tcp_socket sock_r;
-	for(unsigned i = 0; i < 20 && sock_r.empty(); ++i){
+	for (unsigned i = 0; i < 20 && sock_r.empty(); ++i) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sock_r = server_sock.accept();
 	}
@@ -195,8 +200,8 @@ void run(){
 	{
 		setka::address addr_s = sock_s.get_remote_address();
 		setka::address addr_r = sock_r.get_remote_address();
-//		TRACE(<< "send_data_continuously::run(): addr_s = " << std::hex << addr_s.host << ":" << addr_s.port << std::dec << std::endl)
-//		TRACE(<< "send_data_continuously::run(): addr_r = " << std::hex << addr_r.host << ":" << addr_r.port << std::dec << std::endl)
+		//		TRACE(<< "send_data_continuously::run(): addr_s = " << std::hex << addr_s.host << ":" << addr_s.port << std::dec << std::endl)
+		//		TRACE(<< "send_data_continuously::run(): addr_r = " << std::hex << addr_r.host << ":" << addr_r.port << std::dec << std::endl)
 		utki::assert_always(addr_s.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
 		utki::assert_always(addr_r.host.get_v4() == 0x7f000001, SL); //check that IP is 127.0.0.1
 	}
@@ -210,66 +215,69 @@ void run(){
 	size_t num_bytes_send = 0;
 
 	uint32_t rcnt = 0;
-	std::array<uint8_t, sizeof(uint32_t)> recv_buffer;  // NOLINT
-	unsigned num_recv_buf_bytes= 0;
+	std::array<uint8_t, sizeof(uint32_t)> recv_buffer; // NOLINT
+	unsigned num_recv_buf_bytes = 0;
 
 	uint32_t start_time = utki::get_ticks_ms();
-	
-	while(utki::get_ticks_ms() - start_time < 5000){ // 5 seconds
+
+	while (utki::get_ticks_ms() - start_time < 5000) { // 5 seconds
 		bool is_triggered = ws.wait(1000);
 
 		utki::assert_always(ws.get_triggered().size() <= ws.size(), SL);
 
 		auto triggered = ws.get_triggered();
 
-		if(!is_triggered
+		if (!is_triggered
 #if CFG_OS == CFG_OS_WINDOWS
-		|| triggered.empty()
+			|| triggered.empty()
 #endif
-		){
-//			TRACE(<< "send_data_continuously::run(): 0 triggered" << std::endl)
+		)
+		{
+			//			TRACE(<< "send_data_continuously::run(): 0 triggered" << std::endl)
 			continue;
 		}
 
 		//If 2 waitables have triggered they should be 2 different waitables.
-		if(triggered.size() == 2){
-//			TRACE(<< "send_data_continuously::run(): 2 triggered" << std::endl)
+		if (triggered.size() == 2) {
+			//			TRACE(<< "send_data_continuously::run(): 2 triggered" << std::endl)
 			utki::assert_always(triggered[0].user_data != triggered[1].user_data, SL);
-		}else{
+		} else {
 			utki::assert_always(triggered.size() == 1, SL);
-//			TRACE(<< "send_data_continuously::run(): 1 triggered" << std::endl)
+			//			TRACE(<< "send_data_continuously::run(): 1 triggered" << std::endl)
 		}
 
-		for(const auto& t : triggered){
-			if(t.user_data == &sock_s){
+		for (const auto& t : triggered) {
+			if (t.user_data == &sock_s) {
 				utki::assert_always(t.user_data != &sock_r, SL);
 
-//				TRACE(<< "send_data_continuously::run(): sock_s triggered" << std::endl)
+				//				TRACE(<< "send_data_continuously::run(): sock_s triggered" << std::endl)
 				utki::assert_always(!t.flags.get(opros::ready::read), SL);
 				utki::assert_always(!t.flags.get(opros::ready::error), SL);
 				utki::assert_always(t.flags.get(opros::ready::write), SL);
 
 				utki::assert_always(num_bytes_send <= send_buffer.size(), SL);
 
-				if(send_buffer.size() == num_bytes_send){
+				if (send_buffer.size() == num_bytes_send) {
 					send_buffer.resize(0xffff + 1);
 					num_bytes_send = 0;
-					
+
 					utki::assert_always(
 						(send_buffer.size() % sizeof(uint32_t)) == 0,
-						[&](auto&o){
+						[&](auto& o) {
 							o << "send_buffer.Size() = " << send_buffer.size()
-							<< " (send_buffer.Size() % sizeof(uint32_t)) = "
-							<< (send_buffer.size() % sizeof(uint32_t));
+							  << " (send_buffer.Size() % sizeof(uint32_t)) = "
+							  << (send_buffer.size() % sizeof(uint32_t));
 						},
 						SL
 					);
 
 					uint8_t* p = &send_buffer[0];
-					for(; p != send_buffer.data() + send_buffer.size(); p += sizeof(uint32_t)){ // NOLINT
+					for (; p != send_buffer.data() + send_buffer.size(); p += sizeof(uint32_t)) { // NOLINT
 						utki::assert_always(
 							p < ((send_buffer.data() + send_buffer.size()) - (sizeof(uint32_t) - 1)), // NOLINT
-							[&](auto&o){o << "p = " << p << " send_buffer.End() = " << utki::end_pointer(send_buffer);},
+							[&](auto& o) {
+								o << "p = " << p << " send_buffer.End() = " << utki::end_pointer(send_buffer);
+							},
 							SL
 						);
 						utki::serialize32le(scnt, p);
@@ -280,102 +288,108 @@ void run(){
 
 				utki::assert_always(send_buffer.size() > 0, SL);
 
-				try{
+				try {
 					// NOLINTNEXTLINE
-					auto res = sock_s.send(utki::make_span(send_buffer.data() + num_bytes_send, send_buffer.size() - num_bytes_send));
+					auto res = sock_s.send(
+						utki::make_span(send_buffer.data() + num_bytes_send, send_buffer.size() - num_bytes_send)
+					);
 					num_bytes_send += res;
-					if(res == 0){
-						utki::assert_always(res > 0, SL); // since it was CanWrite() we should be able to write at least something
-					}else{
-//						TRACE(<< "send_data_continuously::run(): " << res << " bytes sent" << std::endl)
+					if (res == 0) {
+						utki::assert_always(
+							res > 0,
+							SL
+						); // since it was CanWrite() we should be able to write at least something
+					} else {
+						//						TRACE(<< "send_data_continuously::run(): " << res << " bytes sent" << std::endl)
 					}
-				}catch(std::exception& e){
+				} catch (std::exception& e) {
 					utki::assert_always(
 						false,
-						[&](auto&o){o << "sock_s.Send() failed: " << e.what();},
+						[&](auto& o) {
+							o << "sock_s.Send() failed: " << e.what();
+						},
 						SL
 					);
 				}
 				utki::assert_always(num_bytes_send <= send_buffer.size(), SL);
-			}else if(t.user_data == &sock_r){
+			} else if (t.user_data == &sock_r) {
 				utki::assert_always(t.user_data != &sock_s, SL);
 
-//				TRACE(<< "send_data_continuously::run(): sock_r triggered" << std::endl)
+				//				TRACE(<< "send_data_continuously::run(): sock_r triggered" << std::endl)
 				utki::assert_always(!t.flags.get(opros::ready::error), SL);
 				utki::assert_always(t.flags.get(opros::ready::read), SL);
 				utki::assert_always(!t.flags.get(opros::ready::write), SL);
 
-				while(true){
+				while (true) {
 					constexpr auto receive_buffer_size = utki::kilobyte * 8;
 					std::array<uint8_t, receive_buffer_size> buf; // NOLINT
 					size_t num_bytes_received = 0;
-					try{
+					try {
 						num_bytes_received = sock_r.receive(utki::make_span(buf));
-					}catch(std::exception& e){
+					} catch (std::exception& e) {
 						utki::assert_always(
 							false,
-							[&](auto&o){o << "sock_r.Recv() failed: " << e.what();},
+							[&](auto& o) {
+								o << "sock_r.Recv() failed: " << e.what();
+							},
 							SL
 						);
 					}
 					utki::assert_always(num_bytes_received <= buf.size(), SL);
-//					TRACE(<< "send_data_continuously::run(): " << num_bytes_received << " bytes received" << std::endl)
+					//					TRACE(<< "send_data_continuously::run(): " << num_bytes_received << " bytes received" << std::endl)
 
-					if(num_bytes_received == 0){
-						break;//~while(true)
+					if (num_bytes_received == 0) {
+						break; //~while(true)
 					}
 
 					auto p = buf.cbegin();
-					for(unsigned i = 0; i < num_bytes_received && p != buf.end(); ++p, ++i){
+					for (unsigned i = 0; i < num_bytes_received && p != buf.end(); ++p, ++i) {
 						recv_buffer[num_recv_buf_bytes] = *p; // NOLINT
 						++num_recv_buf_bytes;
 
-						utki::assert_always(num_recv_buf_bytes<= recv_buffer.size(), SL);
+						utki::assert_always(num_recv_buf_bytes <= recv_buffer.size(), SL);
 
-						if(num_recv_buf_bytes== recv_buffer.size()){
-							num_recv_buf_bytes= 0;
+						if (num_recv_buf_bytes == recv_buffer.size()) {
+							num_recv_buf_bytes = 0;
 							uint32_t num = utki::deserialize32le(recv_buffer.data());
 							utki::assert_always(
-									rcnt == num,
-									[&](auto&o){o << "num = " << num << " rcnt = " << rcnt
-											<< " rcnt - num = " << (rcnt - num)
-											<< " recv_buffer = "
-											<< unsigned(recv_buffer[0]) << ", "
-											<< unsigned(recv_buffer[1]) << ", "
-											<< unsigned(recv_buffer[2]) << ", "
-											<< unsigned(recv_buffer[3]);
-									},
-									SL
-								);
+								rcnt == num,
+								[&](auto& o) {
+									o << "num = " << num << " rcnt = " << rcnt << " rcnt - num = " << (rcnt - num)
+									  << " recv_buffer = " << unsigned(recv_buffer[0]) << ", "
+									  << unsigned(recv_buffer[1]) << ", " << unsigned(recv_buffer[2]) << ", "
+									  << unsigned(recv_buffer[3]);
+								},
+								SL
+							);
 							++rcnt;
 						}
-					}//~for
-				}//~while(true)
-			}else{
+					} //~for
+				} //~while(true)
+			} else {
 				utki::assert_always(false, SL);
 			}
-		}//~for(triggered)
-	}//~while
+		} //~for(triggered)
+	} //~while
 
 	ws.remove(sock_s);
 	ws.remove(sock_r);
 }
 
-}//~namespace
+} // namespace send_data_continuously_with_wait_set
 
+namespace send_data_continuously {
 
-
-namespace send_data_continuously{
-
-void run(){
+void run()
+{
 	setka::tcp_server_socket server_sock(13666);
 
 	setka::tcp_socket sock_s(setka::address("127.0.0.1", 13666));
 
 	// accept connection
-//	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
+	//	TRACE(<< "send_data_continuously::run(): accepting connection" << std::endl)
 	setka::tcp_socket sock_r;
-	for(unsigned i = 0; i < 20 && sock_r.empty(); ++i){
+	for (unsigned i = 0; i < 20 && sock_r.empty(); ++i) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		sock_r = server_sock.accept();
 	}
@@ -391,78 +405,89 @@ void run(){
 
 	uint32_t start_time = utki::get_ticks_ms();
 
-	while(utki::get_ticks_ms() - start_time < 5000){ // 5 seconds
+	while (utki::get_ticks_ms() - start_time < 5000) { // 5 seconds
 
 		// send
 
-		try{
+		try {
 			utki::span<const uint8_t> buf(&scnt, 1);
 			auto res = sock_s.send(buf);
 			utki::assert_always(res <= 1, SL);
-			if(res == 1){
+			if (res == 1) {
 				++scnt;
-			}else{
+			} else {
 				utki::assert_always(false, SL);
 			}
-		}catch(std::exception& e){
+		} catch (std::exception& e) {
 			utki::assert_always(
 				false,
-				[&](auto&o){o << "sock_s.Send() failed: " << e.what();},
+				[&](auto& o) {
+					o << "sock_s.Send() failed: " << e.what();
+				},
 				SL
 			);
 		}
 
-
 		// read
 
-		while(true){
+		while (true) {
 			constexpr auto receive_buffer_size = utki::kilobyte * 8;
 			std::array<uint8_t, receive_buffer_size> buf; // NOLINT
 			size_t num_bytes_received = 0;
-			try{
+			try {
 				num_bytes_received = sock_r.receive(utki::make_span(buf));
-			}catch(std::exception& e){
+			} catch (std::exception& e) {
 				utki::assert_always(
 					false,
-					[&](auto&o){o << "sock_r.Recv() failed: " << e.what();},
+					[&](auto& o) {
+						o << "sock_r.Recv() failed: " << e.what();
+					},
 					SL
 				);
 			}
 			utki::assert_always(num_bytes_received <= buf.size(), SL);
-//			TRACE(<< "send_data_continuously::run(): " << num_bytes_received << " bytes received" << std::endl)
+			//			TRACE(<< "send_data_continuously::run(): " << num_bytes_received << " bytes received" << std::endl)
 
-			if(num_bytes_received == 0){
-				break;//~while(true)
+			if (num_bytes_received == 0) {
+				break; //~while(true)
 			}
 
 			auto p = buf.cbegin();
-			for(unsigned i = 0; i < num_bytes_received && p != buf.end(); ++p, ++i){
+			for (unsigned i = 0; i < num_bytes_received && p != buf.end(); ++p, ++i) {
 				utki::assert_always(
 					rcnt == *p,
-					[&](auto&o){o << "rcnt = " << unsigned(rcnt) << " *p = " << unsigned(*p) << " diff = " << unsigned(rcnt - *p);},
+					[&](auto& o) {
+						o << "rcnt = " << unsigned(rcnt) << " *p = " << unsigned(*p)
+						  << " diff = " << unsigned(rcnt - *p);
+					},
 					SL
 				);
 				++rcnt;
-			}//~for
-		}//~while(true)
-		
-	}//~while
+			} //~for
+		} //~while(true)
+
+	} //~while
 }
 
-}//~namespace
+} // namespace send_data_continuously
 
+namespace basic_ip_address_test {
 
-
-namespace basic_ip_address_test{
-
-void run(){
+void run()
+{
 	{
-		try{
+		try {
 			setka::address a("123.124.125.126", 5);
 			utki::assert_always(a.host.get_v4() == (123 << 24) + (124 << 16) + (125 << 8) + 126, SL);
 			utki::assert_always(a.port == 5, SL);
-		}catch(std::exception& e){
-			utki::assert_always(false, [&](auto&o){o << e.what();}, SL);
+		} catch (std::exception& e) {
+			utki::assert_always(
+				false,
+				[&](auto& o) {
+					o << e.what();
+				},
+				SL
+			);
 		}
 	}
 
@@ -492,27 +517,31 @@ void run(){
 	}
 }
 
-}//~namespace
+} // namespace basic_ip_address_test
 
+namespace basic_udp_sockets_test {
 
-
-namespace basic_udp_sockets_test{
-
-void run(){
-
+void run()
+{
 	setka::udp_socket recv_sock;
 
-	try{
+	try {
 		recv_sock = setka::udp_socket(13666);
-	}catch(std::exception &e){
-		utki::assert_always(false, [&](auto&o){o << e.what();}, SL);
+	} catch (std::exception& e) {
+		utki::assert_always(
+			false,
+			[&](auto& o) {
+				o << e.what();
+			},
+			SL
+		);
 	}
 
 	utki::assert_always(recv_sock.get_local_port() == 13666, SL);
 
 	setka::udp_socket send_sock;
 
-	try{
+	try {
 		send_sock = setka::udp_socket(0);
 
 		const std::array<uint8_t, 4> data = {
@@ -523,54 +552,63 @@ void run(){
 		};
 		size_t num_bytes_send = 0;
 
-		setka::address addr(
-				is_ipv6_supported_by_os() ? "::1" : "127.0.0.1",
-				13666
-			);
+		setka::address addr(is_ipv6_supported_by_os() ? "::1" : "127.0.0.1", 13666);
 
-		for(unsigned i = 0; i < 10; ++i){
+		for (unsigned i = 0; i < 10; ++i) {
 			num_bytes_send = send_sock.send(utki::make_span(data), addr);
 			utki::assert_always(num_bytes_send == 4 || num_bytes_send == 0, SL);
-			if(num_bytes_send == 4){
+			if (num_bytes_send == 4) {
 				break;
 			}
-			
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		utki::assert_always(num_bytes_send == 4, SL);
-	}catch(std::exception &e){
-		utki::log([](auto&o){o << "is_ipv6_supported_by_os() = " << is_ipv6_supported_by_os() << std::endl;});
-		utki::assert_always(false, [&](auto&o){o << e.what();}, SL);
+	} catch (std::exception& e) {
+		utki::log([](auto& o) {
+			o << "is_ipv6_supported_by_os() = " << is_ipv6_supported_by_os() << std::endl;
+		});
+		utki::assert_always(
+			false,
+			[&](auto& o) {
+				o << e.what();
+			},
+			SL
+		);
 	}
 
-	try{
+	try {
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 		std::array<uint8_t, utki::kilobyte> buf;
-		
+
 		size_t num_bytes_received = 0;
-		for(unsigned i = 0; i < 10; ++i){
+		for (unsigned i = 0; i < 10; ++i) {
 			auto [n, sender] = recv_sock.receive(utki::make_span(buf));
 			// a regular variable, the structured binding elements cannot be captured in C++17
 			setka::address ip = sender;
 			num_bytes_received = n;
 			utki::assert_always(num_bytes_received == 0 || num_bytes_received == 4, SL); // all or nothing
-			if(num_bytes_received == 4){
-				if(is_ipv6_supported_by_os()){
+			if (num_bytes_received == 4) {
+				if (is_ipv6_supported_by_os()) {
 					utki::assert_always(
 						ip.host.quad[3] == 1,
-						[&](auto&o){o << "ip.host.Quad3() = " << std::hex << ip.host.quad[3] << std::dec;},
+						[&](auto& o) {
+							o << "ip.host.Quad3() = " << std::hex << ip.host.quad[3] << std::dec;
+						},
 						SL
 					);
-				}else{
+				} else {
 					utki::assert_always(
 						ip.host.get_v4() == 0x7f000001,
-						[&](auto&o){o << "ip.host.IPv4Host() = " << std::hex << ip.host.get_v4() << std::dec;},
+						[&](auto& o) {
+							o << "ip.host.IPv4Host() = " << std::hex << ip.host.get_v4() << std::dec;
+						},
 						SL
 					);
 				}
 				break;
 			}
-			
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		utki::assert_always(num_bytes_received == 4, SL);
@@ -578,228 +616,246 @@ void run(){
 		utki::assert_always(buf[1] == '1', SL);
 		utki::assert_always(buf[2] == '2', SL);
 		utki::assert_always(buf[3] == '4', SL);
-	}catch(std::exception& e){
+	} catch (std::exception& e) {
 		utki::assert_always(
 			false,
-			[&](auto&o){o << e.what();},
+			[&](auto& o) {
+				o << e.what();
+			},
 			SL
 		);
 	}
 }
-}
+} // namespace basic_udp_sockets_test
 
-namespace test_udp_socket_wait_for_writing{
-void run(){
-	try{
+namespace test_udp_socket_wait_for_writing {
+void run()
+{
+	try {
 		setka::udp_socket send_sock(0);
 
 		opros::wait_set ws(1);
 
 		ws.add(send_sock, utki::make_flags({opros::ready::read, opros::ready::write}), &send_sock);
 
-		if(!ws.wait(3000)){
+		if (!ws.wait(3000)) {
 			// if timeout was hit
 			// NOTE: for some reason waiting for writing to UDP socket does not work on Win32 (aaarrrggghh).
 #if CFG_OS == CFG_OS_WINDOWS
-			utki::log([](auto&o){o << "WARNING: Waiting for writing to UDP socket does not work on Win32";});
+			utki::log([](auto& o) {
+				o << "WARNING: Waiting for writing to UDP socket does not work on Win32";
+			});
 #endif
-		}else{
+		} else {
 			auto triggered = ws.get_triggered();
 			utki::assert_always(triggered[0].flags.get(opros::ready::write), SL);
 			utki::assert_always(!triggered[0].flags.get(opros::ready::read), SL);
 		}
 
 		ws.remove(send_sock);
-	}catch(std::exception& e){
-		utki::assert_always(false, [&](auto&o){o << e.what();}, SL);
+	} catch (std::exception& e) {
+		utki::assert_always(
+			false,
+			[&](auto& o) {
+				o << e.what();
+			},
+			SL
+		);
 	}
 }
-}
+} // namespace test_udp_socket_wait_for_writing
 
-namespace test_ip_address{
-void run(){
-	try{//test IP-address without port string parsing
-		try{//test correct string
+namespace test_ip_address {
+void run()
+{
+	try { //test IP-address without port string parsing
+		try { //test correct string
 			setka::address ip("127.0.0.1", 80);
 			utki::assert_always(ip.host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(ip.port == 80, SL);
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{//test correct string
+
+		try { //test correct string
 			setka::address ip("127.0.0.1:23ddqwd", 80);
 			utki::assert_always(ip.host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(ip.port == 80, SL);
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			utki::assert_always(true, SL);
 		}
-		try{//test correct string
+		try { //test correct string
 			setka::address ip("127.0.0.2555:23ddqwd", 80);
 			utki::assert_always(ip.host.get_v4() == 0x7f0000ff, SL);
 			utki::assert_always(ip.port == 80, SL);
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			utki::assert_always(true, SL);
 		}
-		
-		try{//test incorrect string
+
+		try { //test incorrect string
 			setka::address ip("127.0.1803:65536");
 			utki::assert_always(false, SL);
 
 			// NOLINTNEXTLINE(bugprone-empty-catch)
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			//should get here
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{//test incorrect string
+
+		try { //test incorrect string
 			setka::address ip("127.0.270.1:65536");
 			utki::assert_always(false, SL);
 
 			// NOLINTNEXTLINE(bugprone-empty-catch)
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			//should get here
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
-	}catch(...){
+	} catch (...) {
 		utki::assert_always(false, SL);
 	}
-	
-	try{//test IP-address with port string parsing
-		try{//test correct string
+
+	try { //test IP-address with port string parsing
+		try { //test correct string
 			setka::address ip("127.0.0.1:80");
 			utki::assert_always(ip.host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(ip.port == 80, SL);
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{//test incorrect string
+
+		try { //test incorrect string
 			setka::address ip("127.0.0.1803:43");
 			utki::assert_always(false, SL);
 
 			// NOLINTNEXTLINE(bugprone-empty-catch)
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			//should get here
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{//test incorrect string
+
+		try { //test incorrect string
 			setka::address ip("127.0.0.180p43");
 			utki::assert_always(false, SL);
 
 			// NOLINTNEXTLINE(bugprone-empty-catch)
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			//should get here
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{//test incorrect string
+
+		try { //test incorrect string
 			setka::address ip("127.0.0.180:123456");
 			utki::assert_always(false, SL);
 
 			// NOLINTNEXTLINE(bugprone-empty-catch)
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			//should get here
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{// test incorrect string
+
+		try { // test incorrect string
 			setka::address ip("127.0.0.180:72345");
 			utki::assert_always(false, SL);
 
 			// NOLINTNEXTLINE(bugprone-empty-catch)
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			// should get here
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{// test incorrect string
+
+		try { // test incorrect string
 			setka::address ip("127.0.0.1803:65536");
 			utki::assert_always(false, SL);
 
 			// NOLINTNEXTLINE(bugprone-empty-catch)
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			// should get here
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{// test correct string
+
+		try { // test correct string
 			setka::address ip("127.0.0.1:65535");
 			utki::assert_always(ip.host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(ip.port == 0xffff, SL);
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{//test correct string
+
+		try { //test correct string
 			setka::address ip("127.0.0.1:0");
 			utki::assert_always(ip.host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(ip.port == 0, SL);
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{//test correct string
+
+		try { //test correct string
 			setka::address ip("127.0.0.1:6535 ");
 			utki::assert_always(ip.host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(ip.port == 6535, SL);
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			utki::assert_always(false, SL);
 		}
-		
-		try{//test correct string
+
+		try { //test correct string
 			setka::address ip("127.0.0.1:6535dwqd 345");
 			utki::assert_always(ip.host.get_v4() == 0x7f000001, SL);
 			utki::assert_always(ip.port == 6535, SL);
-		}catch(std::exception&){
+		} catch (std::exception&) {
 			utki::assert_always(false, SL);
 		}
-	}catch(...){
+	} catch (...) {
 		utki::assert_always(false, SL);
 	}
-	
+
 	// Test IPv6
-	if(is_ipv6_supported_by_os()){
-		try{
+	if (is_ipv6_supported_by_os()) {
+		try {
 			setka::address ip("1002:3004:5006::7008:900a");
 			utki::assert_always(ip.port == 0, SL);
 			utki::assert_always(ip.host.quad[0] == 0x10023004, SL);
 			utki::assert_always(ip.host.quad[1] == 0x50060000, SL);
 			utki::assert_always(ip.host.quad[2] == 0x00000000, SL);
 			utki::assert_always(ip.host.quad[3] == 0x7008900a, SL);
-		}catch(std::exception& e){
-			utki::assert_always(false, [&](auto&o){o << "exception caught: " << e.what();}, SL);
-		}catch(...){
+		} catch (std::exception& e) {
+			utki::assert_always(
+				false,
+				[&](auto& o) {
+					o << "exception caught: " << e.what();
+				},
+				SL
+			);
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
 
-		try{
+		try {
 			setka::address ip("[1002:3004:5006::7008:900a]:134");
 			utki::assert_always(ip.port == 134, SL);
 			utki::assert_always(ip.host.quad[0] == 0x10023004, SL);
 			utki::assert_always(ip.host.quad[1] == 0x50060000, SL);
 			utki::assert_always(ip.host.quad[2] == 0x00000000, SL);
 			utki::assert_always(ip.host.quad[3] == 0x7008900a, SL);
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
 
-		try{
+		try {
 			setka::address ip("[::ffff:127.0.0.1]:45");
 			utki::assert_always(ip.port == 45, SL);
 			utki::assert_always(ip.host.is_v4(), SL);
 			utki::assert_always(ip.host.get_v4() == 0x7f000001, SL);
-		}catch(...){
+		} catch (...) {
 			utki::assert_always(false, SL);
 		}
 	}
 }
-}
+} // namespace test_ip_address
